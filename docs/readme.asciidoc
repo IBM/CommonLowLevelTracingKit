@@ -1,0 +1,163 @@
+// Copyright (c) 2024, International Business Machines
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+= CLLTK - Common Lowlevel Tracing Kit
+:source-highlighter: highlight.js
+A blazingly fast and memory efficient tracing frontend.
+:toc:
+
+
+
+== How it works
+To explain the idea behind `clltk` it is best to break down a small example:
+[source,C,linenums]
+----
+CLLTK_DEFINE_TRACEBUFFER(MyFirstTracebuffer, 1024);
+
+int main()
+{
+  const char * name = "Max";
+  const int age = 42;
+
+  CLLTK_TRACEPOINT(MyFirstTracebuffer, "Hello %s, you are %d years old", name, age);
+
+  return 0
+}
+----
+
+=== Tracebuffer creation
+`clltk` 's main concept are *Tracebuffers*, in which tracing data is stored. This allows tight control over memory consumption of the traces:
+
+`CLLTK_DEFINE_TRACEBUFFER(MyFirstTracebuffer, 1024);`
+
+Creates a new *Tracebuffer* with a size of at least 1024 bytes. This Tracebuffer will automatically be constructed at program start before entering `main()`.
+
+A *Tracebuffer* actually refers to two parts:
+
+1. The actual buffer, holding *Tracepoint* entries. +
+   In the backend this buffer is most likely implemented as a ringbuffer.
+2. A set of memory sections holding metadata
+
+NOTE: The `clltk` library does not manage buffer memory itself. Instead you will need a data store backend which can allocate buffer memory and provide access to it.
+
+=== Tracepoint creation
+In the application code you can create *Tracepoints* whose entries and metadata will be sent into the asociated *Tracebuffer*. This is done by using the line
+
+`CLLTK_TRACEPOINT(MyFirstTracebuffer, "Hello %s, you are %d years old", name, age);`
+
+This allows printf-style formatting and type-checking of Tracepoint arguments.
+When you use this macro, three things happen:
+
+1. **At compile time:**
+   Metadata for the tracepoint is collected, such as FormatString, Argument Types, Line Number and Filename. Those are stored in a custom section of the compiled ELF file.
+2. **When program loads:**
+   Stores FormatString and other Metadata to the Tracebuffer's metadata.
+3. **When program execution traverses this point:**
+    Encodes and Stores an Entry into the Tracebuffer containing
+    - A reference into the Tracepoint metadata (containing FormatString)
+    - Dynamic data given as variable argument list (`name` and `age`)
+    - Additional Metadata, such as `timestamp` or `processId`
+
+NOTE: By splitting the work into those three stages, `clltk` is able to reduce memory consumption of Tracebuffer space and increase runtime performance, at the cost of slightly higher program startup time.
+
+== Simple dataflow overview 
+image::./docs/images/clltk_simple_overview.png[]
+
+== Storage Backends
+*CLLTK* takes care of effectively encoding Tracepoint data. Where and how those Tracepoints, as well as metadata is stored is the job of the *Storage Backend*. +
+For example, data could be stored either lossless or lossy (in Ringbuffers), in a global database, in files, or streamed over the network.
+
+Typically a Backend also supports exporting trace data into a serialized format and reading this format back.
+
+=== Storage Backend Interface
+The interface a Storage Backend needs to fulfill is documented link:./documentation/storage_backend.asciidoc[here]
+
+=== How to couple CLLTK with a Backend
+The backend is selected by simply linking against a library, which exports the functions described in the backend interface.
+
+=== Simple File storage Backend
+*CLLTK* ships with a very simple example backend. This backend stores each tracebuffer as a file `buffername.dump`. Associated metadata gets stored as `buffername.meta.dump`.
+
+
+== Trace Entry Data Format
+The data format in which traces are serialized is described in detail in the link:./documentation/technical_documentation.asciidoc[CLLTK Technical] documentation.
+
+*CLLTK* ships with a decoder, which can decode trace entries. A decoded entry will look like this:
+
+----
+TODO: Decoded example
+----
+
+NOTE: *CLLTK* does not describe how tracebuffers are stored. The decoder relies on the backend to provide access to trace entries.
+
+== The `CLLTK_TRACEPOINT` Macro Syntax
+----
+CLLTK_TRACEPOINT(_BUFFER_, _LEVEL_, _FORMAT_, ...)
+----
+_BUFFER_:: Named Identifier of an already defined CLLTK_TRACEBUFFER
+_LEVEL_:: one of `clltk_tracelevel_Error`, `clltk_tracelevel_Info`, `clltk_tracelevel_Debug`
+_FORMAT_:: A valid C String Literal (null terminated `const char*`). Not a variable. For supported format specifiers in the given String, see chapter <<format_specifiers>>
+... (Variable Argument List):: Arguments with which the format specifiers will be replaced in formatted output. Supported Argument types are listed in chapter <<argument_types>>
+
+=== Compatibility with `printf` format specifiers [[format_specifiers]]
+All standard format specifiers are supported. For a comprehensive list, have a look http://www.pixelbeat.org/programming/gcc/format_specs.html[here].
+
+However note the following special cases:
+
+* `%.10s` will still capture the whole string, and not only 10 characters.
+* `%.\*s` will still capture the whole string, together with argument value for `*`.
+
+=== Supported argument data types in Variable Argument List [[argument_types]]
+* signed / unsigned
+* const / non-const
+* 8, 16, 32, 64 and 128 bits
+* float (32bits) and double (64bits)
+* string (NULL terminated)
+
+== CLLTK Decoder
+[source,C,linenums]
+----
+    struct clltk_decoded_entry
+    {
+        //comparable to trace_point + filled out format string
+    }
+
+    //-----------------------------
+    // Decoder interface not part of backend:
+    // returns static error message. nullptr if success.
+    const char * clltk_decode_entry(
+        size_t metadata_blob_count,
+        backend_metadata_blob metadata_blobs[metadata_blob_count],
+        void * entry_data,
+        size_t entry_size,
+        void * callback_environment,
+        void (callback_decoded_entry*)(const clltk_decoded_entry * const decoded_entry, void * environment)
+    )
+----
+
+== Repository structure
+
+[plantuml, format=svg, opts="inline"]
+----
+@startsalt
+{
+{T
++clltk                           | root
+++clltk_common                   | common header for all clltk                                 
+++clltk_analyser                 | decoder                                 
+++ clltk_storage                 | \t   
++++ interface                   | interface for all storage implementations
++++ implementations             | \t
+++++ user_file_based            | implementation with shared files in user space
+++++ kernel_file_based          | implementation with shared files provided by kernel module
+++ clltk_tracing_frontend        | frontend used by traced application
+++ docs                         | \t
+++++ images                     | \t
+++++ diagrammers                | \t
+++ examples                     | \t
+++++ build                      | output folder for example builds
+++++ dumps                      | output folder for example execution
+++++ minimal                    | minimal example with tracepoint and tracebuffer
+}
+}
+@endsalt
+----

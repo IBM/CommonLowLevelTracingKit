@@ -1,0 +1,299 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"debug.console.acceptSuggestionOnEnter": "on",
+		"cSpell.language": "en,en-US,en-GB",
+		"csv-preview.resizeColumns": "all",
+		"spellright.language": [
+			"en"
+		],
+		"testMate.cpp.test.executables": "{build,Build,BUILD,out,Out,OUT}/**/*{test,Test,TEST}*",
+		"testMate.cpp.test.parallelExecutionLimit": 1,
+		"testMate.cpp.test.parallelExecutionOfExecutableLimit": 1,
+		"testMate.cpp.debug.configTemplate": {
+            "type": "lldb",
+            "MIMode": "lldb",
+            "program": "${exec}",
+            "args": "${argsArray}",
+            "cwd": "${cwd}",
+            "env": "${envObj}",
+            "sourceFileMap": "${sourceFileMapObj}",
+            "externalConsole": false
+        },
+        "clangd.arguments": [
+            "-log=verbose",
+            "-pretty",
+            "--background-index",
+            "--compile-commands-dir=./build/",
+			"-header-insertion=never"
+        ],
+		"C_Cpp.default.cppStandard": "c++11",
+		"C_Cpp.default.cStandard": "c11",
+		"python.testing.unittestEnabled": true,
+		"python.testing.pytestEnabled": false,
+		"python.testing.autoTestDiscoverOnSaveEnabled": true,
+		"python.testing.unittestArgs": [
+			"-v",
+			"-s",
+			"./tests",
+			"-p",
+			"*.py"
+		],
+		"files.exclude": {
+			"**/.cache/": true,
+			"**/__pycache__/": true,
+			"**/*.gen.c": true,
+			"**/*.gen.cpp": true,
+			"**/*.gen.hpp": true,
+			"**/*.gen.h": true,
+			"**/*.o": true,
+			"**/*.o.d": true,
+			"**/*.cmd": true,
+			"**/*.ko": true,
+			"**/*.mod": true,
+			"**/*.mod.c": true,
+			"**/*.order": true,
+			"**/*.symvers": true,
+			"**/.tmp_*": true,
+			"**/*.bkp": true,
+			"**/.DS_Store": true,
+			"**/*.a": true,
+			"**/*.idx": true,
+		},
+		"explorerExclude.backup": {},
+		"files.associations": {
+			"stdio.h": "c",
+			"info.h": "c",
+			"any": "c",
+			"barrier": "c",
+			"bit": "c",
+			"compare": "c",
+			"condition_variable": "c",
+			"cstddef": "c",
+			"forward_list": "c",
+			"list": "c",
+			"string": "c",
+			"optional": "c",
+			"limits": "c",
+			"memory": "c",
+			"mutex": "c",
+			"new": "c",
+			"functional": "c",
+			"type_traits": "c",
+			"string.h": "c"
+		},
+		"clang-format.style": "file",
+		"editor.tabSize": 4,
+		"lldb.suppressMissingSourceFiles": false,
+		"search.useIgnoreFiles": false,
+		"search.exclude": {
+			"**/node_modules": true,
+			"**/bower_components": true,
+			"**/*.code-search": true,
+			"build": true,
+		},
+		"cmake.useCMakePresets": "always",
+		"robotcode.robot.outputDir": "build/robot_output",
+		"robotcode.robot.paths": [
+			"tests/robot.tests/"
+		],
+		"clang-tidy.buildPath": "build/"
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "run clltk-cmd with lldb",
+				"type": "lldb",
+				"request": "launch",
+				"cwd": "${workspaceFolder}",
+				"program": "${command:cmake.buildDirectory}/clltk_cmd/clltk",
+				"sourceLanguages": [
+					"c",
+					"c++"
+				],
+				"args": [
+					"-C", "${workspaceFolder}/"
+				],
+				"initCommands":[
+					"settings set target.disable-aslr false"
+				],
+				"preLaunchTask":  "build clltk-cmd",
+			},
+			{
+				"name": "run cmake target",
+				"type": "lldb",
+				"request": "launch",
+				"cwd": "${command:cmake.launchTargetDirectory}",
+				"program": "${command:cmake.launchTargetPath}",
+				"stopOnEntry": false,
+				"reverseDebugging": true,
+				"sourceLanguages": [
+					"c",
+					"c++"
+				],
+				"internalConsoleOptions": "neverOpen",
+				"initCommands": [
+					"settings set target.disable-aslr false"
+				],
+			},
+			{
+				"name": "clltk_decoder.py",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "${workspaceFolder}/decoder_tool/python/clltk_decoder.py",
+				"args": [
+					"${workspaceFolder}/",
+					"/tmp/",
+					"-o",
+					"${workspaceFolder}/build/output.csv",
+					"-v",
+				],
+				"console": "integratedTerminal",
+				"justMyCode": true,
+			},
+			{
+				"name": "attach debug kernel",
+				"type": "gdb",
+				"request": "attach",
+				"cwd": "${workspaceRoot}",
+				"remote": true,
+				"target": ":1234",
+				"stopAtConnect": false,
+				"debugger_args": [
+					"-ex",
+					"set auto-load safe-path ${workspaceFolder}",
+					"-ex",
+					"file ${workspaceFolder}/build_kernel/linux/vmlinux",
+					"-ex",
+					"b do_init_module",
+				]
+			},
+		]
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "gen_version_header",
+				"type": "shell",
+				"command": "${workspaceFolder}/scripts/ci-cd/gen_version_header.sh",
+				"problemMatcher": [
+					"$gcc"
+				],
+				"options": {
+					"env": {
+						"INITRD_ROOT": "${env:BUILD_CACHE}/build_kernel/rootfs/"
+					}
+				}
+			},
+			{
+				"label": "kernel_build",
+				"type": "shell",
+				"command": "${workspaceFolder}/scripts/ci-cd/build_kernelspace.sh",
+				"dependsOn": ["gen_version_header"],
+				"problemMatcher": [
+					"$gcc"
+				],
+				"options": {
+					"env": {
+						"INITRD_ROOT": "${env:BUILD_CACHE}/build_kernel/rootfs/"
+					}
+				}
+			},
+			{
+				"label": "kernel_debugger",
+				"type": "shell",
+				"command": "${workspaceFolder}/scripts/ci-cd/debug_kernelspace.sh",
+				"isBackground": true,
+				"dependsOn": [
+					"kernel_build"
+				],
+				"options": {
+					"env": {
+						"INITRD_ROOT": "${env:BUILD_CACHE}/rootfs/"
+					}
+				},
+				"problemMatcher": []
+			},
+			{
+				"label": "delete traces",
+				"type": "shell",
+				"command": "find",
+				"args": [
+					"${workspaceFolder}/build/",
+					"/tmp/",
+					"\\(",
+					"-name",
+					"*.clltk_trace",
+					"-o",
+					"-name",
+					"additional_tracepoints.json",
+					"\\)",
+					"-print",
+					"-delete"
+				],
+				"problemMatcher": []
+			},
+			{
+				"label": "decode traces",
+				"type": "shell",
+				"command": "python",
+				"args": [
+					"${workspaceFolder}/decoder_tool/python/clltk_decoder.py",
+					"${workspaceFolder}/build/",
+					"/tmp/",
+					"-o",
+					"${workspaceFolder}/build/output.csv"
+				],
+				"problemMatcher": [],
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "shared",
+					"showReuseMessage": false,
+					"clear": false
+				}
+			},
+			{
+				"label": "build clltk-cmd",
+				"type": "shell",
+				"command": "cmake --build build --target clltk-cmd",
+				"group": {
+					"kind": "build",
+					"isDefault": true
+				},
+				"problemMatcher": ["$gcc"],
+				"presentation": {
+					"reveal": "always",
+					"panel": "new",
+					"revealProblems": "onProblem",
+					"close": true
+				}
+			}
+		]
+	},
+	"extensions": {
+		"recommendations": [
+			"matepek.vscode-catch2-test-adapter",
+			"xaver.clang-format",
+			"twxs.cmake",
+			"josetr.cmake-language-support-vscode",
+			"vadimcn.vscode-lldb",
+			"grapecity.gc-excelviewer",
+			"ms-vscode.hexeditor",
+			"webfreak.debug",
+			"littlefoxteam.vscode-python-test-adapter",
+			"ms-vscode.test-adapter-converter",
+			"hbenl.vscode-test-explorer",
+			"llvm-vs-code-extensions.vscode-clangd",
+			"ms-vscode.cmake-tools",
+			"d-biehl.robotcode"
+		],
+	},
+}

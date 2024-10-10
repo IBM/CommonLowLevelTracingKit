@@ -1,0 +1,164 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 25,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "binaryDir": "${sourceDir}/build/",
+            "installDir": "${sourceDir}/build/install/",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "STANDALONE_PROJECT" : "ON"
+            }
+        },
+        {
+            "name": "unittests",
+            "inherits" : "default",
+            "cacheVariables": {
+                "ENABLE_CODE_COVERAGE" : "ON",
+                "CLLTK_EXAMPLES": "OFF"
+            }
+        },
+        {
+            "name": "rpm",
+            "inherits": "default",
+            "cacheVariables": {
+                "STANDALONE_PROJECT": "OFF",
+                "CPACK_GENERATOR": "RPM",
+                "CPACK_SOURCE_GENERATOR": "RPM",
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CLLTK_EXAMPLES": "OFF",
+                "CLLTK_TESTS": "OFF",
+                "CLLTK_SNAPSHOT": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "default",
+            "configurePreset": "default",
+            "targets": [
+                "all"
+            ]
+        },
+        {
+            "name": "unittests",
+            "configurePreset": "unittests",
+            "targets": [
+                "all"
+            ]
+        },
+        {
+            "name": "rpm",
+            "configurePreset": "rpm",
+            "targets": [
+                "all"
+            ]
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "unittests",
+            "configurePreset": "unittests",
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "noTestsAction": "error",
+                "stopOnFailure": true
+            }
+        }
+    ],
+    "packagePresets": [
+        {
+            "name": "rpm-c/c++",
+            "configurePreset": "rpm",
+            "variables": {
+                "CPACK_COMPONENTS_ALL": "tracing;snapshot;cmd",
+                "CPACK_RPM_COMPONENT_INSTALL": "ON",
+                "CPACK_RPM_PACKAGE_COMPONENT": "ON",
+                "CPACK_RPM_DEBUGINFO_PACKAGE": "ON",
+                "CPACK_RPM_INSTALL_WITH_EXEC": "ON"
+            }
+        },
+        {
+            "name": "rpm-python",
+            "configurePreset": "rpm",
+            "variables": {
+                "CPACK_COMPONENTS_ALL": "decoder",
+                "CPACK_RPM_COMPONENT_INSTALL": "ON",
+                "CPACK_RPM_PACKAGE_COMPONENT": "ON",
+                "CPACK_RPM_INSTALL_WITH_EXEC": "ON"
+            }
+        },
+        {
+            "name": "srpm",
+            "configurePreset": "rpm",
+            "variables": {
+                "CPACK_RPM_PACKAGE_SOURCES": "ON"
+            }
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "default",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "default"
+                },
+                {
+                    "type": "build",
+                    "name": "default"
+                }
+            ]
+        },
+        {
+            "name": "unittests",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unittests"
+                },
+                {
+                    "type": "build",
+                    "name": "unittests"
+                },
+                {
+                    "type": "test",
+                    "name": "unittests"
+                }
+            ]
+        },
+        {
+            "name": "rpms",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "rpm"
+                },
+                {
+                    "type": "build",
+                    "name": "rpm"
+                },
+                {
+                    "type": "package",
+                    "name": "rpm-c/c++"
+                },
+                {
+                    "type": "package",
+                    "name": "rpm-python"
+                },
+                {
+                    "type": "package",
+                    "name": "srpm"
+                }
+            ]
+        }
+    ]
+}

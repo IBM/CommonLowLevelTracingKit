@@ -1,0 +1,90 @@
+<mxfile host="65bd71144e">
+    <diagram id="j7huVOAFBWUfznfyKsph" name="Page-1">
+        <mxGraphModel dx="832" dy="400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="26" style="edgeStyle=none;html=1;" parent="1" source="6" target="25" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="gzip compressed" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=top;dashed=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="80" width="160" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="tar archive" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="110" width="120" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="additional.json" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;" parent="1" vertex="1">
+                    <mxGeometry x="340" y="210" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="Tracebuffer" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="140" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="Tracebuffer" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="340" y="150" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="Tracebuffer" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="160" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="23" style="edgeStyle=none;html=1;" parent="1" source="11" target="6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="CommonLowLevelTracingKit_snapshot&lt;br&gt;library" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="120" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="24" style="edgeStyle=none;html=1;" parent="1" source="14" target="6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" value="tar &amp;amp; gzip" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="200" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" style="edgeStyle=none;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="10" target="14" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" style="edgeStyle=none;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="10" target="11" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" style="edgeStyle=none;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="9" target="11" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" style="edgeStyle=none;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="9" target="14" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" style="edgeStyle=none;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="8" target="14" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="22" style="edgeStyle=none;html=1;" parent="1" source="8" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="200" y="140" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="13" value="" style="group" parent="1" vertex="1" connectable="0">
+                    <mxGeometry x="80" y="150" width="100" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="Tracebuffer" style="rounded=1;whiteSpace=wrap;html=1;container=0;" parent="13" vertex="1">
+                    <mxGeometry width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="Tracebuffer" style="rounded=1;whiteSpace=wrap;html=1;container=0;" parent="13" vertex="1">
+                    <mxGeometry x="10" y="10" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="Tracebuffer" style="rounded=1;whiteSpace=wrap;html=1;container=0;" parent="13" vertex="1">
+                    <mxGeometry x="20" y="20" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="28" style="edgeStyle=none;html=1;" parent="1" source="25" target="27" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="25" value="clltk_decoder" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="160" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="27" value="human readable" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;" parent="1" vertex="1">
+                    <mxGeometry x="580" y="130" width="80" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="29" value="optional" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="260" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="30" value="Copyright (c) 2024, International Business Machines&lt;br style=&quot;font-size: 10px;&quot;&gt;SPDX-License-Identifier: BSD-2-Clause-Patent" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fontColor=default;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="260" y="290" width="240" height="20" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
