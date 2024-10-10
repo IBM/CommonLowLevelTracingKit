@@ -1,0 +1,14 @@
+ccflags-y := \
+	-g \
+	-std=gnu11 \
+	-Wno-declaration-after-statement \
+	-I . \
+	-I$(src)/../../tracing_library/include/
+
+obj-m := simple_tracing_test.o
+
+simple_tracing_test-y := \
+	more.o \
+	kthreadtest.o \
+	simple.o
+	

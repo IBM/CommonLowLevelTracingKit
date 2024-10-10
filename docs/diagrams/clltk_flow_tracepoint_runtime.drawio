@@ -1,0 +1,127 @@
+<mxfile host="65bd71144e">
+    <diagram id="xgzrXrmu05g-opPAq0yR" name="Page-1">
+        <mxGraphModel dx="1187" dy="597" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="11" style="edgeStyle=none;html=1;" parent="1" source="2" target="6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="tracepoint is it hit" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="200" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" style="edgeStyle=none;html=1;" parent="1" source="3" target="2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="" style="ellipse;shape=doubleEllipse;html=1;dashed=0;whitespace=wrap;aspect=fixed;" parent="1" vertex="1">
+                    <mxGeometry x="170" y="160" width="20" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="at runtime" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="140" width="120" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" style="edgeStyle=none;html=1;" parent="1" source="6" target="7" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="argument stored in va_arg by runtime" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="260" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" style="edgeStyle=none;html=1;" parent="1" source="7" target="10" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="28" style="edgeStyle=none;html=1;" parent="1" source="7" target="9" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="tracepoint function is called&lt;br&gt;with:&lt;br&gt;- tracebuffer&lt;br&gt;- argument type information &lt;br&gt;- va_arg" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="320" width="160" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="tracepoint function" style="swimlane;whiteSpace=wrap;html=1;startSize=40;" parent="1" vertex="1">
+                    <mxGeometry x="280" y="107.5" width="180" height="525" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" style="edgeStyle=none;html=1;" parent="9" source="14" target="15" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" value="timestamp, process and thread id are gatherd" style="rounded=0;whiteSpace=wrap;html=1;" parent="9" vertex="1">
+                    <mxGeometry x="30" y="100" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" style="edgeStyle=none;html=1;" parent="9" source="15" target="16" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" value="temporary entry buffer size is calculated by&amp;nbsp; adding up size of each argument and entry overhead" style="rounded=0;whiteSpace=wrap;html=1;" parent="9" vertex="1">
+                    <mxGeometry x="20" y="180" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="22" style="edgeStyle=none;html=1;" parent="9" source="16" target="17" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" value="create temporary entry buffer" style="rounded=0;whiteSpace=wrap;html=1;" parent="9" vertex="1">
+                    <mxGeometry x="30" y="280" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="24" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="9" source="17" target="23" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" value="fill entry buffer with serialized arguments" style="rounded=0;whiteSpace=wrap;html=1;" parent="9" vertex="1">
+                    <mxGeometry x="30" y="340" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" style="edgeStyle=none;html=1;" parent="9" source="18" target="14" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" value="" style="ellipse;shape=doubleEllipse;html=1;dashed=0;whitespace=wrap;aspect=fixed;" parent="9" vertex="1">
+                    <mxGeometry x="80" y="60" width="20" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="27" style="edgeStyle=none;html=1;" parent="9" source="23" target="25" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="23" value="add entry to ringbuffer" style="rounded=0;whiteSpace=wrap;html=1;" parent="9" vertex="1">
+                    <mxGeometry x="30" y="400" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="25" value="return" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" parent="9" vertex="1">
+                    <mxGeometry x="30" y="460" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="progamm resums after tracepoint" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="440" width="160" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="29" value="add to ringbuffer" style="swimlane;whiteSpace=wrap;html=1;startSize=40;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="311.25" width="160" height="432.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="36" style="edgeStyle=none;html=1;" parent="29" source="30" target="31" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="30" value="" style="ellipse;shape=doubleEllipse;html=1;dashed=0;whitespace=wrap;aspect=fixed;" parent="29" vertex="1">
+                    <mxGeometry x="70" y="60" width="20" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="37" style="edgeStyle=none;html=1;" parent="29" source="31" target="32" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="31" value="get semaphore" style="rounded=0;whiteSpace=wrap;html=1;" parent="29" vertex="1">
+                    <mxGeometry x="20" y="100" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="38" style="edgeStyle=none;html=1;" parent="29" source="32" target="33" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="32" value="drop old entries unitl enough space for new one" style="rounded=0;whiteSpace=wrap;html=1;" parent="29" vertex="1">
+                    <mxGeometry x="20" y="160" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="39" style="edgeStyle=none;html=1;" parent="29" source="33" target="34" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="33" value="add new entry to ringbuffer and crc" style="rounded=0;whiteSpace=wrap;html=1;" parent="29" vertex="1">
+                    <mxGeometry x="20" y="240" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="40" style="edgeStyle=none;html=1;" parent="29" source="34" target="35" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="34" value="release semaphore" style="rounded=0;whiteSpace=wrap;html=1;" parent="29" vertex="1">
+                    <mxGeometry x="20" y="312.5" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="35" value="return" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" parent="29" vertex="1">
+                    <mxGeometry x="20" y="372.5" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="41" style="edgeStyle=none;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="23" target="29" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="42" value="Copyright (c) 2024, International Business Machines&lt;br style=&quot;font-size: 10px;&quot;&gt;SPDX-License-Identifier: BSD-2-Clause-Patent" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fontColor=default;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="230" y="720" width="240" height="20" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

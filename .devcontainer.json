@@ -1,0 +1,66 @@
+{
+	"name": "CommonLowLevelTracingKit dev container",
+	"initializeCommand": "./scripts/container.sh echo 'container done'",
+	"build": {
+		"dockerfile": "./scripts/container.Dockerfile",
+		"options": [
+			"--no-cache",
+		]
+	},
+	"workspaceMount": "source=/${localWorkspaceFolder}/,target=/clltk-workspace-base/,type=bind,consistency=cached",
+	"workspaceFolder": "/clltk-workspace-base/",
+	"containerUser": "root",
+	"remoteUser": "root",
+	"mounts": [
+		"source=${localEnv:HOME}/.ccache,target=/root/.ccache,type=bind,consistency=cached",
+		"source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,readonly",
+		"source=${localEnv:HOME}/.gitconfig,target=/root/.gitconfig,type=bind,readonly",
+		"source=./build/in_container/amd64/build/,target=//clltk-workspace-base/build/,type=bind,consistency=cached",
+		"source=./build/in_container/amd64/traces,target=/tmp/traces/,type=bind,consistency=cached",
+		"source=./build/in_container/.bash_history,target=/root/.bash_history,type=bind,consistency=cached"
+	],
+	"runArgs": [
+		"--network=host", // use host network inside container
+		"--hostname=clltk-ci",
+		"--security-opt=label=disable",
+		"--security-opt=seccomp=unconfined"
+	],
+	"containerEnv": {
+		"CLLTK_TRACING_PATH": "/tmp/traces/",
+		"BUILD_DIR": "/clltk-workspace-base/build/",
+		"PERSITENT_ARTIFACTS": "/clltk-workspace-base/build/persistent/",
+		"CCACHE_DIR": "/root/.ccache/",
+		"INATALL_DIR": "/clltk-workspace-base/install/",
+		"CLLTK_CI_VERSION_STEP_REQUIRED": "true"
+	},
+	"updateRemoteUserUID": true,
+	"postCreateCommand": "mkdir -p /tmp/traces /clltk/build_kernel/",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode.cmake-tools",
+				"ban.spellright",
+				"wayou.vscode-todo-highlight",
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"mhutchie.git-graph",
+				"donjayamanne.githistory",
+				"waderyan.gitblame",
+				"webfreak.debug",
+				"matepek.vscode-catch2-test-adapter",
+				"vadimcn.vscode-lldb",
+				"donjayamanne.python-extension-pack",
+				"llvm-vs-code-extensions.vscode-clangd",
+				"twxs.cmake",
+				"xaver.clang-format",
+				"ms-vscode.hexeditor",
+				"njpwerner.autodocstring",
+				"donjayamanne.python-environment-manager",
+				"KevinRose.vsc-python-indent",
+				"betwo.vscode-linux-binary-preview",
+				"asciidoctor.asciidoctor-vscode",
+				"robocorp.robotframework-lsp"
+			]
+		}
+	}
+}

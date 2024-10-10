@@ -1,0 +1,218 @@
+// Copyright (c) 2024, International Business Machines
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+= File Specification
+
+A clltk tracebuffer file consist of four different parts.
+
+1. file header at the start of the file and contains offset information for the following parts.
+2. definition at an offset defined in file header and contains information like tracebuffer name
+3. ringbuffer at an offset defined in file header and contains traceentries created while tracing an application
+4. stack at an offset defined in file header and contains meta information, necessary to decode traceentries
+
+
+image::./images/clltk_file_specification.png[]
+
+== File Sections
+
+=== FileHeader
+Structure at beginning of a clltk tracebuffer file. Holds information where different file section are located. To ensure valid entries, the whole structured is guarded by a crc8. +
+The following tables shows the location of different values, with offsets to start of the file. 
+[cols="1,1,6"]
+|====
+ >h| offset  >h| size h|
+ >| 0        >| 16    | magic (`?#$~tracebuffer\0`) to identify file as clltk tracebuffer 
+ >| 16       >| 8     | file version (`1`) to identify future changes
+ >| 24       >| 8     | definition file offset
+ >| 32       >| 8     | ringbuffer file offset
+ >| 40       >| 8     | stack file offset
+ >| 48       >| 1     | crc8 over file header
+|====
+
+=== Definition Section
+The definition section is located at a file offset defined inside the file header and consists of the path and name of the tracebuffer. Thereby, even after a file is renamed, the original tracebuffer name could be recovered.
+
+The following table shows the location of the different values inside the definition section, as offsets to definition file offset.
+[cols="1,1,6"]
+|====
+>h| offset  >h| size h|
+ >| 0        >| 8     | definition body size 
+ >| 8        >| flex  | body contains path and name of tracebuffer
+|====
+
+While searching for an existing tracebuffer by a traced application only the file names are used to identify an tracebuffer. And the values inside definition are only used at decoding time.
+
+=== Ringbuffer Section
+The ringbuffer section is located at a file offset defined inside the file header and contains the ringbuffer used to store traceentries.
+For the direct from user space this whole section must be mmapped in to the user space of a traced application. 
+
+The following table shows the structure of the ringbuffer head, with all offsets relative to ringbuffer section offset.
+[cols="1,1,6"]
+|====
+>h| offset  >h| size h|
+ >| 0        >| 32    |  unnamed semaphore (memory-based) as interprocess and interthread. mutex for ringbuffer access.
+ >| 32       >| 8     | body size as uint64 
+ >| 40       >| 8     | wrapped counter as uint64, incremented each time the ringbuffer wrapped.
+ >| 48       >| 8     | dropped counter as uint64, incremented each time a traceentry neetes to be dropped to make space for newer entry. 
+ >| 56       >| 8     | next_free offset in body as uint64. Offset to the next free byte inside the ringbuffer body to which the next write access will place the next entry.
+ >| 64       >| 8     | last_valid offset in body as uint64. Offset to the last valid byte inside the ringbuffer body from which the next read access will take the oldest entry. 
+ >| 72       >| 40    | reserved space for future usage
+ >| 112      >| flex  | ringbuffer body which holds traceentries. 
+|====
+
+All write access to a tracebuffer is only permitted after obtaining the semaphore. The valid states of the semaphore are therefore 0 and 1. With 0 meaning some process or thread obtained write access. And 1 that now one is currently writing to the tracebuffer. +
+
+For adding a new traceentry, after obtaining write access, maybe some old entries are been dropped until enough space between next_free and last_valid is available to a the new traceentry. Both values are offset relative to the ringbuffer body location inside the file. And for each dropped entry, the dropped counter is incremented, up to a maximum of UINT64_MAX.
+If next_free gets bigger than body size, the wrapped counter is incremented, up to a maximum of UINT64_MAX. And next_free is wrapped back to the beginning of the ringbuffer body. The same is true for next_valid, but with out hte incrementation of any counter. +
+An ringbuffer is thereby empty if next_free == last_valid and full if next_free+1==last_valid. Will moving next_free or last_valid, next_free may never overtake last_valid. Instead last_valid must first be moved by dropping old entries and than next_free moved.
+
+The dropping of old entries may only occur on whole traceentires.
+
+==== Ringbufferentry
+The ringbuffer is based on variable length entries. An entry could only be added or extracted as a single entity.
+Each of the entries is constructed like the following table shows:
+[cols="1,1,6"]
+|====
+>h| offset  >h| size h|
+ >| 0        >| 1     | magic (`~`)
+ >| 1        >| 2     | body size as uint16
+ >| 3        >| 1     | ringbuffer entry header crc8
+ >| 4        >| flex  | body
+ >| flex     >| 1     | ringbuffer entry body crc9
+|====
+All offsets are relative to the beginning of an entry. For the oldest entry the beginning is always the last_valid offset. If the combined offset or index for an access is equal or bigger than the ringbuffer body size than the offset/index needs to be wrapped to the beginning of the ringbuffer body. This could be done by calculate the module of index for ringbuffer body size.
+
+The magic is used to securely detect the start ot an ringbuffer entry while dropping old entries or, if a last_valid and next_free are damaged, to find all entries at decoding time.
+
+The body size enables the extraction of a entry as a single entity.
+
+The first crc8, the ringbuffer entry header crc8, guarantee the identification of real entry headers after a `~`. If any other `~` occurs inside the ringbuffer body the likelihood that also the crc8 from this position onwards is valid is extremely low.
+
+The body contains the data, which the ringbuffer entry should store and has the size given in ringbuffer entry body size. After it, an additional, crc8 is added to permitted body data validation. But this second crc8 is not part of the ringbuffer entry body size.
+
+=== Stack Section
+The stack section implements a linear growable data structure with unique entries. The start of the stack data structure is located at the stack section offset, defined in the file header.
+While the ringbuffer holds the traceentries, the stack hold the corresponding meta data necessary to decode the traceentries. Multiple meta entry are combined into meta blobs which are than stored, each meta blob as one stack entry, inside the stack. 
+
+Located at the start of the stack section lays the stack header with the following layout:
+[cols="1,1,6"]
+|====
+ >h| offset >h| size h|
+ >| 0        >| 8     | version
+ >| 8        >| 32    | mutex for stack write access.
+ >| 40       >| 40    | reserved for future usage
+ >| 80       >| 8     | body size 
+ >| 88       >| flex  | body 
+|====
+Also for the write access to the stack a lock is required. Again an unnamed semaphore is used.  Therefore the semaphore and for easy access, the body size as well, have to be mmapped.
+
+The stack body immediately starts with the first stack entry. And flash with the end of the first stack entry follows the second stack entry, and so on.
+
+If a new stack entry is added, the body size must be incremented accordingly and could increase the file size.
+
+==== Stack Entry
+Besides the header, the stacks could contains multiple entries. With each with the following layout:
+[cols="1,1,6"]
+|====
+>h| offset  >h| size h|
+ >| 0        >| 16    | md5 of body
+ >| 16       >| 8     | reserved for future usage
+ >| 24       >| 8     | body size
+ >| 28       >| 1     | crc
+ >| 29       >| flex  | body
+|====
+
+Because the stack may only contain unique entities and to speed up the detection if a new entry already exist inside the stack an md5 hash of the body is also stored. To detect if new entry already exists, a loop over all entries is necessary. Foreach entry the md5 hash and body size is compared and, if equal, the whole is compared. If reaching the end of stack body, without matching any existing entry, the new entry is added flush to the last entry and the body size increased.
+
+The body of a stack entry, also called meta blob, consists of multiple meta entries. And is just a copy of the meta data gathered by the compiler in to a custom elf section at compile time.
+
+== Tracedata
+
+=== Traceentry (body of ringbuffer entry)
+A traceentry is stored as the body of a ringbuffer entry. It is always valid if the ringbuffer entry is valid, and needs therefore no additional checks.
+Overall a traceentry consists of two parts. The first one, the traceentry header, with a fix memory layout and second one with a flexible memory layout.
+ 
+The layout for the traceentry header is shown in the following table:
+[cols="1,1,6"]
+|====
+>h| offset  >h| size h|
+>h| 0        >| 6     | in_file_offset
+>h| 6        >| 4     | pid (process id)
+>h| 10       >| 4     | pid (thread id)
+>h| 14       >| 8     | utc timestamp_ns as uint64 in nano seconds
+>h| 22       >| flex  | body (second part of traceentry)
+|====
+
+The second part, the same as the traceentry header body, contains the user provided argument values and is therefor only present if any argument was provided.
+If present, the layout of this part is defined by the argument information inside the metab information inside the file at offset `in_file_offset`.
+All argument values are stored, ordered by there placement inside the tracepoint call, without any gapes.
+To decode the argument values, first the argument type has to be retrieved from the argument type array inside the meta entry. Base on this type the value is access.
+If it is a fixed size type like: uint8, ... int128, pointer, float or double, the number of bytes for this types width is used to hold the argument value. And the next value starts immediately behind it.
+If it is a flex size type like: dump or null-terminated string, the first 4 bytes are used to store the size of the flex size value as uint32, followed by the argument value with exactly the size defined in the first 4 bytes. And than the next value starts immediately behind it.
+
+Additional to the argument_type_values the metaentry located at file_offset_for_meta_data contains also information like line number, file name and a string with information for formatting the arguments to be human readable.
+
+
+=== Metaentry (part of a stack entry body)
+Foreach static tracepoint a meta entry is created. This meta entry contains all static information about the tracepoint and also the argument type array to decode the arguments inside the traceentry body.
+
+The layout of one of this are shown in the following table:
+[cols="1,1,6"]
+|====
+>h| offset  >h| size h|
+ >| 0        >| 1     | magic (`{`)
+ >| 1        >| 4     | size of this whole structure
+ >| 5        >| 1     | meta_entry_type
+ >| 6        >| 4     | line as uint32
+ >| 10       >| 1     | argument_count
+ >| 11       >| flex  | argument_type_array as array of argument_type with size of argument_count + 1 and the last index empty.  
+ >| flex     >| flex  | file as null-terminated string
+ >| flex     >| flex  | str as null-terminated string
+|====
+
+A magic is placed at the beginning of the meta entry for debugging propose and to ensure, when accessing directly based on file offset that the offset points to a valid meta entry.
+
+The size of the whole structure could be used as the flexible step width while iterate over multiple meta entries.
+
+The meta_entry_type is used to differentiate between printf-like tracepoints (1) or a dump tracepoint (2) and could be extended to support other styles, like key value pairs (3).
+
+The line holds the line number.
+
+The argument_count holds the number of user provided arguments.
+
+The argument_type_array holds the arguments types as an array. This values are deducted at compile time. In order to make this array also a valid string, which is useful for debugging, an additional `\0` is added to this array. +
+The possible values argument types, their interpretation and sizes are shown in the following table:
+[cols="1,1,6"]
+|====
+h| argument_type h| data type  h| size 
+h| ?              | unknown     | 
+h| c              | uint8       | 1
+h| C              |  int8       | 1
+h| w              | uint16      | 2
+h| W              |  int16      | 2
+h| i              | uint32      | 4
+h| I              |  int32      | 4
+h| l              | uint64      | 8
+h| L              |  int64      | 8
+h| q              | uint128     | 16
+h| Q              |  int128     | 16
+h| f              | float       | 4
+h| d              | double      | 8
+h| s              | string      | 4 + flex
+h| p              | pointer     | 8
+h| x              | dump        | 4 + flex
+|====
+ 
+Flush after the argument_type_array the file string is placed. This contains as null-terminated string the file name in which this tracepoint is placed.
+
+After the file string follows the null-terminated str. For printf-like it is the format string. 
+
+== More Information
+=== CRC
+For data validation a crc8, with Poly=0x07, Init=0x0, RefIn=0x0, RefOut=0x0 and XorOut=0x0, is used.
+
+=== Data integrity
+
+Because the meta data are required to decode an traceentry it must be ensured that the meta data for each traceentry are present inside the file. To achieve this the all meta blobs / custom elf-sections with meta data are added to a tracebuffer before any tracepoint could be executed.
+
+If this instruction is followed, and instant copy of the whole file will only contains traceentries with valid meta entries.
+But because the copy of the file may not be instant part of the ringbuffer could be compromised. this could happen if there is a time delay somewhere in copy process of th ringbuffer. Either the last_valid and next_free  are not longer correct for the body or, because the body could be copied in multiple parts, some entries could be invalid. By combining ringbuffer entry header magic, ringbuffer entry header crc and ringbuffer entry body crc8 all valid ringbuffer entries could be recovered.

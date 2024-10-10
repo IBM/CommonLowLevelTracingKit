@@ -1,0 +1,229 @@
+// Copyright (c) 2024, International Business Machines
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+= CLLTK technical documentation
+:source-highlighter: highlight.js
+A blazingly fast and memory efficient tracing frontend.
+:toc:
+
+
+
+
+== Naming
+
+[cols="1,5"]
+|===
+h| name h| meaning 
+| tracebuffer |
+    From file point of view the whole tracebuffer, consisting of definition, ringbuffer and stack. 
+    And from tracing library point of view, everything related to one tracebuffer. 
+| tracepoint | 
+    A line of code inside user code to trace program execution and values. It is fixed (compile time) associated with a tracebuffer. It consisted of meta data, created at compile time, which are placed inside the stack of tracebuffer and a function call which created, if tracepoint is executed, a ringbuffer entry. 
+| traceentry | A entry inside a ringbuffer with argument values and, if required, meta information.
+| ringbuffer | Ringbuffer for flexible-size ringbuffer entries. Will automatically drop oldest entry if full.
+| metaentry | meta information for one trace point with information like format string, file name, line number, argument types
+| metablob | multiple meta entries which are combined into a elf-section. And is part of the binary of a traced application or an entry in stack of a tracebuffer.
+| trace point call | user application traverse source code and hits trace point
+| user arguments | arguments in trace point call
+| format string | compile-time constant printf-like format string
+| trace context | values like timestamp, process id, thread id
+| user application | software which is traced
+| snapshot | very fast copy of one or more trace buffers at one point in time
+| decoding time |
+| runtime |
+| compile time |
+|traced application |
+| file section |
+| elf section |
+|===
+
+
+
+== Implementation
+
+.Control flow through tracebuffer definition and opening.
+image::./images/clltk_flow_tracebuffer.png[]
+
+.Compiler flow through tracepoint.
+image::./images/clltk_flow_tracepoint_compilation.png[]
+
+.Control flow through tracepoint execution. 
+image::./images/clltk_flow_tracepoint_runtime.png[]
+
+== Used technicals tricks in Implementation
+=== printf-format check
+To ensure valid argument-types for a format-string,
+link:https://gcc.gnu.org/onlinedocs/gcc-3.2/gcc/Function-Attributes.html#:~:text=format%20(archetype%2C%20string%2Dindex%2C%20first%2Dto%2Dcheck)[gcc format attribute] is used. 
+To activate this check `-Wall` as compile flag is required.
+Than it could be used like this: 
+
+[source,C,linenums]
+----
+// function declaration
+void printf_like_function(void *receiver, const char *format, ...)
+    __attribute__ ((format (printf, 2, 3)));
+
+// function call
+printf_like_function(receiver, "%d", 1);       // ok
+printf_like_function(receiver, "%s", "1");     // ok
+printf_like_function(receiver, "%s", 1);       // gcc warning [-Wformat]
+printf_like_function(receiver, "%d", 1.1);     // gcc warning [-Wformat]
+printf_like_function(receiver, "%f", 1);       // gcc warning [-Wformat]
+printf_like_function(receiver, "%d", (long)1); // gcc warning [-Wformat]
+----
+
+=== Type safe access to variable arguments
+1. get argument count and array with argument-types as enums, trough link:https://stackoverflow.com/a/11920694[c-macro-magic], at compile-time. Use `_Generic` macro to map types to enum and use meta programing for c++.
+2. use argument type array to access var_list with with valid type
+
+---
+
+=== Gathering meta data at compile-time
+To get all meta data for one tracebuffer, all relevant information are stored in to a custom elf-section. This is possible due to a  
+link:https://gcc.gnu.org/onlinedocs/gcc-3.2/gcc/Function-Attributes.html#:~:text=section%20(%22section%2Dname%22)[gcc section attribute].
+By defining all meta data strings and data structures as `static const` and appling the section attribute, gcc will gathering all meta data into the same section. 
+
+[source,C,linenums]
+----
+
+// in first_file.cpp
+{
+    static const char filename[] __attribute__((used, section("my_section"))) = {__FILE__};
+    static const char format[] __attribute__((used, section("my_section"))) = {"first format string %s"};
+}
+
+// second_file.cpp
+{
+    static const char filename[] __attribute__((used, section("my_section"))) =  {__FILE__};
+    static const char format[] __attribute__((used, section("my_section"))) =  {"second format string %d"};
+}
+
+/* elf section "my_section" 
+.filename_0 "first_file.cpp\0"
+.format_0 "first format string %s\0"
+.filename_1 "second_file.cpp\0"
+.format_1 "second format string %s\0"
+*/
+----
+
+Access to this elf section is possible via the following code;
+[source,C,linenums]
+----
+extern const void __start_my_section;
+extern const void __stop_my_section;
+
+const void *const begin = &__start_my_section;  // pointer to first address of my_section
+const void *const end = &__stop_my_section;     // pointer to first address after my_section
+----
+---
+=== caching process and thread id
+Each call to `syscall(SYS_getpid)` and `syscall(SYS_gettid)` requires a context switch to kernel and therefore burdens a heavy overhead. To remove this context switch, pid (process id) and tid (thread id) should be cached. +
+It's possible to detect if a code is executed inside a new thread with storage specifier `__thread` for tid and detect forking with `pthread_atfork`.
+
+.cache for tid
+[source,C,linenums]
+----
+__thread _Atomic uint32_t cached_tid = {0};
+uint32_t get_thread_id()
+{
+    uint32_t value = atomic_load(&cached_tid);
+    if (value)
+        return value;
+    value = (uint32_t)syscall(SYS_gettid);
+    atomic_store(&cached_tid, value);
+    return value;
+}
+----
+Due to storage specifier `__thread` for `cached_tid` it is a different variable for each thread and is each time initialized with zero. Because the process with id zero it the idle thread this is never a valid process id for a usable process. Therefore, if process id is zero, a system call is executed to get the process id and stored as a atomic variable to prevent data race conditions.
+
+.cache for pid
+[source,C,linenums]
+----
+__thread _Atomic uint32_t cached_pid = {0};
+uint32_t get_process_id()
+{
+    uint32_t value = atomic_load(&cached_pid);
+    if (value)
+        return value;
+    value = (uint32_t)syscall(SYS_getpid);
+    atomic_store(&cached_pid, value);
+    return value;
+}
+
+void update_cache(void)
+{
+    uint32_t pid = (uint32_t)syscall(SYS_getpid);
+    atomic_store(&cached_pid, pid);
+    uint32_t tid = (uint32_t)syscall(SYS_gettid);
+    atomic_store(&cached_tid, tid);
+}
+
+// at the begin of main or in a constructor
+pthread_atfork(NULL, NULL, update_cache);
+----
+For pid it is mostly the same as for tid. But to detect an new process `pthread_atfork` is utilised to register a callback to be automatically called, inside the new thread, immediately after fork. 
+---
+=== clean up for locks
+Some times a lock need to be freed in different places, depending on the program sequence. For example like this:
+
+[source,C,linenums]
+----
+void foo(void)
+{
+    Obj obj = ...;
+    get_lock(obj);
+    auto data = read_data(obj);
+    if(!data_valid(data))
+    {
+        release_lock(obj); // program path A
+        return;
+    }
+    process_data(data);
+    write_data(obj, data);
+    release_lock(obj); // program path B
+    return;
+}
+----
+Code like this always enables a coding error by calling `release_lock` multiple times. A possible improvement for this 
+is:
+[source,C,linenums]
+----
+typedef struct {Obj* obj;} Lock;
+void release_obj_lock(const Lock* lock)
+{
+    if(lock && lock->obj)
+        release_lock(obj);
+}
+void foo(void)
+{
+    Obj obj = ...;
+    const Lock lock __attribute__((cleanup(release_obj_lock))) = get_lock(obj);
+    auto data = read_data(obj);
+    if(!data_valid(data))
+    {
+        return; // program path A
+    }
+    process_data(data);
+    write_data(obj, data);
+    return; // program path B
+}
+----
+The `cleanup` attribute adds a call to `release_obj_lock` to each place where variable `lock` goes out of scope. An the lock will be always, only once, released.
+
+---
+=== safely call a function only once in multiprocess and multithreading
+
+[source,C,linenums]
+----
+void foo(void) {...}
+
+static pthread_once_t init_once = PTHREAD_ONCE_INIT;
+pthread_once(&init_once, foo);
+----
+
+== Some other Stuff
+** each linkage unit, like executable, shared-library or dynamic-library, contains there own meta-sections foreach buffer
+
+* use shared memory between applications and kernel.
+** kernel only provides shared memory space, which is mapped into user-address-space
+** serialize access to shared memory via https://linux.die.net/man/7/sem_overview[posix named-semaphore]
+** one shared-memory-space for ringbuffer and arbitrary number of meta-buffer for this ringbuffer

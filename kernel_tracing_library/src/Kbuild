@@ -1,0 +1,36 @@
+ccflags-y := \
+	-std=gnu11 \
+	-Wno-declaration-after-statement \
+	-D "strnlen_s(str, len)=((str != NULL) ? strnlen(str, len) : 0)" \
+	-D _CLLTK_INTERNAL=1 \
+	-finline-functions \
+	-funroll-loops \
+	-I$(src) 
+
+# kernel module
+obj-m := clltk_kernel_tracing.o
+
+# abstaction
+ccflags-y += -I$(src)/../../tracing_library/source/
+clltk_kernel_tracing-y +=  $(addprefix abstraction/, \
+							error.o \
+							file.o \
+							info.o \
+							memory.o \
+							sync.o \
+							)	
+
+# shared code
+ccflags-y += -I$(src)/../../tracing_library/include/
+clltk_kernel_tracing-y +=  $(addprefix ../../tracing_library/source/, \
+							arguments.o \
+							tracebuffer.o \
+							tracepoint.o \
+							c-vector/vec.o \
+							md5/md5.o \
+							ringbuffer/ringbuffer.o \
+							unique_stack/unique_stack.o \
+							)
+
+# kernel module entry code
+clltk_kernel_tracing-y +=  module.o initialization.o

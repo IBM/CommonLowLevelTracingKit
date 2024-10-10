@@ -1,0 +1,264 @@
+<mxfile host="65bd71144e">
+    <diagram id="b3jq4vEwQTs1iwOlyd9f" name="Page-1">
+        <mxGraphModel dx="1187" dy="597" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="120" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.75;exitY=1;exitDx=0;exitDy=0;" parent="1" source="3" target="118" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="137" value="definies" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="120" vertex="1" connectable="0">
+                    <mxGeometry x="-0.1546" y="-1" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="3" value="CLLTK_TACEBUFFER(MY_FIRST_TB)" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="160" width="280" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="tracebuffer handler" style="rounded=0;whiteSpace=wrap;html=1;rotation=-90;" parent="1" vertex="1">
+                    <mxGeometry x="20" y="370" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="116" style="edgeStyle=none;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" parent="1" source="6" target="113" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="48" value="open tracebuffer" style="swimlane;whiteSpace=wrap;html=1;fillColor=none;startSize=40;" parent="1" vertex="1">
+                    <mxGeometry x="570" y="340" width="200" height="720" as="geometry">
+                        <mxRectangle x="570" y="340" width="220" height="40" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="81" value="tracebuffer already &lt;br&gt;open?" style="rhombus;whiteSpace=wrap;html=1;" parent="48" vertex="1">
+                    <mxGeometry x="40" y="100" width="80" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="83" value="create tempfile and init it" style="rounded=0;whiteSpace=wrap;html=1;" parent="48" vertex="1">
+                    <mxGeometry x="20" y="300" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="88" value="rename&amp;nbsp;&lt;br&gt;tempfile&lt;br&gt;to final" style="rhombus;whiteSpace=wrap;html=1;" parent="48" vertex="1">
+                    <mxGeometry x="40" y="360" width="80" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="82" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="48" source="83" target="88" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="90" value="delete unused tempfile" style="rounded=0;whiteSpace=wrap;html=1;" parent="48" vertex="1">
+                    <mxGeometry x="20" y="460" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="84" style="edgeStyle=none;html=1;" parent="48" source="88" target="90" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="85" value="failed" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="84" vertex="1" connectable="0">
+                    <mxGeometry x="-0.812" y="-3" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="91" style="edgeStyle=none;html=1;" parent="48" source="95" target="83" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="92" value="No" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="91" vertex="1" connectable="0">
+                    <mxGeometry x="-0.6902" y="2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="95" value="file&lt;br&gt;already&lt;br&gt;exists?" style="rhombus;whiteSpace=wrap;html=1;" parent="48" vertex="1">
+                    <mxGeometry x="40" y="200" width="80" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="77" style="edgeStyle=none;html=1;" parent="48" source="81" target="95" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="78" value="No" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="77" vertex="1" connectable="0">
+                    <mxGeometry x="-0.4063" y="-2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="97" value="open tracebuffer from file" style="rounded=0;whiteSpace=wrap;html=1;" parent="48" vertex="1">
+                    <mxGeometry x="20" y="520" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="86" style="edgeStyle=none;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="48" source="88" target="97" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="160" y="400"/>
+                            <mxPoint x="160" y="540"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="87" value="pass" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="86" vertex="1" connectable="0">
+                    <mxGeometry x="-0.8816" y="-1" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="89" style="edgeStyle=none;html=1;" parent="48" source="90" target="97" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="93" style="edgeStyle=none;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="48" source="95" target="97" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="290" y="460" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="160" y="240"/>
+                            <mxPoint x="160" y="540"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="94" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="93" vertex="1" connectable="0">
+                    <mxGeometry x="-0.929" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="99" value="add tracebuffer to list of already open tracebuffer" style="rounded=0;whiteSpace=wrap;html=1;" parent="48" vertex="1">
+                    <mxGeometry x="20" y="580" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="96" style="edgeStyle=none;html=1;" parent="48" source="97" target="99" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="100" value="return tracebuffer handler" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" parent="48" vertex="1">
+                    <mxGeometry x="20" y="660" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="79" style="edgeStyle=none;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="48" source="81" target="100" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="180" y="140"/>
+                            <mxPoint x="180" y="680"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="80" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="79" vertex="1" connectable="0">
+                    <mxGeometry x="-0.9084" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="98" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="48" source="99" target="100" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="134" style="edgeStyle=none;html=1;" parent="48" source="133" target="81" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="133" value="" style="ellipse;shape=doubleEllipse;html=1;dashed=0;whitespace=wrap;aspect=fixed;fillColor=none;" parent="48" vertex="1">
+                    <mxGeometry x="70" y="60" width="20" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="117" style="edgeStyle=none;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" parent="1" source="101" target="115" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="103" value="add meta to tracebuffer" style="swimlane;whiteSpace=wrap;html=1;fillColor=none;startSize=40;" parent="1" vertex="1">
+                    <mxGeometry x="370" y="400" width="180" height="380" as="geometry">
+                        <mxRectangle x="370" y="400" width="180" height="40" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="112" style="edgeStyle=none;html=1;" parent="103" source="104" target="106" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="104" value="get meta section from current binary" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" parent="103" vertex="1">
+                    <mxGeometry x="20" y="100" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="109" value="No" style="edgeStyle=none;html=1;" parent="103" source="106" target="108" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="111" style="edgeStyle=none;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="103" source="106" target="107" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="160" y="195"/>
+                            <mxPoint x="160" y="340"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="141" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="111" vertex="1" connectable="0">
+                    <mxGeometry x="-0.8274" y="-4" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="106" value="meta section&lt;br&gt;&amp;nbsp;already in stack in tracebuffer?" style="rhombus;whiteSpace=wrap;html=1;fillColor=none;" parent="103" vertex="1">
+                    <mxGeometry x="40" y="160" width="80" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="110" style="edgeStyle=none;html=1;" parent="103" source="108" target="107" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="108" value="add meta section to stack in tracebuffer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" parent="103" vertex="1">
+                    <mxGeometry x="20" y="260" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="107" value="return file offset&lt;br&gt;&amp;nbsp;of meta setion" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=none;" parent="103" vertex="1">
+                    <mxGeometry x="20" y="320" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="132" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="103" source="131" target="104" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="110" y="110" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="131" value="" style="ellipse;shape=doubleEllipse;html=1;dashed=0;whitespace=wrap;aspect=fixed;fillColor=none;" parent="103" vertex="1">
+                    <mxGeometry x="70" y="60" width="20" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="113" value="pointer to open tracebuffer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="350" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="115" value="file offset of meta section in stack" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="390" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="118" value="MY_FIRST_TB&lt;br style=&quot;border-color: var(--border-color);&quot;&gt;constructor" style="swimlane;whiteSpace=wrap;html=1;fillColor=none;startSize=40;" parent="1" vertex="1">
+                    <mxGeometry x="212" y="240" width="136" height="280" as="geometry">
+                        <mxRectangle x="80" y="440" width="120" height="40" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="6" value="open tracebuffer" style="rounded=0;whiteSpace=wrap;html=1;" parent="118" vertex="1">
+                    <mxGeometry x="18" y="100" width="100" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="125" style="edgeStyle=none;html=1;" parent="118" source="101" target="124" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="101" value="add meta to tracebuffer" style="rounded=0;whiteSpace=wrap;html=1;" parent="118" vertex="1">
+                    <mxGeometry x="18" y="160" width="100" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="102" style="edgeStyle=none;html=1;" parent="118" source="6" target="101" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="123" style="edgeStyle=none;html=1;" parent="118" source="121" target="6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="121" value="" style="ellipse;shape=doubleEllipse;html=1;dashed=0;whitespace=wrap;aspect=fixed;fillColor=none;" parent="118" vertex="1">
+                    <mxGeometry x="58" y="60" width="20" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="124" value="tracebuffer&lt;br&gt;ready to use" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=none;" parent="118" vertex="1">
+                    <mxGeometry x="8" y="220" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="127" value="" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="6" target="48" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="400" y="390" as="sourcePoint"/>
+                        <mxPoint x="450" y="340" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="570" y="360"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="129" value="" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0.003;exitY=0.051;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="103" target="101" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="360" y="420" as="sourcePoint"/>
+                        <mxPoint x="350" y="590" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="130" value="" style="endArrow=classic;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="3" target="113" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="100" y="310" as="sourcePoint"/>
+                        <mxPoint x="150" y="260" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="136" value="defines" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="130" vertex="1" connectable="0">
+                    <mxGeometry x="-0.1714" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="139" style="edgeStyle=none;html=1;entryX=0.998;entryY=0.072;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="138" target="118" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="440" y="260"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="140" value="called by c runtime&lt;br&gt;befor main" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="139" vertex="1" connectable="0">
+                    <mxGeometry x="-0.641" y="-2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="138" value="" style="ellipse;shape=doubleEllipse;html=1;dashed=0;whitespace=wrap;aspect=fixed;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="430" y="170" width="20" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="142" value="Copyright (c) 2024, International Business Machines&lt;br style=&quot;font-size: 10px;&quot;&gt;SPDX-License-Identifier: BSD-2-Clause-Patent" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fontColor=default;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="240" y="1030" width="240" height="20" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
