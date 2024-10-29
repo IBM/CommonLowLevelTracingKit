@@ -1,7 +1,7 @@
 # Copyright (c) 2024, International Business Machines
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
-cmake_minimum_required(VERSION 3.21...3.21 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
 project(CommoneLowLevelTracingKit LANGUAGES C CXX)
 

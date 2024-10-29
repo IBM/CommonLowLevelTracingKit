@@ -149,7 +149,7 @@ def decode(b: bytes) -> str:
         raise RuntimeError("")
 
 
-def get(raw, offset, size=None):
+def get(raw: bytes, offset, size=None) -> bytes:
     if size is None:
         return raw[offset:]
     else:
@@ -479,7 +479,6 @@ class StaticTraceentry:
 
             # create formatted string
         except Exception as e:
-            ex_type, ex, tb = sys.exc_info()
             error_str = f'Extracting Argument failed "{self.format}" from {self.file}:{self.line} with {e.with_traceback(e.__traceback__)} in  {traceback.format_exc()}'
             logging.error(error_str)
             self.formatted = error_str
@@ -577,7 +576,7 @@ class StaticTraceentry:
             string_length = get_int(raw, offset, 4)
             offset += 4
             value = get(raw, offset, string_length)
-            value = decode(value).replace('\0', '\\0')
+            value = " ".join(f"0x{x:02X}" for x in value)
             offset += string_length
         else:
             assert 0, "type unkown"
