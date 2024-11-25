@@ -109,10 +109,16 @@ std::optional<size_t> CommonLowLevelTracingKit::snapshot::take_snapshot(
 	current_writefunc = func;
 	written_counter = 0;
 
-	// Open a new tar archive in memory using the libtar library
-	TAR *tar;
-	if (0 < tar_open(&tar, (const char *)0, &handler, O_WRONLY, 0, TAR_GNU)) {
-		return {}; // Return an empty optional if the archive failed to open
+	// add custom deleter to automatically free tar struct in any case
+	using tar_ptr = std::unique_ptr<TAR, decltype(&tar_close)>;
+	tar_ptr tar = tar_ptr(nullptr, tar_close);
+	{
+		// Open a new tar archive in memory using the libtar library
+		TAR *raw_tar;
+		if (0 < tar_open(&raw_tar, (const char *)0, &handler, O_WRONLY, 0, TAR_GNU)) {
+			return {}; // Return an empty optional if the archive failed to open
+		}
+		tar = tar_ptr(raw_tar, tar_close);
 	}
 
 	// add all files
@@ -120,21 +126,17 @@ std::optional<size_t> CommonLowLevelTracingKit::snapshot::take_snapshot(
 		if (verbose) {
 			verbose(file->to_string(), {});
 		}
-		if (add_file_to_tar(tar, file.get()) != ReturnCode::Success) {
+		if (add_file_to_tar(tar.get(), file.get()) != ReturnCode::Success) {
 			if (verbose)
 				verbose({}, "failed to add file " + file->getFilepath());
 			return {};
 		}
 	}
 	// Write an end-of-archive marker to the tar archive
-	if (0 != tar_append_eof(tar)) {
+	if (0 != tar_append_eof(tar.get())) {
 		return {}; // Return an empty optional if the end-of-archive marker could not be written
 	}
 
-	// Close the tar archive
-	if (0 != tar_close(tar)) {
-		return {}; // Return an empty optional if the archive could not be closed
-	}
-
+	// tar archive will be automatically closed by custom deleter in unique_ptr
 	return written_counter;
 }
