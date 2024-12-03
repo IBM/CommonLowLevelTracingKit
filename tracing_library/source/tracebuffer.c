@@ -29,6 +29,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
+#include <sys/mman.h>
 
 static size_t strnlen_s(const char *str, size_t len)
 {
@@ -215,6 +216,7 @@ void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 		buffer->runtime.file_offset =
 			_clltk_tracebuffer_add_to_stack(buffer, buffer->meta.start, meta_size);
 	}
+	munmap((void*)buffer->meta.start, meta_size);
 }
 
 void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
