@@ -42,13 +42,53 @@ The tracepoints `CLLTK_TRACEPOINT` defines first the target tracebuffer, than th
       `decoder_tool/python/clltk_decoder.py <path to tracebuffers>`
 8. View your traces in `output.csv`
 
-## Requirements
-
-This project requires:
-
+## Build Requirements
+### Base Library build
 - cmake (>=3.18)
 - gcc (>=10.0)
 - g++ (>=10.0)
+- git
+- file
+- rsync
+- gettext
+- libtar-dev
+
+### CLI tool build
+- libcli11-dev
+- nlohmann-json3-dev
+
+### Library Unit tests
+- valgrind
+- openjdk-17-jdk
+- openssl
+- lcov
+- gcovr
+
+### Kernel module build
+- make
+- curl
+- rpm
+- elfutils
+- clang
+- ll
+- llvm
+- libelf-dev
+- build-essential
+- flex
+- bison
+- bc
+- libncurses-dev
+- libssl-dev
+- kmod
+
+### Kernel module tests
+- busybox-static
+- strace
+- cpio
+- qemu-system
+
+## Runtime Requirements
+- non
 
 ## Security Considerations
 **Tampering with Trace Files**: Any modification or tampering with the trace files can cause the library to **crash or potentially freeze** the system. Ensure the integrity of these files is maintained to avoid instability.
