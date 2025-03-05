@@ -186,5 +186,18 @@ For python test unittest is used and these test covers the tracing and decoding 
 cmake --workflow --preset rpms
 ```
 
+
+### Minimal Build
+
+By default all Features, Extensions and debugging tools are build. A minimal build, that only produces the dynamic and static library, can be run with:
+
+```
+mkdir build
+cd build
+cmake .. -DCLLTK_SNAPSHOT=OFF -D -DCLLTK_DECODER=OFF -DCLLTK_COMMAND_LINE_TOOL=OFF -DCLLTK_KERNEL_TRACING=OFF -DCLLTK_EXAMPLES=OFF -DCLLTK_TESTS=OFF
+```
+
+> [!IMPORTANT] Be aware that this disables the build of snapshot and decoding tool. Mixing versions and using this tools from older build is highly discouraged!
+
 ## Contributing
 Have a lock in [CONTRIBUTING](./CONTRIBUTING.md)
