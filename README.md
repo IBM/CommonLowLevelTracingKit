@@ -42,13 +42,53 @@ The tracepoints `CLLTK_TRACEPOINT` defines first the target tracebuffer, than th
       `decoder_tool/python/clltk_decoder.py <path to tracebuffers>`
 8. View your traces in `output.csv`
 
-## Requirements
-
-This project requires:
-
+## Build Requirements
+### Base Library build
 - cmake (>=3.18)
 - gcc (>=10.0)
 - g++ (>=10.0)
+- git
+- file
+- rsync
+- gettext
+- libtar-dev
+
+### CLI tool build
+- libcli11-dev
+- nlohmann-json3-dev
+
+### Library Unit tests
+- valgrind
+- openjdk-17-jdk
+- openssl
+- lcov
+- gcovr
+
+### Kernel module build
+- make
+- curl
+- rpm
+- elfutils
+- clang
+- ll
+- llvm
+- libelf-dev
+- build-essential
+- flex
+- bison
+- bc
+- libncurses-dev
+- libssl-dev
+- kmod
+
+### Kernel module tests
+- busybox-static
+- strace
+- cpio
+- qemu-system
+
+## Runtime Requirements
+- non
 
 ## Security Considerations
 **Tampering with Trace Files**: Any modification or tampering with the trace files can cause the library to **crash or potentially freeze** the system. Ensure the integrity of these files is maintained to avoid instability.
@@ -145,6 +185,19 @@ For python test unittest is used and these test covers the tracing and decoding 
 ```bash
 cmake --workflow --preset rpms
 ```
+
+
+### Minimal Build
+
+By default all Features, Extensions and debugging tools are build. A minimal build, that only produces the dynamic and static library, can be run with:
+
+```
+mkdir build
+cd build
+cmake .. -DCLLTK_SNAPSHOT=OFF -D -DCLLTK_DECODER=OFF -DCLLTK_COMMAND_LINE_TOOL=OFF -DCLLTK_KERNEL_TRACING=OFF -DCLLTK_EXAMPLES=OFF -DCLLTK_TESTS=OFF
+```
+
+> [!IMPORTANT] Be aware that this disables the build of snapshot and decoding tool. Mixing versions and using this tools from older build is highly discouraged!
 
 ## Contributing
 Have a lock in [CONTRIBUTING](./CONTRIBUTING.md)
