@@ -1,4 +1,4 @@
-FROM docker.io/library/ubuntu:mantic-20240216 as ci
+FROM docker.io/library/ubuntu:noble-20250127 as ci
 RUN echo "build base-layers"
 
 USER root
