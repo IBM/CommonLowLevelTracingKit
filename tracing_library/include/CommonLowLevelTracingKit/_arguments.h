@@ -220,12 +220,12 @@ template <_clltk_argument_t arg_type> constexpr bool _CLLTK_TYPE_IS_FLEX_TEMP(vo
 	__VA_OPT__(_CLLTK_APPLY(_CLLTK_TYPE_IS_FLEX, _CLLTK_OR, __VA_ARGS__)) + 0
 
 // create struct with type informations
-#define _CLLTK_CREATE_TYPES(...)                                       \
-	{                                                                  \
-		/* .count = */ _CLLTK_NARGS(__VA_ARGS__),                      \
-			/* .flex_size = */ _CLLTK_ARG_TYPES_ARE_FLEX(__VA_ARGS__), \
-			/* .already_checked = */ false,                            \
-			/* .types = */ {_CLLTK_ARG_TYPES_TO_TYPES(__VA_ARGS__)},   \
+#define _CLLTK_CREATE_TYPES(...)                                   \
+	{                                                              \
+		/* .count = */ _CLLTK_NARGS(__VA_ARGS__),                  \
+		/* .flex_size = */ _CLLTK_ARG_TYPES_ARE_FLEX(__VA_ARGS__), \
+		/* .already_checked = */ false,                            \
+		/* .types = */ {_CLLTK_ARG_TYPES_TO_TYPES(__VA_ARGS__)},   \
 	}
 
 // create single static assert for one argument if it is known

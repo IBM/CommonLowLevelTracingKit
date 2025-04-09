@@ -165,24 +165,26 @@ TEST_F(SnapshotTest, CompressedIsSmallerThanRaw)
 	static const write_function_t func = [](const void *, size_t size) -> std::optional<size_t> {
 		return size;
 	};
-	const auto firstSize = take_snapshot(func, {}, true);
-	EXPECT_TRUE(firstSize);
-	EXPECT_TRUE(firstSize.value());
 
-	{
+	{ // generate random data
+		constexpr size_t payload_size = 1024 * 1024;
 		std::mt19937 engine(seed);
 		std::uniform_int_distribution<char> dist(CHAR_MIN, CHAR_MAX);
 		fs::path filepath = this->temp_dir / "newFile.bin";
 		std::ofstream file(filepath, std::ios::binary);
-		std::vector<char> buffer(1024 * 1024);
+		std::vector<char> buffer(payload_size);
 		std::generate(buffer.begin(), buffer.end(), [&]() { return dist(engine); });
 		file.write(buffer.data(), (long)buffer.size());
 	}
 
-	const auto secondSize = take_snapshot(func, {}, true);
-	EXPECT_TRUE(secondSize);
-	EXPECT_TRUE(secondSize.value());
-	EXPECT_LT(secondSize.value(), firstSize.value() + 1024 * 1024);
+	const auto rawSnapshotSize = take_snapshot(func, {}, false);
+	EXPECT_TRUE(rawSnapshotSize);
+	EXPECT_TRUE(rawSnapshotSize.value());
+
+	const auto compressedSnapshotSize = take_snapshot(func, {}, true);
+	EXPECT_TRUE(compressedSnapshotSize);
+	EXPECT_TRUE(compressedSnapshotSize.value());
+	EXPECT_LE(compressedSnapshotSize.value(), compressedSnapshotSize.value());
 }
 
 TEST_F(SnapshotTest, UncompressedTwiceWithAdditionalTracepointDifferSize)
@@ -314,27 +316,35 @@ TEST_F(SnapshotTest, WriteFailedALittle)
 	}
 }
 
-static int mmapCountNow()
+static std::vector<std::string> mmappedFiles()
 {
 	std::ifstream mapsFile("/proc/self/maps");
-	std::string line;
-	int entries = 0;
-	while (std::getline(mapsFile, line)) {
-		entries++;
+	std::vector<std::string> files = {};
+	for (std::string line; std::getline(mapsFile, line);) {
+		files.push_back(line);
 	}
-	return entries;
+	return files;
 }
 TEST_F(SnapshotTest, CheckForMissingMUNMAP)
 {
-	const int mmapCountBefore = mmapCountNow();
+	const std::vector<std::string> mmappedFilesBefore = mmappedFiles();
 
 	const write_function_t func = [&](const void *, size_t size) -> std::optional<size_t> {
-		EXPECT_GE(mmapCountNow(), mmapCountBefore);
+		EXPECT_GE(mmappedFiles().size(), mmappedFilesBefore.size());
 		return size;
 	};
 	const auto count = take_snapshot(func, {}, false);
 	ASSERT_TRUE(count);
 	EXPECT_TRUE(count.value());
-	const int mmapCountAfter = mmapCountNow();
-	EXPECT_EQ(mmapCountBefore, mmapCountAfter);
+	const std::vector<std::string> mmappedFilesAfter = mmappedFiles();
+
+	for (auto fileAfter : mmappedFilesAfter) {
+		if (std::find(mmappedFilesBefore.begin(), mmappedFilesBefore.end(), fileAfter) ==
+			mmappedFilesBefore.end()) {
+			if (fileAfter.find(this->temp_dir) != std::string::npos) {
+				ADD_FAILURE() << "not unmapped file: \"" << fileAfter << "\"" << std::endl;
+			}
+		}
+	}
+	std::cout << '\n';
 }

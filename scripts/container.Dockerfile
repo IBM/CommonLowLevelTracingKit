@@ -1,88 +1,92 @@
-FROM docker.io/library/ubuntu:noble-20250127 as ci
+FROM quay.io/fedora/fedora-minimal:41 as ci
 RUN echo "build base-layers"
 
 USER root
 
-RUN apt-get update --fix-missing;
-RUN apt-get upgrade -y ;
+RUN dnf -y update && \
+    dnf -y upgrade
 
-RUN apt-get install -y \
-    git\
-    git-lfs\
-    file \
-    clang-format-17 \
+RUN dnf -y install \
+    git \
+    git-lfs
+
+RUN dnf -y install \
     cmake \
     make \
     gcc \
-    libtar-dev \
-    libcli11-dev \
-    nlohmann-json3-dev \
-    rsync \
-    gettext \
+    g++ \
+    clang-tools-extra \
     valgrind \
-    openjdk-17-jdk \
-    wget \
-    unzip \
-    openssl \
     lcov \
     gcovr \
-    ;
-    
-RUN update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-17 100;
+    rpmdevtools
 
-RUN apt-get install -y \
-    python3.6 \
-    python3-pip\
-    ;
+RUN dnf -y install \
+    file \
+    rsync \
+    gettext \
+    wget \
+    unzip \
+    openssl
 
-RUN pip3 install --break-system-packages\
+RUN dnf -y install \
+    python3 \
+    python3-pip
+
+RUN dnf -y install \
+    zlib-ng-compat-devel \
+    libtar-devel \
+    cli11-devel \
+    nlohmann-json-devel \
+    java-17-openjdk-devel
+
+# clang-format specific version may need to be installed via LLVM repo or built from source.
+# Assuming clang-tools-extra provides clang-format; adjust if specific version is needed.
+RUN update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format 100
+
+RUN pip3 install \
     robotframework \
     numpy \
-    pandas \
-    ;
+    pandas
 
 RUN \
     echo "[safe]" >> ~/.gitconfig &&\
     echo "    directory = *" >> ~/.gitconfig &&\
-    echo "";
+    echo ""
 
 FROM ci as kernel
 RUN echo "now build kernel-layers"
 
-RUN apt-get install -y\
-    curl\
-    rpm \
+RUN dnf -y install \
+    curl \
+    rpm-build \
     elfutils \
     clang \
     lld \
     llvm \
-    libelf-dev \
+    elfutils-libelf-devel \
     ccache \
-    build-essential\
-    flex\
-    bison\
-    bc\
-    busybox-static\
-    strace\
-    cpio\
-    qemu-system\
-    libncurses-dev\
-    libssl-dev\
-    kmod\
-    ;
+    @development-tools \
+    flex \
+    bison \
+    bc \
+    busybox \
+    strace \
+    cpio \
+    qemu-system-x86 \
+    ncurses-devel \
+    openssl-devel \
+    kmod
 
 FROM kernel as dev
 RUN echo "now build dev-layers"
 
-RUN apt-get install -y\
+RUN dnf -y install \
     ninja-build \
     gdb \
     lldb \
-    bash-completion \
-    ;
+    bash-completion
 
-
-RUN pip3 install --break-system-packages\
+RUN pip3 install \
     scipy \
-    matplotlib \
-    ;
+    matplotlib

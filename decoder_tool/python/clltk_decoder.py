@@ -826,7 +826,10 @@ if __name__ == "__main__":
         for member in archive.getmembers():
             estimated_unpacked_size += member.size
         if estimated_unpacked_size < 25*1024*1024:
-            archive.extractall(tmpdir.name)
+            if sys.version_info.major == 3 and sys.version_info.minor >= 12:
+                archive.extractall(tmpdir.name, filter='data')
+            else:
+                archive.extractall(tmpdir.name)
         else:
             logging.error(f'could not unpack {input} as it would be {estimated_unpacked_size} bytes')
         tmpdirs.append(tmpdir)
@@ -837,7 +840,7 @@ if __name__ == "__main__":
         for root, dirs, dir_files in os.walk(folder):
             for file in dir_files:
                 abspath = os.path.join(root, file)
-                if is_tracebuffer_file_name(file) and not '~' in file:
+                if is_tracebuffer_file_name(file) and '~' not in file:
                     relpath = os.path.relpath(abspath, folder)
                     name = f"{relpath} in {folder_name}"
                     files[name] = abspath

@@ -1,0 +1,51 @@
+name: Pull Request Action
+run-name: Pull Request Action by ${{ github.actor }}
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  CONTAINER_TARGET: ci
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
+      - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
+      - run: echo "The workflow is now ready to test your code on the runner."
+
+      - name: "Build CI-Container"
+        run: |
+            cd ${{ github.workspace }}
+            ./scripts/container.sh echo "container ready"
+
+      - name: "Run CI in CI-Container"
+        run: |
+            cd ${{ github.workspace }}
+            ./scripts/container.sh ./scripts/ci-cd/run.sh
+
+
+      - name: "Run rpms workflow in CI-Container"
+        run: |
+            cd ${{ github.workspace }}
+            ./scripts/container.sh cmake --workflow --preset rpms
+
+      - name: "Run package_source in CI-Container"
+        run: |
+            cd ${{ github.workspace }}
+            ./scripts/container.sh cmake --build --preset rpm --target package_source
+
+      - name: "Done"
+        run: |
+            echo "Done"
+          
+

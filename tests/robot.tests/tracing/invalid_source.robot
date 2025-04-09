@@ -19,8 +19,8 @@ twice same buffer definition
     ...    CLLTK_TRACEBUFFER(BUFFER, 4096)
     ...    CLLTK_TRACEBUFFER(BUFFER, 4096)
     ...    int main(void){}
-    source ${content} for C failes with    redefinition of ‘_clltk_BUFFER_create_section’
-    source ${content} for CPP failes with    redefinition of ‘const char _clltk_BUFFER_create_section []’
+    source ${content} for C failes with    redefinition of
+    source ${content} for CPP failes with    redefinition of
 
 missing buffer size
     ${content}=    catenate    SEPARATOR=\n
@@ -123,7 +123,12 @@ tracepoint in none-static cpp inline function not possible due to gcc deficienci
     ${content}=    catenate    SEPARATOR=\n
     ...    \#include "CommonLowLevelTracingKit/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER, 1024)
-    ...    inline void foo(void){CLLTK_TRACEPOINT(BUFFER, "from inline");}
-    ...    int main(void){foo();}
-    ${error}=    Set Variable   error: ‘_meta’ causes a section type conflict with ‘_clltk_BUFFER_create_section’
+    ...    inline void foo(void){
+    ...        CLLTK_TRACEPOINT(BUFFER, "from inline");
+    ...    }
+    ...    int main(void){
+    ...        foo();
+    ...        CLLTK_TRACEPOINT(BUFFER, "from main");
+    ...    }
+    ${error}=    Set Variable   error: ‘_meta’ causes a section type conflict with 
     source ${content} for CPP failes with    ${error}

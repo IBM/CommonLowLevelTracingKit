@@ -43,14 +43,14 @@ def _run(*args, env=os.environ):
     if "" != out.stderr.decode():
         raise RuntimeError(out.stderr.decode())
     stdout = out.stdout.decode()
-    return out.stdout.decode()
+    return stdout
 
 def process(file_content, build_musst_fail=False, run_musst_fail=False, runs=1, language=Langauge.C, check_callback = None):
     target = {Langauge.C:"main_c", Langauge.CPP :"main_cpp"}[language]
     file = {Langauge.C:"main.gen.c", Langauge.CPP :"main.gen.cpp"}[language]
     
     tmp = tempfile.TemporaryDirectory()
-    env ={str(key):value for key,value in  os.environ.items() if not "CLLTK" in str(key)}
+    env ={str(key):value for key,value in  os.environ.items() if "CLLTK" not in str(key)}
     env['CLLTK_TRACING_PATH'] = tmp.name
 
     _run(f"cmake -S . -B {BUILD_DIR} -G \"Unix Makefiles\"")
