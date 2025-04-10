@@ -2,12 +2,14 @@ name: Pull Request Action
 run-name: Pull Request Action by ${{ github.actor }}
 
 on:
-  pull_request:
+  push:
     branches:
       - 'main'
 
 env:
   CONTAINER_TARGET: ci
+  CLLTK_CI_VERSION_STEP_REQUIRED: false
+
 
 jobs:
   build:
