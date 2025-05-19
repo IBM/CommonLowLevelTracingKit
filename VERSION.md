@@ -1,6 +1,8 @@
-1.2.42
+1.2.43
 
 # Change log
+## 1.2.43
+- make _clltk_tracebuffer_init thread safe
 ## 1.2.41
 - fix potential memory leak in snapshot
 ## 1.2.40

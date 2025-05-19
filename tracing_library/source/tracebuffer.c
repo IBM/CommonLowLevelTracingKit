@@ -114,10 +114,9 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 	return file_file;
 }
 
+// not thread safe
 static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t size)
 {
-	SYNC_GLOBAL_LOCK(global_lock);
-
 	// check if already open
 	const vector_entry_match_t match =
 		vector_find(tracebufferes, tracebuffer_handler_matcher, name);
@@ -192,7 +191,7 @@ static bool tracebuffer_ready(const _clltk_tracebuffer_handler_t *handler)
 
 void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 {
-	{ // new scope so that global lock is tidied up before next stuff which may also requires global
+	{ // new scope so that global lock is tidied up before add_to_stack
 	  // lock
 		SYNC_GLOBAL_LOCK(global_lock);
 		if (tracebufferes == NULL) {
@@ -201,13 +200,13 @@ void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 				ERROR_AND_EXIT("could not create vector for tracebuffers");
 			}
 		}
-	}
 
-	if (buffer->runtime.tracebuffer == NULL) {
-		buffer->runtime.tracebuffer =
-			tracebuffer_open(buffer->definition.name, buffer->definition.size);
+		if (buffer->runtime.tracebuffer == NULL) {
+			buffer->runtime.tracebuffer =
+				tracebuffer_open(buffer->definition.name, buffer->definition.size);
+		}
+		buffer->runtime.tracebuffer->used++;
 	}
-	buffer->runtime.tracebuffer->used++;
 
 	const uint32_t meta_size =
 		(uint32_t)((uint64_t)buffer->meta.stop - (uint64_t)buffer->meta.start);
