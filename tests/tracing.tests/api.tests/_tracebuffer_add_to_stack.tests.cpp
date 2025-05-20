@@ -25,8 +25,9 @@ TEST_F(tracebuffer_add_to_stack, simple)
 	ASSERT_NE(th, nullptr);
 
 	std::string str = "data set from simple";
-	const auto offset = _clltk_tracebuffer_add_to_stack(&handler, str.data(), (uint32_t)str.size());
+	const auto offset = _clltk_tracebuffer_add_to_stack(th, str.data(), (uint32_t)str.size());
 	EXPECT_GT(offset, 0);
+	_clltk_tracebuffer_reset_handler(&handler);
 }
 
 TEST_F(tracebuffer_add_to_stack, twice_same)
@@ -38,14 +39,14 @@ TEST_F(tracebuffer_add_to_stack, twice_same)
 
 	// add first time
 	std::string str = "data set from twice same";
-	const auto offset0 =
-		_clltk_tracebuffer_add_to_stack(&handler, str.data(), (uint32_t)str.size());
+	const auto offset0 = _clltk_tracebuffer_add_to_stack(th, str.data(), (uint32_t)str.size());
 	EXPECT_GT(offset0, 0);
 
 	// add second time
-	const auto offset1 =
-		_clltk_tracebuffer_add_to_stack(&handler, str.data(), (uint32_t)str.size());
+	const auto offset1 = _clltk_tracebuffer_add_to_stack(th, str.data(), (uint32_t)str.size());
 	EXPECT_EQ(offset0, offset1);
+
+	_clltk_tracebuffer_reset_handler(&handler);
 }
 
 TEST_F(tracebuffer_add_to_stack, twice_different)
@@ -57,16 +58,16 @@ TEST_F(tracebuffer_add_to_stack, twice_different)
 
 	// add first time
 	std::string str0 = "fist data set from twice different";
-	const auto offset0 =
-		_clltk_tracebuffer_add_to_stack(&handler, str0.data(), (uint32_t)str0.size());
+	const auto offset0 = _clltk_tracebuffer_add_to_stack(th, str0.data(), (uint32_t)str0.size());
 	EXPECT_GT(offset0, 0);
 
 	// add second time
 	std::string str1 = "second data set from twice different";
-	const auto offset1 =
-		_clltk_tracebuffer_add_to_stack(&handler, str1.data(), (uint32_t)str1.size());
+	const auto offset1 = _clltk_tracebuffer_add_to_stack(th, str1.data(), (uint32_t)str1.size());
 	EXPECT_GT(offset1, 0);
 	EXPECT_NE(offset0, offset1);
+
+	_clltk_tracebuffer_reset_handler(&handler);
 }
 
 TEST_F(tracebuffer_add_to_stack, bigger_than_one_page)
@@ -78,7 +79,8 @@ TEST_F(tracebuffer_add_to_stack, bigger_than_one_page)
 
 	// add first time
 	std::array<uint8_t, 1024 * 32> data{};
-	const auto offset0 =
-		_clltk_tracebuffer_add_to_stack(&handler, data.data(), (uint32_t)data.size());
+	const auto offset0 = _clltk_tracebuffer_add_to_stack(th, data.data(), (uint32_t)data.size());
 	EXPECT_GT(offset0, 0);
+
+	_clltk_tracebuffer_reset_handler(&handler);
 }

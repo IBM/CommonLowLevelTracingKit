@@ -54,9 +54,8 @@ class system_tests(unittest.TestCase):
                     }
                     '''
                 
-                tracepoints = process(file_content, language=language)
-                self.assertEqual(1 + TRACEBUFFER_INFO_COUNT, len(tracepoints))
-                self.assertEqual(tracepoints["formatted"][TRACEBUFFER_INFO_COUNT], "should be in tracebuffer")
+                stderr :str = process(file_content, language=language, run_musst_fail=True)
+                self.assertRegex(stderr, r'^\x1b\[1;31mclltk recoverable: unusable tracebuffer[^\n]+\n$')
                 pass
 
 #endif 

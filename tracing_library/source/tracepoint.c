@@ -38,14 +38,18 @@ static size_t strnlen_s(const char *str, size_t len)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstack-protector"
-void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
+void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_t *buffer,
 										const _clltk_file_offset_t in_file_offset,
 										const char *const file, const uint32_t line,
 										_clltk_argument_types_t *types, const char *const format,
 										...)
 {
+	if (buffer == NULL) {
+		ERROR_LOG("unusable tracebuffer at %s:%d", file, line);
+		return;
+	}
 	if (false == _CLLTK_FILE_OFFSET_IS_STATIC(in_file_offset)) {
-		ERROR_LOG("invalid in_file_offset at %s:%d for %s", file, line, handler->definition.name);
+		ERROR_LOG("invalid in_file_offset at %s:%d", file, line);
 		return;
 	}
 
@@ -93,7 +97,7 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 	va_end(args);
 
 	// add to ringbuffer
-	add_to_ringbuffer(handler, raw_entry_buffer, raw_entry_size);
+	add_to_ringbuffer(buffer, raw_entry_buffer, raw_entry_size);
 	if (raw_buffer_is_heap_allocated) {
 		memory_heap_free(raw_entry_buffer);
 	}
@@ -102,13 +106,17 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 EXPORT_SYMBOL(_clltk_static_tracepoint_with_args);
 #endif
 
-void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_handler_t *handler,
+void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_t *buffer,
 										const _clltk_file_offset_t in_file_offset,
 										const char *const file, const uint32_t line,
 										const void *address, uint32_t size_in_bytes)
 {
+	if (buffer == NULL) {
+		ERROR_LOG("unusable tracebuffer at %s:%d", file, line);
+		return;
+	}
 	if (false == _CLLTK_FILE_OFFSET_IS_STATIC(in_file_offset)) {
-		ERROR_LOG("invalid in_file_offset at %s:%d for %s", file, line, handler->definition.name);
+		ERROR_LOG("invalid in_file_offset at %s:%d", file, line);
 		return;
 	}
 
@@ -144,7 +152,7 @@ void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_handler_t *handler,
 	memcpy(&entry_buffer->body[4], address, size_in_bytes);
 
 	// add to ringbuffer
-	add_to_ringbuffer(handler, raw_entry_buffer, raw_entry_size);
+	add_to_ringbuffer(buffer, raw_entry_buffer, raw_entry_size);
 
 	if (raw_buffer_is_heap_allocated) {
 		memory_heap_free(raw_entry_buffer);
@@ -206,7 +214,9 @@ void clltk_dynamic_tracepoint_execution(const char *name, const char *file, cons
 
 	// add to ringbuffer
 	_clltk_tracebuffer_handler_t handler = {{name, 10 * 1024}, {}, 0};
-	add_to_ringbuffer(&handler, raw_entry_buffer, raw_entry_size);
+	_clltk_tracebuffer_init_handler(&handler);
+	add_to_ringbuffer(handler.tracebuffer, raw_entry_buffer, raw_entry_size);
+	_clltk_tracebuffer_reset_handler(&handler);
 
 	if (raw_buffer_is_heap_allocated) {
 		memory_heap_free(raw_entry_buffer);
