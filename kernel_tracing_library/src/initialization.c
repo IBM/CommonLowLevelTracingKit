@@ -77,7 +77,7 @@ static void use_elf_section(const tmp_elf_section_t *const section)
 {
 	for (int tb_index = 0; tb_index < vector_size(section->tracebuffers); tb_index++) {
 		_clltk_tracebuffer_handler_t *const tb = section->tracebuffers[tb_index];
-		if (tb->runtime.tracebuffer == NULL && tb->meta.start == NULL && tb->meta.stop == NULL) {
+		if (tb->tracebuffer == NULL && tb->meta.start == NULL && tb->meta.stop == NULL) {
 			tb->meta.start = section->body;
 			tb->meta.stop = &section->body[section->used];
 			_clltk_tracebuffer_init_handler(tb);
@@ -100,7 +100,7 @@ void _clltk_init_tracing_for_this_module(const struct mod_kallsyms *const allsym
 		if (nameU64 == tb_prefix) {
 			// store each tracebuffer which uses this elf section
 			_clltk_tracebuffer_handler_t *const tb = (_clltk_tracebuffer_handler_t *)ptr;
-			if (tb->runtime.file_offset == 0) {
+			if (tb->meta.file_offset == 0) {
 				tmp_elf_section_t *const elf = get_elf_section(&sectionstable, tb->definition.name);
 				add_tracebuffer_to_elf_section(elf, tb);
 			}

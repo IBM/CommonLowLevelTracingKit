@@ -48,7 +48,7 @@ __attribute__((always_inline)) static inline size_t round_up(size_t value, size_
 _clltk_tracebuffer_t **tracebufferes = NULL;
 
 static bool tracebuffer_struct_matcher(const _clltk_tracebuffer_t *const *const vector_entry,
-										const char *const name)
+									   const char *const name)
 {
 	return name != NULL && 0 == strcmp((*vector_entry)->name, name);
 }
@@ -118,8 +118,7 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 static _clltk_tracebuffer_t *create_tracebuffer_struct(const char *const name, size_t size)
 {
 	// check if already open
-	const vector_entry_match_t match =
-		vector_find(tracebufferes, tracebuffer_struct_matcher, name);
+	const vector_entry_match_t match = vector_find(tracebufferes, tracebuffer_struct_matcher, name);
 	if (match.found)
 		return tracebufferes[match.position];
 
@@ -183,9 +182,9 @@ static _clltk_tracebuffer_t *create_tracebuffer_struct(const char *const name, s
 
 static bool tracebuffer_ready(const _clltk_tracebuffer_handler_t *handler)
 {
-	const bool mapped = handler->runtime.tracebuffer != NULL && handler->runtime.tracebuffer->used;
+	const bool mapped = handler->tracebuffer != NULL && handler->tracebuffer->used;
 	const bool meta_added =
-		(handler->meta.start != handler->meta.stop) ? handler->runtime.file_offset : true;
+		(handler->meta.start != handler->meta.stop) ? handler->meta.file_offset : true;
 	return mapped && meta_added;
 }
 
@@ -201,37 +200,38 @@ _clltk_tracebuffer_t *_clltk_tracebuffer_init_handler(_clltk_tracebuffer_handler
 			}
 		}
 
-		if (buffer->runtime.tracebuffer == NULL) {
-			buffer->runtime.tracebuffer =
+		if (buffer->tracebuffer == NULL) {
+			buffer->tracebuffer =
 				create_tracebuffer_struct(buffer->definition.name, buffer->definition.size);
 		}
-		buffer->runtime.tracebuffer->used++;
+		buffer->tracebuffer->used++;
 	}
 
 	const uint32_t meta_size =
 		(uint32_t)((uint64_t)buffer->meta.stop - (uint64_t)buffer->meta.start);
-	if ((buffer->runtime.file_offset == _clltk_file_offset_unset) && (meta_size > 0)) {
-		buffer->runtime.file_offset =
+	if ((buffer->meta.file_offset == _clltk_file_offset_unset) && (meta_size > 0)) {
+		buffer->meta.file_offset =
 			_clltk_tracebuffer_add_to_stack(buffer, buffer->meta.start, meta_size);
 	}
+	return buffer->tracebuffer;
 }
 
 void _clltk_tracebuffer_reset_handler(_clltk_tracebuffer_handler_t *buffer)
 {
 	SYNC_GLOBAL_LOCK(global_lock); // global lock while removing tracebuffer
-	if (buffer->runtime.tracebuffer == NULL)
+	if (buffer->tracebuffer == NULL)
 		return;
 
-	buffer->runtime.tracebuffer->used--;
-	if (buffer->runtime.tracebuffer->used > 0)
+	buffer->tracebuffer->used--;
+	if (buffer->tracebuffer->used > 0)
 		return;
 
 	const vector_entry_match_t match =
 		vector_find(tracebufferes, tracebuffer_struct_matcher, buffer->definition.name);
 
-	_clltk_tracebuffer_t *const tb = buffer->runtime.tracebuffer;
-	buffer->runtime.tracebuffer = NULL;
-	buffer->runtime.file_offset = 0;
+	_clltk_tracebuffer_t *const tb = buffer->tracebuffer;
+	buffer->tracebuffer = NULL;
+	buffer->meta.file_offset = 0;
 	memory_heap_free(tb->name);
 	tb->used = 0;
 	tb->ringbuffer = NULL;
@@ -245,7 +245,7 @@ void _clltk_tracebuffer_reset_handler(_clltk_tracebuffer_handler_t *buffer)
 
 	if (match.found)
 		vector_remove(tracebufferes, match.position);
-	buffer->runtime.tracebuffer = NULL;
+	buffer->tracebuffer = NULL;
 
 	if (vector_size(tracebufferes) == 0) {
 		vector_free(&tracebufferes);
@@ -297,7 +297,7 @@ _clltk_file_offset_t _clltk_tracebuffer_add_to_stack(_clltk_tracebuffer_handler_
 void add_to_ringbuffer(_clltk_tracebuffer_handler_t *handler, const void *const entry, size_t size)
 {
 	if (tracebuffer_ready(handler)) {
-		_clltk_tracebuffer_t *const tracebuffer = handler->runtime.tracebuffer;
+		_clltk_tracebuffer_t *const tracebuffer = handler->tracebuffer;
 		SYNC_MEMORY_LOCK(lock, tracebuffer->ringbuffer_mutex);
 		if (!lock.locked)
 			ERROR_LOG("could not lock ringbuffer update. ERROR was: %s", lock.error_msg);

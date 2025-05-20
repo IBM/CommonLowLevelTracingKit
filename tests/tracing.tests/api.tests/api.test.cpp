@@ -24,8 +24,8 @@ class api : public testing::Test
 #define Data(_Str_) _Str_, sizeof(_Str_)
 TEST_F(api, full_test)
 {
-	std::vector<_clltk_tracebuffer_handler_t> tbs{{{"first", 1024}, {0, 0}, {0, 0}},
-												  {{"second", 1024}, {0, 0}, {0, 0}}};
+	std::vector<_clltk_tracebuffer_handler_t> tbs{{{"first", 1024}, {}, 0},
+												  {{"second", 1024}, {}, 0}};
 	for (auto &handler : tbs)
 		_clltk_tracebuffer_init_handler(&handler);
 

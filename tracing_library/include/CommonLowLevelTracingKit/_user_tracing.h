@@ -63,8 +63,9 @@ _CLLTK_EXTERN_C_END
 								 {                                                           \
 									 &__start__clltk_##_NAME_##_meta,                        \
 									 &__stop__clltk_##_NAME_##_meta,                         \
+									 _clltk_file_offset_unset,                               \
 								 },                                                          \
-								 {NULL, _clltk_file_offset_unset}};                          \
+								 NULL};                                                      \
                                                                                              \
 	static _clltk_tracebuffer_handler_t *const _clltk_##_NAME_##_ptr                         \
 		__attribute__((used, section("_clltk_tracebuffer_handler_ptr"))) = &_clltk_##_NAME_; \

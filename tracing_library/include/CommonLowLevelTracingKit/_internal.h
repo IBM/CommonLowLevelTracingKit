@@ -29,18 +29,16 @@ enum {
 
 typedef struct _clltk_tracebuffer_handler_t _clltk_tracebuffer_handler_t;
 struct _clltk_tracebuffer_handler_t {
-	struct {
+	const struct {
 		const char *const name;
 		const size_t size;
 	} definition;
 	struct {
 		const void *start;
 		const void *stop;
-	} meta;
-	struct {
-		_clltk_tracebuffer_t *tracebuffer;
 		_clltk_file_offset_t file_offset;
-	} runtime;
+	} meta;
+	_clltk_tracebuffer_t *volatile tracebuffer;
 };
 
 _clltk_tracebuffer_t *_clltk_tracebuffer_init_handler(_clltk_tracebuffer_handler_t *buffer)
@@ -70,16 +68,16 @@ _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_handler_t *buffer,
 	const uintptr_t this_start = (uintptr_t)this_meta;
 	const uintptr_t this_stop = (uintptr_t)this_meta + (uintptr_t)this_meta_size;
 
-	if ((buffer->runtime.file_offset == _clltk_file_offset_unset) && (elf_sec_size > 0))
-		buffer->runtime.file_offset =
+	if ((buffer->meta.file_offset == _clltk_file_offset_unset) && (elf_sec_size > 0))
+		buffer->meta.file_offset =
 			_clltk_tracebuffer_add_to_stack(buffer, (const void *)elf_sec_start, elf_sec_size);
 
-	if (buffer->runtime.file_offset == _clltk_file_offset_invalid)
+	if (buffer->meta.file_offset == _clltk_file_offset_invalid)
 		return _clltk_file_offset_invalid;
 
 	if ((elf_sec_start <= this_start) && (this_stop <= elf_sec_stop)) {
 		// if meta for this tracepoint is in section
-		return buffer->runtime.file_offset + (_clltk_file_offset_t)(this_start - elf_sec_start);
+		return buffer->meta.file_offset + (_clltk_file_offset_t)(this_start - elf_sec_start);
 	} else {
 		// if meta for this tracepoint is not in section
 		// this will happen with template functions

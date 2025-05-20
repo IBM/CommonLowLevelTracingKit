@@ -78,7 +78,7 @@ __attribute__((destructor(102), used)) static void _clltk_destructor(void)
 		/* ------- runtime time stuff ------- */                                              \
 		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                 \
 		if (_clltk_offset == _clltk_file_offset_unset) {                                      \
-			_clltk_offset = tb->runtime.file_offset + _clltktp.in_section_offset;             \
+			_clltk_offset = tb->meta.file_offset + _clltktp.in_section_offset;                \
 		}                                                                                     \
                                                                                               \
 		/* at runtime execute trace point */                                                  \
@@ -102,7 +102,7 @@ __attribute__((destructor(102), used)) static void _clltk_destructor(void)
 		/* ------- runtime time stuff ------- */                                                 \
 		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                    \
 		if (_clltk_offset == _clltk_file_offset_unset) {                                         \
-			_clltk_offset = tb->runtime.file_offset + _clltktp.in_section_offset;                \
+			_clltk_offset = tb->meta.file_offset + _clltktp.in_section_offset;                   \
 		}                                                                                        \
                                                                                                  \
 		/* at runtime execute trace point */                                                     \

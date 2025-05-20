@@ -205,7 +205,7 @@ void clltk_dynamic_tracepoint_execution(const char *name, const char *file, cons
 	pos += (memcpy(pos, message, message_len), message_len);
 
 	// add to ringbuffer
-	_clltk_tracebuffer_handler_t handler = {{name, 10 * 1024}, {NULL, NULL}, {NULL, 0}};
+	_clltk_tracebuffer_handler_t handler = {{name, 10 * 1024}, {}, 0};
 	add_to_ringbuffer(&handler, raw_entry_buffer, raw_entry_size);
 
 	if (raw_buffer_is_heap_allocated) {
