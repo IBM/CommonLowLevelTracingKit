@@ -43,11 +43,6 @@ struct _clltk_tracebuffer_handler_t {
 	} runtime;
 };
 
-static inline bool _clltk_tracebuffer_open(_clltk_tracebuffer_handler_t *buffer)
-{
-	return buffer && buffer->runtime.tracebuffer && buffer->runtime.tracebuffer;
-}
-
 void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 	__attribute__((used, visibility("default")));
 void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
