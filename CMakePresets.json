@@ -21,7 +21,7 @@
             "inherits" : "default",
             "cacheVariables": {
                 "ENABLE_CODE_COVERAGE" : "ON",
-                "CLLTK_EXAMPLES": "OFF"
+                "CLLTK_EXAMPLES": "ON"
             }
         },
         {

@@ -46,5 +46,4 @@ struct _clltk_tracebuffer_t {
 	sync_mutex_t *stack_mutex;
 };
 
-void add_to_ringbuffer(_clltk_tracebuffer_handler_t *_clltk_tracebuffer_handler_t,
-					   const void *const entry, size_t size);
+void add_to_ringbuffer(_clltk_tracebuffer_t *buffer, const void *const entry, size_t size);

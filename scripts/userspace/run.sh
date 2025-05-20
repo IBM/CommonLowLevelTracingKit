@@ -15,14 +15,14 @@ cd ${ROOT_PATH}
 
 BUILD_DIR=${BUILD_DIR:-./build/}
 BUILD_DIR=$(realpath $BUILD_DIR)/
-echo BUILD_DIR="$BUILD_DIR"
+echo "BUILD_DIR = \"$BUILD_DIR\""
 
 EXE_NAME=$1
 shift
 EXE_ARGS=$*
 
-FOUND_FILE=$(find $BUILD_DIR -type f -executable -name "$EXE_NAME" -print -quit)
-echo FOUND_FILE = $FOUND_FILE
+FOUND_FILE=$(find $BUILD_DIR -path "${BUILD_DIR}in_container" -prune -o -type f -executable -name "$EXE_NAME" -print -quit)
+echo "FOUND_FILE = \"$FOUND_FILE\""
 
 if [[ -z "${CLLTK_TRACING_PATH}" ]] ; then
     mkdir -p /tmp/traces

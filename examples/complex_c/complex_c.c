@@ -87,7 +87,7 @@ void macro_as_tracebuffer_name(void)
 
 void dynamic_tracing(void)
 {
-	clltk_dynamic_tracebuffer_creation("SIMPLE_C_dyn", 1);
+	clltk_dynamic_tracebuffer_creation("SIMPLE_C_dyn", 1024);
 	clltk_dynamic_tracepoint_execution("SIMPLE_C_dyn", __FILE__, __LINE__, 0, 0,
 									   "dynamic tracepoint with two args %s %lu", "arg0", 10lu);
 }

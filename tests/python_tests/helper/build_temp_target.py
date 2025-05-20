@@ -74,7 +74,7 @@ def process(file_content, build_musst_fail=False, run_musst_fail=False, runs=1, 
     except RuntimeError as e:
         if run_musst_fail:
             tmp.cleanup()
-            return None
+            return e.args[0]
         else:
             raise e
     if run_musst_fail:
