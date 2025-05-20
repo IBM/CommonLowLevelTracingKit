@@ -19,9 +19,9 @@ class tracebuffer_add_to_stack : public ::testing::Test
 
 TEST_F(tracebuffer_add_to_stack, simple)
 {
-	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {nullptr, nullptr}, {nullptr, 0}};
-	_clltk_tracebuffer_init(&handler);
-	auto &th = handler.runtime.tracebuffer;
+	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {}, 0};
+	_clltk_tracebuffer_init_handler(&handler);
+	auto &th = handler.tracebuffer;
 	ASSERT_NE(th, nullptr);
 
 	std::string str = "data set from simple";
@@ -31,9 +31,9 @@ TEST_F(tracebuffer_add_to_stack, simple)
 
 TEST_F(tracebuffer_add_to_stack, twice_same)
 {
-	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {nullptr, nullptr}, {nullptr, 0}};
-	_clltk_tracebuffer_init(&handler);
-	auto &th = handler.runtime.tracebuffer;
+	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {}, 0};
+	_clltk_tracebuffer_init_handler(&handler);
+	auto &th = handler.tracebuffer;
 	ASSERT_NE(th, nullptr);
 
 	// add first time
@@ -50,9 +50,9 @@ TEST_F(tracebuffer_add_to_stack, twice_same)
 
 TEST_F(tracebuffer_add_to_stack, twice_different)
 {
-	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {nullptr, nullptr}, {nullptr, 0}};
-	_clltk_tracebuffer_init(&handler);
-	auto &th = handler.runtime.tracebuffer;
+	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {}, 0};
+	_clltk_tracebuffer_init_handler(&handler);
+	auto &th = handler.tracebuffer;
 	ASSERT_NE(th, nullptr);
 
 	// add first time
@@ -71,9 +71,9 @@ TEST_F(tracebuffer_add_to_stack, twice_different)
 
 TEST_F(tracebuffer_add_to_stack, bigger_than_one_page)
 {
-	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {nullptr, nullptr}, {nullptr, 0}};
-	_clltk_tracebuffer_init(&handler);
-	auto &th = handler.runtime.tracebuffer;
+	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {}, 0};
+	_clltk_tracebuffer_init_handler(&handler);
+	auto &th = handler.tracebuffer;
 	ASSERT_NE(th, nullptr);
 
 	// add first time

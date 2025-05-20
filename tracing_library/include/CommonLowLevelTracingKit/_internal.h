@@ -43,9 +43,10 @@ struct _clltk_tracebuffer_handler_t {
 	} runtime;
 };
 
-void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
+_clltk_tracebuffer_t *_clltk_tracebuffer_init_handler(_clltk_tracebuffer_handler_t *buffer)
 	__attribute__((used, visibility("default")));
-void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
+
+void _clltk_tracebuffer_reset_handler(_clltk_tracebuffer_handler_t *buffer)
 	__attribute__((used, visibility("default")));
 
 _clltk_file_offset_t _clltk_tracebuffer_add_to_stack(_clltk_tracebuffer_handler_t *buffer,

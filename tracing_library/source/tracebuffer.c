@@ -47,7 +47,7 @@ __attribute__((always_inline)) static inline size_t round_up(size_t value, size_
 
 _clltk_tracebuffer_t **tracebufferes = NULL;
 
-static bool tracebuffer_handler_matcher(const _clltk_tracebuffer_t *const *const vector_entry,
+static bool tracebuffer_struct_matcher(const _clltk_tracebuffer_t *const *const vector_entry,
 										const char *const name)
 {
 	return name != NULL && 0 == strcmp((*vector_entry)->name, name);
@@ -115,11 +115,11 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 }
 
 // not thread safe
-static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t size)
+static _clltk_tracebuffer_t *create_tracebuffer_struct(const char *const name, size_t size)
 {
 	// check if already open
 	const vector_entry_match_t match =
-		vector_find(tracebufferes, tracebuffer_handler_matcher, name);
+		vector_find(tracebufferes, tracebuffer_struct_matcher, name);
 	if (match.found)
 		return tracebufferes[match.position];
 
@@ -189,7 +189,7 @@ static bool tracebuffer_ready(const _clltk_tracebuffer_handler_t *handler)
 	return mapped && meta_added;
 }
 
-void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
+_clltk_tracebuffer_t *_clltk_tracebuffer_init_handler(_clltk_tracebuffer_handler_t *buffer)
 {
 	{ // new scope so that global lock is tidied up before add_to_stack
 	  // lock
@@ -203,7 +203,7 @@ void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 
 		if (buffer->runtime.tracebuffer == NULL) {
 			buffer->runtime.tracebuffer =
-				tracebuffer_open(buffer->definition.name, buffer->definition.size);
+				create_tracebuffer_struct(buffer->definition.name, buffer->definition.size);
 		}
 		buffer->runtime.tracebuffer->used++;
 	}
@@ -216,7 +216,7 @@ void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 	}
 }
 
-void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
+void _clltk_tracebuffer_reset_handler(_clltk_tracebuffer_handler_t *buffer)
 {
 	SYNC_GLOBAL_LOCK(global_lock); // global lock while removing tracebuffer
 	if (buffer->runtime.tracebuffer == NULL)
@@ -227,7 +227,7 @@ void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
 		return;
 
 	const vector_entry_match_t match =
-		vector_find(tracebufferes, tracebuffer_handler_matcher, buffer->definition.name);
+		vector_find(tracebufferes, tracebuffer_struct_matcher, buffer->definition.name);
 
 	_clltk_tracebuffer_t *const tb = buffer->runtime.tracebuffer;
 	buffer->runtime.tracebuffer = NULL;
@@ -261,8 +261,8 @@ _clltk_file_offset_t _clltk_tracebuffer_add_to_stack(_clltk_tracebuffer_handler_
 		return _clltk_file_offset_invalid;
 	}
 
-	// use the address because _clltk_tracebuffer_init will change it
-	_clltk_tracebuffer_t *const *const tracebuffer = &handler->runtime.tracebuffer;
+	// use the address because _clltk_tracebuffer_init_handler will change it
+	_clltk_tracebuffer_t *volatile const *const tracebuffer = &handler->tracebuffer;
 
 	// do not use tracebuffer_ready in if, because it also checks if meta where added
 	if ((*tracebuffer) != NULL && (*tracebuffer)->used) {
@@ -277,9 +277,9 @@ _clltk_file_offset_t _clltk_tracebuffer_add_to_stack(_clltk_tracebuffer_handler_
 	} else {
 		// maybe before constructor of clltk or after constructor of clltk
 		_clltk_file_offset_t file_offset = _clltk_file_offset_invalid;
-		_clltk_tracebuffer_init(handler);
+		_clltk_tracebuffer_init_handler(handler);
 
-		{ // new scope so that locks are tidied up before _clltk_tracebuffer_deinit
+		{ // new scope so that locks are tidied up before _clltk_tracebuffer_reset_handler
 			SYNC_GLOBAL_LOCK(global_lock);
 			SYNC_MEMORY_LOCK(lock, (*tracebuffer)->stack_mutex);
 			if (!lock.locked) {
@@ -289,7 +289,7 @@ _clltk_file_offset_t _clltk_tracebuffer_add_to_stack(_clltk_tracebuffer_handler_
 				file_offset = unique_stack_add(&(*tracebuffer)->stack, new_entry, new_entry_size);
 			}
 		}
-		_clltk_tracebuffer_deinit(handler);
+		_clltk_tracebuffer_reset_handler(handler);
 		return file_offset;
 	}
 }
@@ -306,9 +306,9 @@ void add_to_ringbuffer(_clltk_tracebuffer_handler_t *handler, const void *const 
 		return;
 	} else {
 		// maybe before constructor of clltk or after constructor of clltk
-		_clltk_tracebuffer_init(handler);
-		_clltk_tracebuffer_t *const tracebuffer = handler->runtime.tracebuffer;
-		{ // new scope so that locks are tidied up before _clltk_tracebuffer_deinit
+		_clltk_tracebuffer_init_handler(handler);
+		_clltk_tracebuffer_t *const tracebuffer = handler->tracebuffer;
+		{ // new scope so that locks are tidied up before _clltk_tracebuffer_reset_handler
 			SYNC_MEMORY_LOCK(lock, tracebuffer->ringbuffer_mutex);
 			if (!lock.locked) {
 				ERROR_AND_EXIT("could not lock tracebuffer for ringbuffer update. ERROR was: %s",
@@ -316,13 +316,13 @@ void add_to_ringbuffer(_clltk_tracebuffer_handler_t *handler, const void *const 
 			}
 			ringbuffer_in(tracebuffer->ringbuffer, entry, size);
 		}
-		_clltk_tracebuffer_deinit(handler);
+		_clltk_tracebuffer_reset_handler(handler);
 	}
 }
 
 void clltk_dynamic_tracebuffer_creation(const char *buffer_name, size_t size)
 {
-	_clltk_tracebuffer_handler_t buffer = {{buffer_name, size}, {NULL, NULL}, {NULL, 0}};
-	_clltk_tracebuffer_init(&buffer);
-	_clltk_tracebuffer_deinit(&buffer);
+	_clltk_tracebuffer_handler_t buffer = {{buffer_name, size}, {}, 0};
+	_clltk_tracebuffer_init_handler(&buffer);
+	_clltk_tracebuffer_reset_handler(&buffer);
 }

@@ -35,10 +35,7 @@ __attribute__((constructor(102), used)) static void _clltk_constructor(void)
 	extern _clltk_tracebuffer_handler_t *const __stop__clltk_tracebuffer_handler_ptr;
 	for (_clltk_tracebuffer_handler_t *const *handler = &__start__clltk_tracebuffer_handler_ptr;
 		 handler < &__stop__clltk_tracebuffer_handler_ptr; handler++) {
-		if ((*handler)->meta.start == (*handler)->meta.stop)
-			continue;
-		// no tracepoint for this tracebuffer, so do not init tracebuffer
-		_clltk_tracebuffer_init(*handler);
+		_clltk_tracebuffer_init_handler(*handler);
 	}
 }
 
@@ -48,10 +45,7 @@ __attribute__((destructor(102), used)) static void _clltk_destructor(void)
 	extern _clltk_tracebuffer_handler_t *const __stop__clltk_tracebuffer_handler_ptr;
 	for (_clltk_tracebuffer_handler_t *const *handler = &__start__clltk_tracebuffer_handler_ptr;
 		 handler < &__stop__clltk_tracebuffer_handler_ptr; handler++) {
-		if ((*handler)->meta.start == (*handler)->meta.stop)
-			continue;
-		// no tracepoint for this tracebuffer, so do not init tracebuffer
-		_clltk_tracebuffer_deinit(*handler);
+		_clltk_tracebuffer_reset_handler(*handler);
 	}
 }
 

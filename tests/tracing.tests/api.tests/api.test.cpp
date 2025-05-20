@@ -27,7 +27,7 @@ TEST_F(api, full_test)
 	std::vector<_clltk_tracebuffer_handler_t> tbs{{{"first", 1024}, {0, 0}, {0, 0}},
 												  {{"second", 1024}, {0, 0}, {0, 0}}};
 	for (auto &handler : tbs)
-		_clltk_tracebuffer_init(&handler);
+		_clltk_tracebuffer_init_handler(&handler);
 
 	for (auto &tb : tbs) {
 		for (size_t i = 0; i < 256; i++)
