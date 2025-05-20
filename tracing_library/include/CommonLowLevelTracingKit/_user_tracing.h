@@ -61,7 +61,7 @@ _CLLTK_EXTERN_C_END
 
 #define _CLLTK_STATIC_TRACEBUFFER(_NAME_, _SIZE_)                                            \
 	_CLLTK_EXTERN_C_BEGIN                                                                    \
-	static const char _clltk_##_NAME_##_meta_dummy[8] _CLLTK_PLACE_IN(_BUFFER_) = "<clltk>"; \
+	static const char _clltk_##_NAME_##_meta_dummy[8] _CLLTK_PLACE_IN(_NAME_) = "<clltk>"; \
 	extern const void *const __start__clltk_##_NAME_##_meta;                                 \
 	extern const void *const __stop__clltk_##_NAME_##_meta;                                  \
                                                                                              \

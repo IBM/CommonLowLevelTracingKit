@@ -89,3 +89,19 @@ class valid_build_tests(unittest.TestCase):
                 data = process(file_content, language=language)
                 self.assertEqual(len(data), TRACEBUFFER_INFO_COUNT)
                 pass
+
+    def test_no_tracepoint(self: unittest.TestCase):
+        for language in [Langauge.C, Langauge.CPP]:
+            with self.subTest(language=language):
+                file_content = \
+                    '''
+                    #include "CommonLowLevelTracingKit/tracing.h"
+                    CLLTK_TRACEBUFFER(BUFFER, 64);
+                    int main(void)
+                    {
+                        return 0;
+                    }
+                    '''
+                data = process(file_content, language=language)
+                self.assertEqual(len(data), TRACEBUFFER_INFO_COUNT)
+                pass
