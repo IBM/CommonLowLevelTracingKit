@@ -36,7 +36,7 @@ __attribute__((constructor(101), used)) static void _clltk_constructor(void)
 	for (_clltk_tracebuffer_handler_t *const *handler_ptr = &__start__clltk_tracebuffer_handler_ptr;
 		 handler_ptr < &__stop__clltk_tracebuffer_handler_ptr; handler_ptr++) {
 		_clltk_tracebuffer_handler_t *const handler = *handler_ptr;
-		_clltk_tracebuffer_init_handler(handler);
+		_clltk_handdler_open(handler);
 		const uint32_t meta_size =
 			(uint32_t)((uint64_t)handler->meta.stop - (uint64_t)handler->meta.start);
 		if ((handler->meta.file_offset == _clltk_file_offset_unset) && (meta_size > 0)) {
@@ -52,7 +52,7 @@ __attribute__((destructor(101), used)) static void _clltk_destructor(void)
 	extern _clltk_tracebuffer_handler_t *const __stop__clltk_tracebuffer_handler_ptr;
 	for (_clltk_tracebuffer_handler_t *const *handler = &__start__clltk_tracebuffer_handler_ptr;
 		 handler < &__stop__clltk_tracebuffer_handler_ptr; handler++) {
-		_clltk_tracebuffer_reset_handler(*handler);
+		_clltk_handler_close(*handler);
 	}
 }
 

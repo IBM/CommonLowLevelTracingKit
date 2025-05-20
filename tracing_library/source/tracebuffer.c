@@ -180,7 +180,7 @@ static _clltk_tracebuffer_t *create_tracebuffer_struct(const char *const name, s
 	return tracebuffer_handler;
 }
 
-_clltk_tracebuffer_t *_clltk_tracebuffer_init_handler(_clltk_tracebuffer_handler_t *handler)
+_clltk_tracebuffer_t *_clltk_handdler_open(_clltk_tracebuffer_handler_t *handler)
 {
 	SYNC_GLOBAL_LOCK(global_lock);
 	if (tracebufferes == NULL) {
@@ -198,7 +198,7 @@ _clltk_tracebuffer_t *_clltk_tracebuffer_init_handler(_clltk_tracebuffer_handler
 	return handler->tracebuffer;
 }
 
-void _clltk_tracebuffer_reset_handler(_clltk_tracebuffer_handler_t *handler)
+void _clltk_handler_close(_clltk_tracebuffer_handler_t *handler)
 {
 	SYNC_GLOBAL_LOCK(global_lock); // global lock while removing tracebuffer
 	if (handler->tracebuffer == NULL)
@@ -272,6 +272,6 @@ void add_to_ringbuffer(_clltk_tracebuffer_t *buffer, const void *const entry, si
 void clltk_dynamic_tracebuffer_creation(const char *buffer_name, size_t size)
 {
 	_clltk_tracebuffer_handler_t buffer = {{buffer_name, size}, {}, 0};
-	_clltk_tracebuffer_init_handler(&buffer);
-	_clltk_tracebuffer_reset_handler(&buffer);
+	_clltk_handdler_open(&buffer);
+	_clltk_handler_close(&buffer);
 }

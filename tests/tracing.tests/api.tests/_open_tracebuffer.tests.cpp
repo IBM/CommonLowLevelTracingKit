@@ -25,16 +25,16 @@ TEST_P(valid_paths, init_twice_valid)
 	// open first time
 
 	_clltk_tracebuffer_handler_t handler_0 = {{name.data(), 1024}, {}, 0};
-	_clltk_tracebuffer_init_handler(&handler_0);
+	_clltk_handdler_open(&handler_0);
 	EXPECT_NE(handler_0.tracebuffer, nullptr);
 
 	// open second time
 	_clltk_tracebuffer_handler_t handler_1 = {{name.data(), 1024}, {}, 0};
-	_clltk_tracebuffer_init_handler(&handler_1);
+	_clltk_handdler_open(&handler_1);
 	EXPECT_EQ(handler_0.tracebuffer, handler_1.tracebuffer);
 
-	_clltk_tracebuffer_reset_handler(&handler_0);
-	_clltk_tracebuffer_reset_handler(&handler_1);
+	_clltk_handler_close(&handler_0);
+	_clltk_handler_close(&handler_1);
 }
 
 INSTANTIATE_TEST_CASE_P(open_tracebuffer, valid_paths, ::testing::Values("asd", "s"));

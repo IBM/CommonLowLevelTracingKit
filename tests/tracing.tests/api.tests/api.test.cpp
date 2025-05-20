@@ -27,7 +27,7 @@ TEST_F(api, full_test)
 	std::vector<_clltk_tracebuffer_handler_t> handlers{{{"first", 1024}, {}, 0},
 													   {{"second", 1024}, {}, 0}};
 	for (auto &hdl : handlers)
-		_clltk_tracebuffer_init_handler(&hdl);
+		_clltk_handdler_open(&hdl);
 
 	for (auto &hdl : handlers) {
 		for (size_t i = 0; i < 256; i++)
@@ -45,7 +45,7 @@ TEST_F(api, full_test)
 	}
 
 	for (auto &hdl : handlers)
-		_clltk_tracebuffer_reset_handler(&hdl);
+		_clltk_handler_close(&hdl);
 }
 
 TEST_F(api, delete_tracebuffer)

@@ -80,7 +80,7 @@ static void use_elf_section(const tmp_elf_section_t *const section)
 		if (tb->tracebuffer == NULL && tb->meta.start == NULL && tb->meta.stop == NULL) {
 			tb->meta.start = section->body;
 			tb->meta.stop = &section->body[section->used];
-			_clltk_tracebuffer_init_handler(tb);
+			_clltk_handdler_open(tb);
 		}
 	}
 }
@@ -138,7 +138,7 @@ void _clltk_deinit_tracing_for_this_module(const struct mod_kallsyms *const alls
 		memcpy(&nameU64, name, sizeof(nameU64));
 		if (nameU64 == tb_prefix) {
 			_clltk_tracebuffer_handler_t *const tb = (_clltk_tracebuffer_handler_t *)ptr;
-			_clltk_tracebuffer_reset_handler(tb);
+			_clltk_handler_close(tb);
 		}
 	}
 }

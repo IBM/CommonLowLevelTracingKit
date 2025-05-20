@@ -41,10 +41,10 @@ struct _clltk_tracebuffer_handler_t {
 	_clltk_tracebuffer_t *volatile tracebuffer;
 };
 
-_clltk_tracebuffer_t *_clltk_tracebuffer_init_handler(_clltk_tracebuffer_handler_t *handler)
+_clltk_tracebuffer_t *_clltk_handdler_open(_clltk_tracebuffer_handler_t *handler)
 	__attribute__((used, visibility("default")));
 
-void _clltk_tracebuffer_reset_handler(_clltk_tracebuffer_handler_t *handler)
+void _clltk_handler_close(_clltk_tracebuffer_handler_t *handler)
 	__attribute__((used, visibility("default")));
 
 _clltk_file_offset_t _clltk_tracebuffer_add_to_stack(_clltk_tracebuffer_t *buffer,

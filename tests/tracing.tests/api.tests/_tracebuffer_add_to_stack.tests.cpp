@@ -20,20 +20,20 @@ class tracebuffer_add_to_stack : public ::testing::Test
 TEST_F(tracebuffer_add_to_stack, simple)
 {
 	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {}, 0};
-	_clltk_tracebuffer_init_handler(&handler);
+	_clltk_handdler_open(&handler);
 	auto &th = handler.tracebuffer;
 	ASSERT_NE(th, nullptr);
 
 	std::string str = "data set from simple";
 	const auto offset = _clltk_tracebuffer_add_to_stack(th, str.data(), (uint32_t)str.size());
 	EXPECT_GT(offset, 0);
-	_clltk_tracebuffer_reset_handler(&handler);
+	_clltk_handler_close(&handler);
 }
 
 TEST_F(tracebuffer_add_to_stack, twice_same)
 {
 	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {}, 0};
-	_clltk_tracebuffer_init_handler(&handler);
+	_clltk_handdler_open(&handler);
 	auto &th = handler.tracebuffer;
 	ASSERT_NE(th, nullptr);
 
@@ -46,13 +46,13 @@ TEST_F(tracebuffer_add_to_stack, twice_same)
 	const auto offset1 = _clltk_tracebuffer_add_to_stack(th, str.data(), (uint32_t)str.size());
 	EXPECT_EQ(offset0, offset1);
 
-	_clltk_tracebuffer_reset_handler(&handler);
+	_clltk_handler_close(&handler);
 }
 
 TEST_F(tracebuffer_add_to_stack, twice_different)
 {
 	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {}, 0};
-	_clltk_tracebuffer_init_handler(&handler);
+	_clltk_handdler_open(&handler);
 	auto &th = handler.tracebuffer;
 	ASSERT_NE(th, nullptr);
 
@@ -67,13 +67,13 @@ TEST_F(tracebuffer_add_to_stack, twice_different)
 	EXPECT_GT(offset1, 0);
 	EXPECT_NE(offset0, offset1);
 
-	_clltk_tracebuffer_reset_handler(&handler);
+	_clltk_handler_close(&handler);
 }
 
 TEST_F(tracebuffer_add_to_stack, bigger_than_one_page)
 {
 	_clltk_tracebuffer_handler_t handler = {{"simple", 1024}, {}, 0};
-	_clltk_tracebuffer_init_handler(&handler);
+	_clltk_handdler_open(&handler);
 	auto &th = handler.tracebuffer;
 	ASSERT_NE(th, nullptr);
 
@@ -82,5 +82,5 @@ TEST_F(tracebuffer_add_to_stack, bigger_than_one_page)
 	const auto offset0 = _clltk_tracebuffer_add_to_stack(th, data.data(), (uint32_t)data.size());
 	EXPECT_GT(offset0, 0);
 
-	_clltk_tracebuffer_reset_handler(&handler);
+	_clltk_handler_close(&handler);
 }
