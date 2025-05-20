@@ -28,7 +28,6 @@ struct File {
 	const std::string &getFilepath(void) const { return filepath; }
 	const struct stat &getFilStatus(void) const { return status; }
 	size_t getFilSize(void) const { return status.st_size; }
-	const void *const getContent(void) const { return content; }
 
   protected:
 	std::string filepath;
