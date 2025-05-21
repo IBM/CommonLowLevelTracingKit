@@ -139,11 +139,6 @@ target_compile_options(clltk_tracing_static
         ${clltk_private_compiler_flags}
 )
 
-# target_precompile_headers(clltk_tracing_static 
-#     INTERFACE
-#         ${CMAKE_CURRENT_SOURCE_DIR}/include/CommonLowLevelTracingKit/tracing.h
-# )
-
 add_library(clltk_tracing_shared SHARED
     ${CLLTK_TRACING_SOURCE}
 )
@@ -185,12 +180,6 @@ target_link_options(clltk_tracing_shared
         -Wl,--gc-sections
 )
 
-# target_precompile_headers(clltk_tracing_shared 
-#     INTERFACE
-#         ${CMAKE_CURRENT_SOURCE_DIR}/include/CommonLowLevelTracingKit/tracing.h
-# )
-
-
 # create alias target clltk_tracing based on set cache option
 string(TOUPPER "${CLLTK_TRACING_LIB_TYPE}" CLLTK_TRACING_LIB_TYPE)
 if(${CLLTK_TRACING_LIB_TYPE} STREQUAL "STATIC")
@@ -209,7 +198,6 @@ set(PULIC_HEADERS
     include/CommonLowLevelTracingKit/_user_tracing.h
     include/CommonLowLevelTracingKit/tracing.h
 )
-
 
 set_target_properties(clltk_tracing_static PROPERTIES 
     PUBLIC_HEADER "${PULIC_HEADERS}"
