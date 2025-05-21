@@ -116,7 +116,9 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 
 static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t size)
 {
-	SYNC_GLOBAL_LOCK(global_lock);
+	if ((name == NULL)) {
+		return NULL;
+	}
 
 	// check if already open
 	const vector_entry_match_t match =
@@ -182,39 +184,25 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 	return tracebuffer_handler;
 }
 
-static bool tracebuffer_ready(const _clltk_tracebuffer_handler_t *handler)
-{
-	const bool mapped = handler->runtime.tracebuffer != NULL && handler->runtime.tracebuffer->used;
-	const bool meta_added =
-		(handler->meta.start != handler->meta.stop) ? handler->runtime.file_offset : true;
-	return mapped && meta_added;
-}
-
 void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 {
-	{ // new scope so that global lock is tidied up before next stuff which may also requires global
-	  // lock
-		SYNC_GLOBAL_LOCK(global_lock);
+	SYNC_GLOBAL_LOCK(global_lock);
+	if (tracebufferes == NULL) {
+		tracebufferes = vector_create();
 		if (tracebufferes == NULL) {
-			tracebufferes = vector_create();
-			if (tracebufferes == NULL) {
-				ERROR_AND_EXIT("could not create vector for tracebuffers");
-			}
+			ERROR_AND_EXIT("could not create vector for tracebuffers");
 		}
 	}
 
 	if (buffer->runtime.tracebuffer == NULL) {
 		buffer->runtime.tracebuffer =
 			tracebuffer_open(buffer->definition.name, buffer->definition.size);
+		if (buffer->runtime.tracebuffer == NULL) {
+			ERROR_LOG("could not open tracebuffer");
+			return;
+		}
 	}
 	buffer->runtime.tracebuffer->used++;
-
-	const uint32_t meta_size =
-		(uint32_t)((uint64_t)buffer->meta.stop - (uint64_t)buffer->meta.start);
-	if ((buffer->runtime.file_offset == _clltk_file_offset_unset) && (meta_size > 0)) {
-		buffer->runtime.file_offset =
-			_clltk_tracebuffer_add_to_stack(buffer, buffer->meta.start, meta_size);
-	}
 }
 
 void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
@@ -262,63 +250,35 @@ _clltk_file_offset_t _clltk_tracebuffer_add_to_stack(_clltk_tracebuffer_handler_
 		return _clltk_file_offset_invalid;
 	}
 
-	// use the address because _clltk_tracebuffer_init will change it
-	_clltk_tracebuffer_t *const *const tracebuffer = &handler->runtime.tracebuffer;
+	_clltk_tracebuffer_t *const buffer = handler->runtime.tracebuffer;
 
-	// do not use tracebuffer_ready in if, because it also checks if meta where added
-	if ((*tracebuffer) != NULL && (*tracebuffer)->used) {
-
-		SYNC_GLOBAL_LOCK(global_lock);
-		SYNC_MEMORY_LOCK(lock, (*tracebuffer)->stack_mutex);
-		if (!lock.locked) {
-			ERROR_LOG("could not lock stack update. ERROR was: %s", lock.error_msg);
-			return _clltk_file_offset_invalid;
-		}
-		return unique_stack_add(&(*tracebuffer)->stack, new_entry, new_entry_size);
-	} else {
-		// maybe before constructor of clltk or after constructor of clltk
-		_clltk_file_offset_t file_offset = _clltk_file_offset_invalid;
-		_clltk_tracebuffer_init(handler);
-
-		{ // new scope so that locks are tidied up before _clltk_tracebuffer_deinit
-			SYNC_GLOBAL_LOCK(global_lock);
-			SYNC_MEMORY_LOCK(lock, (*tracebuffer)->stack_mutex);
-			if (!lock.locked) {
-				ERROR_LOG("could not lock stack update. ERROR was: %s", lock.error_msg);
-				file_offset = _clltk_file_offset_invalid;
-			} else {
-				file_offset = unique_stack_add(&(*tracebuffer)->stack, new_entry, new_entry_size);
-			}
-		}
-		_clltk_tracebuffer_deinit(handler);
-		return file_offset;
+	if (buffer == NULL) {
+		ERROR_LOG("no tracebuffer set");
+		return _clltk_file_offset_invalid;
 	}
+
+	SYNC_MEMORY_LOCK(lock, buffer->stack_mutex);
+	if (!lock.locked) {
+		ERROR_LOG("could not lock stack update. ERROR was: %s", lock.error_msg);
+		return _clltk_file_offset_invalid;
+	}
+	return unique_stack_add(&buffer->stack, new_entry, new_entry_size);
 }
 
 void add_to_ringbuffer(_clltk_tracebuffer_handler_t *handler, const void *const entry, size_t size)
 {
-	if (tracebuffer_ready(handler)) {
-		_clltk_tracebuffer_t *const tracebuffer = handler->runtime.tracebuffer;
-		SYNC_MEMORY_LOCK(lock, tracebuffer->ringbuffer_mutex);
-		if (!lock.locked)
-			ERROR_LOG("could not lock ringbuffer update. ERROR was: %s", lock.error_msg);
-		else if (0 == ringbuffer_in(tracebuffer->ringbuffer, entry, size))
-			ERROR_LOG("ringbuffer in failed for add_to_ringbuffer");
+	_clltk_tracebuffer_t *const buffer = handler->runtime.tracebuffer;
+	if (buffer == NULL) {
+		ERROR_LOG("no tracebuffer set");
 		return;
-	} else {
-		// maybe before constructor of clltk or after constructor of clltk
-		_clltk_tracebuffer_init(handler);
-		_clltk_tracebuffer_t *const tracebuffer = handler->runtime.tracebuffer;
-		{ // new scope so that locks are tidied up before _clltk_tracebuffer_deinit
-			SYNC_MEMORY_LOCK(lock, tracebuffer->ringbuffer_mutex);
-			if (!lock.locked) {
-				ERROR_AND_EXIT("could not lock tracebuffer for ringbuffer update. ERROR was: %s",
-							   lock.error_msg);
-			}
-			ringbuffer_in(tracebuffer->ringbuffer, entry, size);
-		}
-		_clltk_tracebuffer_deinit(handler);
 	}
+
+	SYNC_MEMORY_LOCK(lock, buffer->ringbuffer_mutex);
+	if (!lock.locked)
+		ERROR_LOG("could not lock ringbuffer update. ERROR was: %s", lock.error_msg);
+	else if (0 == ringbuffer_in(buffer->ringbuffer, entry, size))
+		ERROR_LOG("ringbuffer in failed for add_to_ringbuffer");
+	return;
 }
 
 void clltk_dynamic_tracebuffer_creation(const char *buffer_name, size_t size)

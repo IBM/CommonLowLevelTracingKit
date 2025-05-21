@@ -47,4 +47,4 @@ struct _clltk_tracebuffer_t {
 };
 
 void add_to_ringbuffer(_clltk_tracebuffer_handler_t *_clltk_tracebuffer_handler_t,
-					   const void *const entry, size_t size);
+					   const void *const entry, size_t size) __attribute__((nonnull(1)));
