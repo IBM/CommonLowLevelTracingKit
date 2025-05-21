@@ -27,6 +27,8 @@ TEST_F(tracebuffer_add_to_stack, simple)
 	std::string str = "data set from simple";
 	const auto offset = _clltk_tracebuffer_add_to_stack(&handler, str.data(), (uint32_t)str.size());
 	EXPECT_GT(offset, 0);
+
+	_clltk_tracebuffer_deinit(&handler);
 }
 
 TEST_F(tracebuffer_add_to_stack, twice_same)
@@ -46,6 +48,8 @@ TEST_F(tracebuffer_add_to_stack, twice_same)
 	const auto offset1 =
 		_clltk_tracebuffer_add_to_stack(&handler, str.data(), (uint32_t)str.size());
 	EXPECT_EQ(offset0, offset1);
+
+	_clltk_tracebuffer_deinit(&handler);
 }
 
 TEST_F(tracebuffer_add_to_stack, twice_different)
@@ -67,6 +71,8 @@ TEST_F(tracebuffer_add_to_stack, twice_different)
 		_clltk_tracebuffer_add_to_stack(&handler, str1.data(), (uint32_t)str1.size());
 	EXPECT_GT(offset1, 0);
 	EXPECT_NE(offset0, offset1);
+
+	_clltk_tracebuffer_deinit(&handler);
 }
 
 TEST_F(tracebuffer_add_to_stack, bigger_than_one_page)
@@ -81,4 +87,6 @@ TEST_F(tracebuffer_add_to_stack, bigger_than_one_page)
 	const auto offset0 =
 		_clltk_tracebuffer_add_to_stack(&handler, data.data(), (uint32_t)data.size());
 	EXPECT_GT(offset0, 0);
+
+	_clltk_tracebuffer_deinit(&handler);
 }

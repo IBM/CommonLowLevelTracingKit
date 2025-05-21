@@ -41,6 +41,9 @@ TEST_F(api, full_test)
 			_clltk_tracebuffer_add_to_stack(&tb, str.data(), (uint32_t)str.size());
 		}
 	}
+
+	for (auto &tb : tbs)
+		_clltk_tracebuffer_deinit(&tb);
 }
 
 TEST_F(api, delete_tracebuffer)

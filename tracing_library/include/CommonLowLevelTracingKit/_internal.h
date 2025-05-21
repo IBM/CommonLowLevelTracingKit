@@ -29,7 +29,7 @@ enum {
 
 typedef struct _clltk_tracebuffer_handler_t _clltk_tracebuffer_handler_t;
 struct _clltk_tracebuffer_handler_t {
-	struct {
+	const struct {
 		const char *const name;
 		const size_t size;
 	} definition;
@@ -42,11 +42,6 @@ struct _clltk_tracebuffer_handler_t {
 		_clltk_file_offset_t file_offset;
 	} runtime;
 };
-
-static inline bool _clltk_tracebuffer_open(_clltk_tracebuffer_handler_t *buffer)
-{
-	return buffer && buffer->runtime.tracebuffer && buffer->runtime.tracebuffer;
-}
 
 void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 	__attribute__((used, visibility("default")));

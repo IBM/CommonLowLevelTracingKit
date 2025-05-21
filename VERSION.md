@@ -1,6 +1,8 @@
-1.2.42
+1.2.43
 
 # Change log
+## 1.2.43
+- make tracing thread safe
 ## 1.2.41
 - fix potential memory leak in snapshot
 ## 1.2.40
