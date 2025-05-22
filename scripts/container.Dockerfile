@@ -76,6 +76,7 @@ RUN dnf -y install \
     qemu-system-x86 \
     ncurses-devel \
     openssl-devel \
+    openssl-devel-engine \
     kmod
 
 FROM kernel as dev

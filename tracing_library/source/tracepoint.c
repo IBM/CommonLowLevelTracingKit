@@ -45,7 +45,8 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 										...)
 {
 	if (false == _CLLTK_FILE_OFFSET_IS_STATIC(in_file_offset)) {
-		ERROR_LOG("invalid in_file_offset at %s:%d for %s", file, line, handler->definition.name);
+		ERROR_LOG("invalid in_file_offset(%lu) at %s:%d for %s", in_file_offset, file, line,
+				  handler->definition.name);
 		return;
 	}
 
@@ -108,7 +109,8 @@ void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_handler_t *handler,
 										const void *address, uint32_t size_in_bytes)
 {
 	if (false == _CLLTK_FILE_OFFSET_IS_STATIC(in_file_offset)) {
-		ERROR_LOG("invalid in_file_offset at %s:%d for %s", file, line, handler->definition.name);
+		ERROR_LOG("invalid in_file_offset(%lu) at %s:%d for %s", in_file_offset, file, line,
+				  handler->definition.name);
 		return;
 	}
 

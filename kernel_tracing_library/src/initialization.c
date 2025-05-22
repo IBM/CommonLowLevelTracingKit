@@ -81,6 +81,12 @@ static void use_elf_section(const tmp_elf_section_t *const section)
 			tb->meta.start = section->body;
 			tb->meta.stop = &section->body[section->used];
 			_clltk_tracebuffer_init(tb);
+			if (tb->runtime.tracebuffer != NULL) {
+				const uint32_t meta_size =
+					(uint32_t)((uint64_t)tb->meta.stop - (uint64_t)tb->meta.start);
+				tb->runtime.file_offset =
+					_clltk_tracebuffer_add_to_stack(tb, tb->meta.start, meta_size);
+			}
 		}
 	}
 }
