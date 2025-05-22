@@ -65,8 +65,10 @@ _CLLTK_EXTERN_C_END
 
 #define _CLLTK_STATIC_TRACEBUFFER(_NAME_, _SIZE_)                                            \
 	_CLLTK_EXTERN_C_BEGIN                                                                    \
-	extern const void *const __start__clltk_##_NAME_##_meta __attribute__((weak));           \
-	extern const void *const __stop__clltk_##_NAME_##_meta __attribute__((weak));            \
+	extern const uint8_t *const __start__clltk_##_NAME_##_meta                               \
+		__attribute__((weak, visibility("hidden")));                                         \
+	extern const uint8_t *const __stop__clltk_##_NAME_##_meta                                \
+		__attribute__((weak, visibility("hidden")));                                         \
                                                                                              \
 	static _clltk_tracebuffer_handler_t _clltk_##_NAME_                                      \
 		__attribute__((used)) = {{#_NAME_, _SIZE_},                                          \
