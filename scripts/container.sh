@@ -16,7 +16,7 @@ ROOT_PATH=$(git rev-parse --show-toplevel)
 cd ${ROOT_PATH}
 
 set -e
-if [ -n "$TRAVIS_PULL_REQUEST" ]; then
+if [ -n "$CI" ]; then
     set -v
     set -x
 fi
@@ -107,7 +107,7 @@ container_cmd+=" --security-opt=seccomp=unconfined"
 container_cmd+=" --user root"
 
 # forward pull request info
-container_cmd+=" --env CLLTK_CI_VERSION_STEP_REQUIRED=${TRAVIS_PULL_REQUEST:-"true"}"
+container_cmd+=" --env CLLTK_CI_VERSION_STEP_REQUIRED=${CLLTK_CI_VERSION_STEP_REQUIRED:-"true"}"
 
 # container run option
 container_cmd+=" --entrypoint /bin/bash"
