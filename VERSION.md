@@ -1,6 +1,8 @@
-1.2.44
+1.2.45
 
 # Change log
+## 1.2.45
+- CI changes
 ## 1.2.44
 - update tracebuffer init at runtime in kernel tracing to match user space 
 ## 1.2.43
