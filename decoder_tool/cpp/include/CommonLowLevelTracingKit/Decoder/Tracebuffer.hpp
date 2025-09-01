@@ -44,7 +44,7 @@ namespace CommonLowLevelTracingKit::decoder {
 		[[nodiscard]] virtual uint64_t pending() noexcept = 0;
 		virtual uint64_t current_top_entries_nr() const noexcept = 0;
 		[[nodiscard]] virtual TracepointPtr
-		next(const TracepointFilterFunc & = TracepointFilterFunc{}) = 0;
+		next(const TracepointFilterFunc & = TracepointFilterFunc{}) noexcept = 0;
 
 	  protected:
 		SyncTracebuffer(const std::filesystem::path &path) noexcept
@@ -56,10 +56,10 @@ namespace CommonLowLevelTracingKit::decoder {
 	using SnapTracebufferCollection = std::vector<SnapTracebufferPtr>;
 	struct EXPORT SnapTracebuffer : Tracebuffer {
 		static SnapTracebufferCollection collect(const std::filesystem::path &,
-												 TracebufferFilterFunc tbFilter = {},
-												 TracepointFilterFunc tpFilter = {});
+												 const TracebufferFilterFunc &tbFilter = {},
+												 const TracepointFilterFunc &tpFilter = {});
 		static SnapTracebufferPtr make(const std::filesystem::path &,
-									   TracepointFilterFunc tpFilte = {});
+									   const TracepointFilterFunc &tpFilte = {});
 
 		TracepointCollection tracepoints;
 

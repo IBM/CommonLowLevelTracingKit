@@ -92,7 +92,10 @@ CLLTK_TRACEBUFFER(GEN_FORMAT_C, 16*4096)
 
 int main(void)
 {{
+    _CLLTK_PRAGMA_DIAG(push)
+    _CLLTK_PRAGMA_DIAG(ignored "-Wformat")
     { get_tracepoints() }
+    _CLLTK_PRAGMA_DIAG(pop)
     return 0;
 }}
 ''')

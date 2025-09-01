@@ -14,7 +14,7 @@
 
 #include "CommonLowLevelTracingKit/_arguments.h"
 
-#ifdef __cplusplus
+#ifdef CLLTK_FOR_CPP
 extern "C" {
 #endif
 
@@ -59,32 +59,10 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *buffer,
 										...)
 	__attribute__((nonnull(1, 3, 5), format(printf, 6, 7), used, visibility("default")));
 
-static inline _clltk_file_offset_t
-_clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_handler_t *buffer,
-									  const void *const this_meta, const uint32_t this_meta_size)
-{
-	const uintptr_t elf_sec_start = (uintptr_t)buffer->meta.start;
-	const uintptr_t elf_sec_stop = (uintptr_t)buffer->meta.stop;
-	const uint32_t elf_sec_size = (uint32_t)(elf_sec_stop - elf_sec_start);
-	const uintptr_t this_start = (uintptr_t)this_meta;
-	const uintptr_t this_stop = (uintptr_t)this_meta + (uintptr_t)this_meta_size;
-
-	if ((buffer->runtime.file_offset == _clltk_file_offset_unset) && (elf_sec_size > 0))
-		buffer->runtime.file_offset =
-			_clltk_tracebuffer_add_to_stack(buffer, (const void *)elf_sec_start, elf_sec_size);
-
-	if (buffer->runtime.file_offset == _clltk_file_offset_invalid)
-		return _clltk_file_offset_invalid;
-
-	if ((elf_sec_start <= this_start) && (this_stop <= elf_sec_stop)) {
-		// if meta for this tracepoint is in section
-		return buffer->runtime.file_offset + (_clltk_file_offset_t)(this_start - elf_sec_start);
-	} else {
-		// if meta for this tracepoint is not in section
-		// this will happen with template functions
-		return _clltk_tracebuffer_add_to_stack(buffer, this_meta, this_meta_size);
-	}
-}
+_clltk_file_offset_t _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_handler_t *buffer,
+														   const void *const this_meta,
+														   const uint32_t this_meta_size)
+	__attribute__((nonnull(1), used, visibility("default")));
 
 void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_handler_t *buffer,
 										const _clltk_file_offset_t in_file_offset,
@@ -92,7 +70,7 @@ void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_handler_t *buffer,
 										const void *address, uint32_t size_in_bytes)
 	__attribute__((nonnull(1), used, visibility("default")));
 
-#ifdef __cplusplus
+#ifdef CLLTK_FOR_CPP
 }
 #endif
 

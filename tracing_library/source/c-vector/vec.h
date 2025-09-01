@@ -31,12 +31,8 @@ typedef unsigned char vec_type_t; // stores the number of bytes for a type
 #define vector_free(vec_addr) (_vector_free((vector *)vec_addr))
 #define vector_add_asg(vec_addr) \
 	((__typeof__(*vec_addr))(_vector_add((vector *)vec_addr, sizeof(__typeof__(**vec_addr)))))
-#define vector_insert_asg(vec_addr, pos)                                                        \
-	((__typeof__(*vec_addr))(_vector_insert((vector *)vec_addr, sizeof(__typeof__(**vec_addr)), \
-											pos)))
 
 #define vector_add(vec_addr, value) (*vector_add_asg(vec_addr) = value)
-#define vector_insert(vec_addr, pos, value) (*vector_insert_asg(vec_addr, pos) = value)
 
 // vec is a vector (aka type*)
 #define vector_erase(vec, pos, len) (_vector_erase((vector)vec, sizeof(__typeof__(*vec)), pos, len))
@@ -52,11 +48,8 @@ typedef unsigned char vec_type_t; // stores the number of bytes for a type
 // vec is a vector* (aka type**)
 #define vector_free(vec_addr) (_vector_free((vector *)vec_addr))
 #define vector_add_asg(vec_addr, type) ((type *)_vector_add((vector *)vec_addr, sizeof(type)))
-#define vector_insert_asg(vec_addr, type, pos) \
-	((type *)_vector_insert((vector *)vec_addr, sizeof(type), pos))
 
 #define vector_add(vec_addr, type, value) (*vector_add_asg(vec_addr, type) = value)
-#define vector_insert(vec_addr, type, pos, value) (*vector_insert_asg(vec_addr, type, pos) = value)
 
 // vec is a vector (aka type*)
 #define vector_erase(vec, type, pos, len) (_vector_erase((vector)vec, sizeof(type), pos, len))
@@ -72,8 +65,6 @@ vector vector_create(void);
 void _vector_free(vector *vec);
 
 void *_vector_add(vector *vec_addr, vec_type_t type_size);
-
-void *_vector_insert(vector *vec_addr, vec_type_t type_size, vec_size_t pos);
 
 void _vector_erase(vector vec_addr, vec_type_t type_size, vec_size_t pos, vec_size_t len);
 

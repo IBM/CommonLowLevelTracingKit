@@ -34,6 +34,17 @@ TEST(vector, two_entry)
 	vector_free(&vec);
 }
 
+TEST(vector, three_entry)
+{
+	int *vec = (int *)vector_create();
+	ASSERT_TRUE(vec);
+	vector_add(&vec, 1);
+	vector_add(&vec, 2);
+	vector_add(&vec, 3);
+	EXPECT_EQ(3, vector_size(vec));
+	EXPECT_GE(vector_get_alloc(vec), 3);
+}
+
 TEST(vector, add_until_relocated)
 {
 	int *vec = (int *)vector_create();

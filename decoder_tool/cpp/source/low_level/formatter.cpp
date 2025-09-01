@@ -5,9 +5,7 @@
 #include <array>
 #include <cctype>
 #include <cstring>
-#include <ffi-x86_64.h>
-#include <ffitarget-x86_64.h>
-#include <stdexcept>
+#include <ffi.h>
 #include <stdio.h>
 #include <variant>
 
@@ -15,6 +13,7 @@
 
 namespace formater = CommonLowLevelTracingKit::decoder::source::formatter;
 using namespace CommonLowLevelTracingKit::decoder::exception;
+using namespace std::string_literals;
 
 using any = std::variant<uint64_t, int64_t, double, char *>;
 
@@ -74,13 +73,14 @@ clltk_arg_to_size(const char clltk_type, const uintptr_t clltk_arg, size_t remai
 	default: CLLTK_DECODER_THROW(FormattingFailed, "unkown type");
 	}
 }
-template <typename T, typename ProxyT = T> const any get_native(uintptr_t p, size_t remaining) {
+template <typename T, typename ProxyT = T>
+static INLINE const any get_native(uintptr_t p, size_t remaining) {
 	if (sizeof(T) > remaining) [[unlikely]]
 		CLLTK_DECODER_THROW(FormattingFailed, "out of range access for formater");
 	T value{};
 	memcpy(&value, std::bit_cast<void *>(p), sizeof(T));
 	static_assert(sizeof(ProxyT) == sizeof(void *));
-	ProxyT xvalue = value;
+	ProxyT xvalue = (ProxyT)value;
 	return xvalue;
 }
 INLINE static constexpr any clltk_arg_to_native(const char clltk_type, const uintptr_t clltk_arg,
@@ -110,13 +110,12 @@ INLINE static constexpr any clltk_arg_to_native(const char clltk_type, const uin
 
 INLINE static std::array<any, total_arg_count>
 clltk_args_to_native_args(const std::string_view &format, const std::span<const char> &clltk_types,
-						  const std::span<const uint8_t> raw_clltk_args) {
+						  const std::span<const uint8_t> &raw_clltk_args) {
 	std::array<any, total_arg_count> args{};
 	args[0] = reinterpret_cast<uint64_t>(nullptr);
 	args[1] = reinterpret_cast<uint64_t>(0lu);
 	args[2] = const_cast<char *>(format.data());
 	size_t raw_arg_offset = 0;
-#pragma GCC unroll max_arg_count
 	for (size_t i = 0; i < clltk_types.size(); i++) {
 		const char type = clltk_types[i];
 		const uintptr_t current = std::bit_cast<uintptr_t>(&raw_clltk_args[raw_arg_offset]);
@@ -190,8 +189,10 @@ clltk_types_to_ffi_types(const std::span<const char> &clltk_types) {
 	types[1] = &ffi_type_uint64;  // uint64 buffer size
 	types[2] = &ffi_type_pointer; // char* (format)
 
-#pragma GCC unroll max_arg_count
-#pragma GCC ivdep
+	PRAGMA_GCC(GCC unroll max_arg_count)
+	PRAGMA_GCC(GCC ivdep)
+	PRAGMA_CLANG(unroll)
+	PRAGMA_CLANG(clang loop interleave(disable))
 	for (size_t i = 0; i < clltk_types.size(); i++) {
 		types[fix_arg_count + i] = clltk_type_to_ffi_type(clltk_types[i]);
 	}
@@ -199,19 +200,18 @@ clltk_types_to_ffi_types(const std::span<const char> &clltk_types) {
 }
 
 static INLINE void clean_up_str(std::string &s) {
-	// 1) Drop any trailing control chars (so we don't need look-ahead)
+	// Drop any trailing control chars (so we don't need look-ahead)
 	while (!s.empty() && std::bit_cast<uint8_t>(s.back()) < 32) { s.pop_back(); }
 
-	// 2) Replace all other control bytes with space (branchless table lookup)
-	static constexpr auto LUT = [] {
-		std::array<uint8_t, 256> t;
-		for (size_t i = 0; i < 256; ++i) t[i] = (i < 32 ? ' ' : safe_narrow_cast<uint8_t>(i));
-		return t;
-	}();
-
-	auto ptr = std::bit_cast<uint8_t *>(s.data());
+	auto ptr = std::bit_cast<char *>(s.data());
 	size_t n = s.size();
-	for (size_t i = 0; i < n; ++i) { ptr[i] = LUT[ptr[i]]; }
+
+	PRAGMA_GCC(GCC ivdep)
+	PRAGMA_CLANG(unroll)
+	PRAGMA_CLANG(clang loop interleave(disable))
+	for (size_t i = 0; i < n; ++i) {
+		if (ptr[i] < 32) ptr[i] = ' ';
+	}
 }
 
 static INLINE std::string clean_up_str_view(const std::string_view &str) {
@@ -224,7 +224,7 @@ static INLINE std::string clean_up_str_view(const std::string_view &str) {
 
 // call snprintf with ffi
 std::string formater::printf(const std::string_view &format, const std::span<const char> &types_raw,
-							 const std::span<const uint8_t> args_raw) {
+							 const std::span<const uint8_t> &args_raw) {
 	if (format.empty()) return "";
 	if (*format.end() != '\0') CLLTK_DECODER_THROW(FormattingFailed, "missing format termination");
 	const auto fixed_typ_array = fix_types_based_on_format(format, types_raw);
@@ -233,8 +233,8 @@ std::string formater::printf(const std::string_view &format, const std::span<con
 	auto arg_types = clltk_types_to_ffi_types(fixed_types);
 	ffi_cif cif;
 	if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI,
-					 safe_narrow_cast<unsigned int>(fix_arg_count + fixed_types.size()),
-					 &ffi_type_uint, arg_types.data()) != FFI_OK) [[unlikely]] {
+					 safe_cast<unsigned int>(fix_arg_count + fixed_types.size()), &ffi_type_uint,
+					 arg_types.data()) != FFI_OK) [[unlikely]] {
 		return "ffi_prep_cif failed";
 	}
 	auto arg_values = clltk_args_to_native_args(format, fixed_types, args_raw);
@@ -248,8 +248,11 @@ std::string formater::printf(const std::string_view &format, const std::span<con
 	arg_values[1] = msg.size();
 	void *values[total_arg_count] = {};
 
-#pragma GCC unroll total_arg_count
-#pragma GCC ivdep
+	PRAGMA_GCC(GCC unroll max_arg_count)
+	PRAGMA_GCC(GCC ivdep)
+	PRAGMA_CLANG(unroll)
+	PRAGMA_CLANG(clang loop vectorize(enable))
+	PRAGMA_CLANG(clang loop interleave(disable))
 	for (size_t i = 0; i < total_arg_count; i++) values[i] = &arg_values[i];
 	int rc = 0;
 	ffi_call(&cif, (void (*)(void))snprintf, &rc, values); // first snprintf try
@@ -257,14 +260,18 @@ std::string formater::printf(const std::string_view &format, const std::span<con
 		CLLTK_DECODER_THROW(FormattingFailed, "first printf try failed");
 	else if (rc == 0)
 		return "";
-	else if (safe_narrow_cast<size_t>(rc) >= guessed_size)
+	else if (safe_cast<size_t>(rc) >= guessed_size)
 		[[unlikely]] { // guessed_size was not big enough
-		const size_t string_size = safe_narrow_cast<size_t>(rc) + 1;
+		const size_t string_size = safe_cast<size_t>(rc) + 1;
 		msg.resize(string_size);
 		arg_values[0] = msg.data();
 		arg_values[1] = msg.size();
-#pragma GCC unroll total_arg_count
-#pragma GCC ivdep
+
+		PRAGMA_GCC(GCC unroll max_arg_count)
+		PRAGMA_GCC(GCC ivdep)
+		PRAGMA_CLANG(unroll)
+		PRAGMA_CLANG(clang loop vectorize(enable))
+		PRAGMA_CLANG(clang loop interleave(disable))
 		for (size_t i = 0; i < total_arg_count; i++) values[i] = &arg_values[i];
 		ffi_call(&cif, (void (*)(void))snprintf, &rc, values); // second/final snprintf
 		if (rc < 0) [[unlikely]]
@@ -272,13 +279,13 @@ std::string formater::printf(const std::string_view &format, const std::span<con
 		else if (rc == 0)
 			return "";
 	}
-	msg.resize(safe_narrow_cast<size_t>(rc));
+	msg.resize(safe_cast<size_t>(rc));
 	clean_up_str(msg);
 	return msg;
 }
 
 std::string formater::dump(const std::string_view &format, const std::span<const char> &types_raw,
-						   const std::span<const uint8_t> args_raw) {
+						   const std::span<const uint8_t> &args_raw) {
 	if (types_raw.size() != 1 || types_raw[0] != 'x')
 		CLLTK_DECODER_THROW(InvalidMeta, "wrong meta for drump tracepoint");
 	const size_t format_size = format.size();
@@ -290,11 +297,12 @@ std::string formater::dump(const std::string_view &format, const std::span<const
 							   + 1; // for starting ", closing " replaces a space
 	std::string output{};
 	output.resize(output_size);
-	const int rc = snprintf(output.data(), output.size(), //
-							"%s%s\"", format.data(), dump_token.data());
+	const int rc =
+		snprintf(output.data(), output.size(), //
+				 "%*s%s\"", safe_cast<int>(format.size()), format.data(), dump_token.data());
 	if (rc < 0) CLLTK_DECODER_THROW(FormattingFailed, "printf try failed for dump");
 
-	const size_t dump_byte_start_offset = safe_narrow_cast<size_t>(rc);
+	const size_t dump_byte_start_offset = safe_cast<size_t>(rc);
 	for (size_t byte_offset = 0; byte_offset < dump_size; byte_offset++) {
 		const uint8_t dump_char = dump_body[byte_offset];
 		const size_t current_offset = dump_byte_start_offset + (byte_offset * 3);

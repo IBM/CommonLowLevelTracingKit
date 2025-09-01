@@ -11,6 +11,8 @@ command -v clang-tidy > /dev/null || { echo "Error: clang-tidy is not installed.
 ROOT_PATH=$(git rev-parse --show-toplevel)
 cd "${ROOT_PATH}"
 
+cmake --preset unittests --fresh -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ 
+
 FILTER="${1:-}"
 
 static_analyse() {

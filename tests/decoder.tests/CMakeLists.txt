@@ -27,6 +27,7 @@ target_link_libraries(decoder_tests
     clltk_tracing_static
     clltk_snapshot_static
     clltk_decoder_object # use the object lib as static and shared have limited exported symbols
+    clltk_tracing_abstraction
 )
 target_compile_definitions(decoder_tests
     PRIVATE

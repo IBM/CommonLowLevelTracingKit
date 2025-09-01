@@ -10,8 +10,8 @@
 namespace CommonLowLevelTracingKit::decoder::source::formatter {
 
 	std::string printf(const std::string_view &format, const std::span<const char> &types,
-					   const std::span<const uint8_t> args_raw);
+					   const std::span<const uint8_t> &args_raw);
 	std::string dump(const std::string_view &format, const std::span<const char> &types,
-					 const std::span<const uint8_t> args_raw);
+					 const std::span<const uint8_t> &args_raw);
 
 } // namespace CommonLowLevelTracingKit::decoder::source::formatter

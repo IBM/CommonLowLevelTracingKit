@@ -63,10 +63,12 @@ static std::filesystem::path trace_file(const std::string &name)
 	const std::filesystem::path absolute_path = std::filesystem::absolute(path);
 	return absolute_path;
 }
+static pthread_mutex_t lock;
 #define SETUP(TB_NAME) _SETUP(TB_NAME)
 #define _SETUP(TB_NAME) _setup(_clltk_##TB_NAME)
 static inline void _setup(_clltk_tracebuffer_handler_t &tb)
 {
+	pthread_mutex_lock(&lock);
 	static const char dummy[] = "Hello World";
 	tb.meta.start = (const void *)dummy;
 	tb.meta.stop = (const void *)(dummy + sizeof(dummy));
@@ -90,9 +92,12 @@ static inline void _cleanup(_clltk_tracebuffer_handler_t &tb)
 	ASSERT_TRUE(tb.runtime.tracebuffer);
 	_clltk_tracebuffer_deinit(&tb);
 	ASSERT_FALSE(tb.runtime.tracebuffer);
+	pthread_mutex_unlock(&lock);
 }
+#ifndef STR
 #define _STR(...) #__VA_ARGS__
 #define STR(...) _STR(__VA_ARGS__)
+#endif // !STR
 
 #define TP(...) CLLTK_TRACEPOINT(TB, __VA_ARGS__)
 #define DUMP(...) CLLTK_TRACEPOINT_DUMP(TB, __VA_ARGS__)

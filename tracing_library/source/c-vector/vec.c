@@ -92,21 +92,6 @@ void *_vector_add(vector *vec_addr, vec_type_t type_size)
 	return (void *)&v_data->buff[type_size * v_data->length++];
 }
 
-void *_vector_insert(vector *vec_addr, vec_type_t type_size, vec_size_t pos)
-{
-	vector_data *v_data = vector_get_data(*vec_addr);
-	vec_size_t new_length = v_data->length + 1;
-	// make sure there is enough room for the new element
-	if (!vector_has_space(v_data)) {
-		v_data = vector_realloc(v_data, type_size);
-	}
-	memmove(&v_data->buff[(pos + 1) * type_size], &v_data->buff[pos * type_size],
-			(v_data->length - pos) * type_size); // move trailing elements
-
-	v_data->length = new_length;
-	return &v_data->buff[pos * type_size];
-}
-
 void _vector_erase(vector vec_addr, vec_type_t type_size, vec_size_t pos, vec_size_t len)
 {
 	vector_data *v_data = vector_get_data(vec_addr);

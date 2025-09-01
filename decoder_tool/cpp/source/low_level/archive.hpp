@@ -5,7 +5,7 @@
 
 struct archive;
 namespace CommonLowLevelTracingKit::decoder::source::low_level {
-	struct Archive;
+	class Archive;
 	using ArchivePtr = std::unique_ptr<Archive>;
 	class Archive {
 	  public:

@@ -42,7 +42,7 @@ TEST(get_argument_sizes, types_empty_but_flex_size)
 TEST(get_argument_sizes, one_uint8_t)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_uint8}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_uint8}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(uint8_t), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(uint8_t), sizes[0]);
@@ -51,7 +51,7 @@ TEST(get_argument_sizes, one_uint8_t)
 TEST(get_argument_sizes, one_int8_t)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_int8}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_sint8}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(int8_t), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(int8_t), sizes[0]);
@@ -60,7 +60,7 @@ TEST(get_argument_sizes, one_int8_t)
 TEST(get_argument_sizes, one_uint16_t)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_uint16}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_uint16}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(uint16_t), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(uint16_t), sizes[0]);
@@ -69,7 +69,7 @@ TEST(get_argument_sizes, one_uint16_t)
 TEST(get_argument_sizes, one_int16_t)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_int16}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_sint16}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(int16_t), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(int16_t), sizes[0]);
@@ -78,7 +78,7 @@ TEST(get_argument_sizes, one_int16_t)
 TEST(get_argument_sizes, one_uint32_t)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_uint32}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_uint32}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(uint32_t), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(uint32_t), sizes[0]);
@@ -87,7 +87,7 @@ TEST(get_argument_sizes, one_uint32_t)
 TEST(get_argument_sizes, one_int32_t)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_int32}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_sint32}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(int32_t), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(int32_t), sizes[0]);
@@ -96,7 +96,7 @@ TEST(get_argument_sizes, one_int32_t)
 TEST(get_argument_sizes, one_uint64_t)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_uint64}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_uint64}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(uint64_t), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(uint64_t), sizes[0]);
@@ -105,7 +105,7 @@ TEST(get_argument_sizes, one_uint64_t)
 TEST(get_argument_sizes, one_int64_t)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_int64}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_sint64}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(int64_t), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(int64_t), sizes[0]);
@@ -114,7 +114,7 @@ TEST(get_argument_sizes, one_int64_t)
 TEST(get_argument_sizes, one_uint128_t)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_uint128}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_uint128}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(__uint128_t), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(__uint128_t), sizes[0]);
@@ -123,7 +123,7 @@ TEST(get_argument_sizes, one_uint128_t)
 TEST(get_argument_sizes, one_int128_t)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_int128}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_sint128}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(__int128_t), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(__int128_t), sizes[0]);
@@ -132,7 +132,7 @@ TEST(get_argument_sizes, one_int128_t)
 TEST(get_argument_sizes, one_float)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_float}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_float}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(float), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(float), sizes[0]);
@@ -141,7 +141,7 @@ TEST(get_argument_sizes, one_float)
 TEST(get_argument_sizes, one_double)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_t_double}};
+		.count = 1, .flex_size = 0, .already_checked = 0, .types = {_clltk_argument_double}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(sizeof(double), _helper("%u", sizes, &types));
 	EXPECT_EQ(sizeof(double), sizes[0]);
@@ -150,7 +150,7 @@ TEST(get_argument_sizes, one_double)
 TEST(get_argument_sizes, string_null)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 1, .already_checked = 0, .types = {_clltk_argument_t_string}};
+		.count = 1, .flex_size = 1, .already_checked = 0, .types = {_clltk_argument_string}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(5, _helper("%s", sizes, &types, nullptr));
 	EXPECT_EQ(5, sizes[0]);
@@ -159,7 +159,7 @@ TEST(get_argument_sizes, string_null)
 TEST(get_argument_sizes, string_empty)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 1, .already_checked = 0, .types = {_clltk_argument_t_string}};
+		.count = 1, .flex_size = 1, .already_checked = 0, .types = {_clltk_argument_string}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(5, _helper("%s", sizes, &types, ""));
 	EXPECT_EQ(5, sizes[0]);
@@ -168,7 +168,7 @@ TEST(get_argument_sizes, string_empty)
 TEST(get_argument_sizes, string_1)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 1, .already_checked = 0, .types = {_clltk_argument_t_string}};
+		.count = 1, .flex_size = 1, .already_checked = 0, .types = {_clltk_argument_string}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(6, _helper("%s", sizes, &types, "A"));
 	EXPECT_EQ(6, sizes[0]);
@@ -177,7 +177,7 @@ TEST(get_argument_sizes, string_1)
 TEST(get_argument_sizes, string_2)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 1, .already_checked = 0, .types = {_clltk_argument_t_string}};
+		.count = 1, .flex_size = 1, .already_checked = 0, .types = {_clltk_argument_string}};
 	uint32_t sizes[1] = {0};
 	EXPECT_EQ(7, _helper("%s", sizes, &types, "AB"));
 	EXPECT_EQ(7, sizes[0]);
@@ -186,7 +186,7 @@ TEST(get_argument_sizes, string_2)
 TEST(get_argument_sizes, string_1024)
 {
 	static _clltk_argument_types_t types = {
-		.count = 1, .flex_size = 1, .already_checked = 0, .types = {_clltk_argument_t_string}};
+		.count = 1, .flex_size = 1, .already_checked = 0, .types = {_clltk_argument_string}};
 	char str[1025] = "";
 	for (uint32_t i = 0; i < sizeof(str); i++)
 		str[i] = 'A';
@@ -202,9 +202,9 @@ TEST(get_argument_sizes, int_float_string)
 											.flex_size = 1,
 											.already_checked = 0,
 											.types = {
-												_clltk_argument_t_int64,
-												_clltk_argument_t_float,
-												_clltk_argument_t_string,
+												_clltk_argument_sint64,
+												_clltk_argument_float,
+												_clltk_argument_string,
 											}};
 	int64_t arg0 = 0;
 	float arg1 = 0;
@@ -222,9 +222,9 @@ TEST(get_argument_sizes, int_string_float)
 											.flex_size = 1,
 											.already_checked = 0,
 											.types = {
-												_clltk_argument_t_int64,
-												_clltk_argument_t_string,
-												_clltk_argument_t_float,
+												_clltk_argument_sint64,
+												_clltk_argument_string,
+												_clltk_argument_float,
 											}};
 	int64_t arg0 = 0;
 	char arg1[11] = "          ";
@@ -242,9 +242,9 @@ TEST(get_argument_sizes, string_int_float)
 											.flex_size = 1,
 											.already_checked = 0,
 											.types = {
-												_clltk_argument_t_string,
-												_clltk_argument_t_int64,
-												_clltk_argument_t_float,
+												_clltk_argument_string,
+												_clltk_argument_sint64,
+												_clltk_argument_float,
 											}};
 	char arg0[11] = "          ";
 	int64_t arg1 = 0;
@@ -262,8 +262,8 @@ TEST(get_argument_sizes, int_float)
 											.flex_size = 1,
 											.already_checked = 0,
 											.types = {
-												_clltk_argument_t_int64,
-												_clltk_argument_t_float,
+												_clltk_argument_sint64,
+												_clltk_argument_float,
 											}};
 	int64_t arg0 = 0;
 	float arg1 = 0;
@@ -279,8 +279,8 @@ TEST(get_argument_sizes, float_int)
 											.flex_size = 1,
 											.already_checked = 0,
 											.types = {
-												_clltk_argument_t_float,
-												_clltk_argument_t_int64,
+												_clltk_argument_float,
+												_clltk_argument_sint64,
 											}};
 	float arg0 = 0;
 	int64_t arg1 = 0;

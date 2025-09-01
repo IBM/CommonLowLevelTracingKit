@@ -50,7 +50,6 @@ TEST_P(decoder_formatter, test_execution)
 		EXPECT_EQ(msg, param.expected) << param.file << ":" << param.line;
 	} else {
 		EXPECT_ANY_THROW(printf(param.format, types, raw_args)) << param.file << ":" << param.line;
-		;
 	}
 }
 

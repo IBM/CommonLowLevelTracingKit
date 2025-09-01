@@ -28,7 +28,6 @@ namespace CommonLowLevelTracingKit::decoder::source {
 	  public:
 		FilePart(const std::filesystem::path &);
 
-		virtual ~FilePart() = default;
 		FilePart(const FilePart &) noexcept = default;
 		FilePart(FilePart &&) noexcept = default;
 		FilePart &operator=(const FilePart &) = delete;
@@ -44,7 +43,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 		template <typename T>
 			requires(internal::POD<T>)
-		INLINE T getLimted(size_t limit, size_t offset = 0) const {
+		INLINE T getLimted(size_t limit, size_t offset = 0) const noexcept {
 			std::array<uint8_t, sizeof(T)> value = {};
 			getLimtedRaw(value.data(), offset, value.size(), limit);
 			return *reinterpret_cast<const T *>(value.data());
@@ -58,7 +57,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			getLimtedRaw(data, offset, std::min(size, calculated_size), limit);
 		}
 
-		uint8_t crc8(size_t size, size_t offset = 0, size_t limit = 0) const;
+		uint8_t crc8(size_t size, size_t offset = 0, size_t limit = 0) const noexcept;
 
 		size_t getFileSize() const;
 		size_t doGrow() const;
@@ -69,7 +68,8 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 	  private:
 		uintptr_t getPtr(size_t offset, size_t object_size) const;
-		void getLimtedRaw(uint8_t *const out, size_t offset, size_t size, size_t limit) const;
+		void getLimtedRaw(uint8_t *const out, size_t offset, size_t size,
+						  size_t limit) const noexcept;
 		FilePart(const FilePart &a_filePart, size_t a_offset);
 		const internal::FilePtr m_file;
 		const size_t m_offset;

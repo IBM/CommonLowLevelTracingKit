@@ -5,8 +5,6 @@
 #include <boost/heap/priority_queue.hpp>
 #include <boost/regex.hpp>
 #include <functional>
-#include <iostream>
-#include <queue>
 #include <string>
 
 #include "CommonLowLevelTracingKit/Decoder/Tracebuffer.hpp"

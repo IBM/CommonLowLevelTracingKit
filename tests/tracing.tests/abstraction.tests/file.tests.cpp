@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "abstraction/file.h"
+#include "abstraction/memory.h"
 #include "gtest/gtest.h"
 #include <string>
+using ::testing::KilledBySignal;
 
 class file : public ::testing::Test
 {
@@ -162,4 +164,15 @@ TEST_F(file, two_temp_file)
 	EXPECT_EQ(final_file_0, final_file_1);
 	file_drop(&final_file_0);
 	file_drop(&final_file_1);
+}
+
+TEST_F(file, mmap)
+{
+	const char name[] = "temp_mmap_file_test";
+	auto temp_file = ::file_create_temp(name, memory_get_page_size());
+	EXPECT_TRUE(temp_file);
+	char *const base = std::bit_cast<char *>(file_mmap_ptr(temp_file));
+	char *const invalid = base + file_mmap_size(temp_file) + 2 * memory_get_page_size();
+	EXPECT_EXIT({ *invalid = 'A'; }, KilledBySignal(SIGSEGV), ".*");
+	file_drop(&temp_file);
 }

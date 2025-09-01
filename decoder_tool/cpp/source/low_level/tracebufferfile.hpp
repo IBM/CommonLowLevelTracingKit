@@ -12,10 +12,9 @@
 #include "ringbuffer.hpp"
 
 namespace CommonLowLevelTracingKit::decoder::source {
-	class TracebufferFile {
+	class TracebufferFile final {
 	  public:
 		TracebufferFile(const std::string &path);
-		virtual ~TracebufferFile() = default;
 		TracebufferFile(const TracebufferFile &) = delete;
 		TracebufferFile &operator=(const TracebufferFile &) = delete;
 		TracebufferFile(TracebufferFile &&) = delete;
@@ -31,7 +30,8 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 	  protected:
 		CONST_INLINE bool validFile() const {
-			return getFileHeaderMagicValid() && getFileHeaderCrcValid();
+			return getFileHeaderMagicValid() && getFileHeaderCrcValid() &&
+				   (m_ringbuffer.getSize() > 10);
 		}
 		CONST_INLINE FilePart getFileHeader() const { return m_file.get(0); }
 		CONST_INLINE bool getFileHeaderCrcValid() const { return getFileHeader().crc8(56) == 0; }

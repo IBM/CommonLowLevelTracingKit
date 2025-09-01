@@ -12,6 +12,7 @@
 #include "TracepointInternal.hpp"
 #include "helper.hpp"
 #include "tracebufferfile.hpp"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #define TB CLLTK_TRACEBUFFER_MACRO_VALUE(decoder_SyncTracebuffer)
@@ -31,8 +32,8 @@ class decoder_SyncTracebuffer : public ::testing::Test
 		SETUP(TB);
 	}
 	void TearDown() override { CLEANUP(TB); }
-	void tp() const { TP("A"); }
 };
+#define tp() TP("A"); // this must be a MACRO to be init each time
 
 TEST_F(decoder_SyncTracebuffer, name)
 {
@@ -64,7 +65,7 @@ TEST_F(decoder_SyncTracebuffer, invalid_meta)
 	{
 		auto raw_tb = source::TracebufferFile(m_file_name);
 		auto first_entry = raw_tb.getRingbuffer().getNextEntry();
-		const uint64_t fileoffset = get<uint64_t>(first_entry->body()) & ((1ULL << 48) - 1);
+		const uint64_t fileoffset = get<uint64_t>(get<0>(first_entry)->body()) & ((1ULL << 48) - 1);
 		const auto f = fopen(m_file_name.c_str(), "r+");
 		uint8_t old = 0;
 		ASSERT_TRUE(pread(fileno(f), &old, 1, (long)fileoffset));
@@ -73,21 +74,30 @@ TEST_F(decoder_SyncTracebuffer, invalid_meta)
 		ASSERT_TRUE(pwrite(fileno(f), &damaged, 1, (long)fileoffset));
 	} // meta should now be damaged
 	auto tb = SyncTracebuffer::make(m_file_name);
-	EXPECT_THROW(tb->next(), exception::InvalidMeta);
+	auto tp = tb->next();
+	EXPECT_THAT(tp->msg(), testing::MatchesRegex(".*invalid meta.*"));
 }
 
 TEST_F(decoder_SyncTracebuffer, invalid_meta_after_get)
 {
 	tp();
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	auto tb = SyncTracebuffer::make(m_file_name);
+	ASSERT_TRUE(tb);
 	auto tp = tb->next();
+	ASSERT_TRUE(tp);
 	{
 		auto raw_tb = source::TracebufferFile(m_file_name);
 		auto first_entry = raw_tb.getRingbuffer().getNextEntry();
-		const uint64_t fileoffset = get<uint64_t>(first_entry->body()) & ((1ULL << 48) - 1);
+		const uint64_t fileoffset = get<uint64_t>(get<0>(first_entry)->body()) & ((1ULL << 48) - 1);
+		ASSERT_LT(fileoffset, raw_tb.getFilePart().getFileSize()) << m_file_name;
 		const auto f = fopen(m_file_name.c_str(), "r+");
+		ASSERT_TRUE(f);
+		ASSERT_TRUE(fileno(f));
 		uint8_t old = 0;
-		ASSERT_TRUE(pread(fileno(f), &old, 1, (long)fileoffset));
+		ASSERT_TRUE(std::filesystem::is_regular_file(m_file_name));
+		ASSERT_EQ(pread(fileno(f), &old, 1, (long)fileoffset), 1)
+			<< strerror(errno) << " for: " << m_file_name;
 		ASSERT_EQ(old, '{');
 		const uint8_t damaged = '?';
 		ASSERT_TRUE(pwrite(fileno(f), &damaged, 1, (long)fileoffset));
@@ -105,11 +115,13 @@ TEST_F(decoder_SyncTracebuffer, invalid_fileoffset)
 	{
 		uint64_t data = 0xF0;
 		EXPECT_EQ(ringbuffer_in(rb, &data, sizeof(data)), sizeof(data));
-		EXPECT_THROW(tb->next(), exception::InvalidEntry);
+		auto tp = tb->next();
+		EXPECT_THAT(tp->msg(), testing::MatchesRegex(".*invalid file offset.*"));
 	}
 	{
 		uint64_t data = tb->size() * 100;
 		EXPECT_EQ(ringbuffer_in(rb, &data, sizeof(data)), sizeof(data));
-		EXPECT_THROW(tb->next(), exception::InvalidEntry);
+		auto tp = tb->next();
+		EXPECT_THAT(tp->msg(), testing::MatchesRegex(".*bigger than file.*"));
 	}
 }

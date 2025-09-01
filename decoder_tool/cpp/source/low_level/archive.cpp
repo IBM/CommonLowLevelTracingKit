@@ -75,7 +75,7 @@ void Archive::unpack() {
 			size_t size;
 			la_int64_t offset;
 			while (archive_read_data_block(a, &buffer, &size, &offset) == ARCHIVE_OK) {
-				ofs.write(static_cast<const char *>(buffer), safe_narrow_cast<long>(size));
+				ofs.write(static_cast<const char *>(buffer), safe_cast<long>(size));
 			}
 		}
 		archive_read_data_skip(a);

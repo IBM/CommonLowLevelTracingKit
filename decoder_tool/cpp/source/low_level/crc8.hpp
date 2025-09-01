@@ -7,7 +7,7 @@
 #include <ranges>
 namespace CommonLowLevelTracingKit::decoder::source {
 	template <std::ranges::contiguous_range R>
-	static inline constexpr uint8_t crc8(const R &data, uint8_t crc = 0x00) {
+	static inline constexpr uint8_t crc8(const R &data, uint8_t crc = 0x00) noexcept {
 		using T = std::ranges::range_value_t<R>;
 		const uint8_t *const p = (const uint8_t *)std::ranges::data(data);
 		const auto n = std::ranges::size(data);

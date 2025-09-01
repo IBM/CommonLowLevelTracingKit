@@ -4,13 +4,12 @@
 #include "inline.hpp"
 #include <string_view>
 namespace CommonLowLevelTracingKit::decoder::source {
-	class Definition {
+	class Definition final {
 	  public:
 		Definition(const FilePart &&a_file)
 			: m_file(a_file)
 			, m_name(std::string_view(&a_file.getRef<char>(sizeof(size_t)), a_file.get<size_t>())) {
 			};
-		virtual ~Definition() = default;
 		Definition(const Definition &) = delete;
 		Definition &operator=(const Definition &) = delete;
 		Definition(Definition &&) = default;

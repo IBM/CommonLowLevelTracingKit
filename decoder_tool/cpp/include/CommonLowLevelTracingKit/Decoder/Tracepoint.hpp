@@ -12,6 +12,8 @@ namespace CommonLowLevelTracingKit::decoder {
 	struct EXPORT Tracepoint {
 		enum class Type {
 			Dynamic = 1,
+			Virtual = 2,
+			Error = 2,
 			Static = 0x101,
 		};
 		virtual ~Tracepoint() = default;

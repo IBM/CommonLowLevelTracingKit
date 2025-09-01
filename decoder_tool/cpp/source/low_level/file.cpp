@@ -78,7 +78,7 @@ size_t internal::File::getRealSize() const {
 	if (fstat(m_fd, &sb) == -1) {
 		throw std::runtime_error("Error getting file size: "s + strerror(errno));
 	}
-	return safe_narrow_cast<size_t>(sb.st_size);
+	return safe_cast<size_t>(sb.st_size);
 }
 
 size_t internal::File::grow() const {
@@ -119,7 +119,7 @@ uintptr_t source::FilePart::getPtr(size_t offset, size_t object_size) const {
 }
 
 void source::FilePart::getLimtedRaw(uint8_t *const out, size_t offset, size_t size,
-									size_t limit) const {
+									size_t limit) const noexcept {
 	offset %= limit;
 	const size_t first_part_size = std::min(size, limit - offset);
 	const uintptr_t first_part_start = m_base + m_offset + offset;
@@ -147,7 +147,7 @@ size_t source::FilePart::getFileSize() const {
 size_t source::FilePart::doGrow() const {
 	return m_file->grow();
 }
-uint8_t source::FilePart::crc8(size_t size, size_t offset, size_t limit) const {
+uint8_t source::FilePart::crc8(size_t size, size_t offset, size_t limit) const noexcept {
 	const uint8_t *const first_part_start =
 		std::bit_cast<const uint8_t *>(m_base + m_offset + offset);
 	if (limit == 0 || ((offset + size) <= limit)) {

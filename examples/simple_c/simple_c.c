@@ -8,6 +8,6 @@ CLLTK_TRACEBUFFER(SIMPLE_C, 1024)
 int main(void)
 {
 	CLLTK_TRACEPOINT(SIMPLE_C, "a simple example with some args %%u=32=%u %%f=1.33e-3=%f %%s=%s",
-					 32, 1.33e-3, "string arg");
+					 32u, 1.33e-3, "string arg");
 	return 0;
 }

@@ -49,16 +49,20 @@ target_compile_options(clltk_decoder_object PRIVATE
     -Wundef
     -Wswitch-enum
     -Wunreachable-code
-    -Wduplicated-cond
-    -Wduplicated-branches
     -Wnull-dereference
     -Wdouble-promotion
     -Wconversion
     -Wsign-conversion
     -Wmissing-declarations
     -Wwrite-strings
-    -Wlogical-op
 )
+if (${CMAKE_C_COMPILER_ID} MATCHES "GNU")
+    target_compile_options(clltk_decoder_object PRIVATE
+        -Wduplicated-cond
+        -Wduplicated-branches
+        -Wlogical-op
+    )
+endif()
 target_compile_features(clltk_decoder_object PUBLIC cxx_std_20)
 set_target_properties(clltk_decoder_object PROPERTIES
     CXX_VISIBILITY_PRESET hidden

@@ -175,6 +175,7 @@ TEST_F(decoder_SnapTracebuffer, uncompressed_archive)
 	std::uniform_int_distribution<uint64_t> dist(0, UINT64_MAX);
 	const uint64_t value = dist(gen);
 	const std::string msg = std::to_string(value);
+	std::cout << "msg = " << msg << std::endl;
 	TP("%s", msg.c_str());
 	static const std::string archive_name = "snapshot";
 	{
@@ -191,7 +192,11 @@ TEST_F(decoder_SnapTracebuffer, uncompressed_archive)
 	EXPECT_GE(tbs.size(), 1); // there could be some old trace buffers
 	size_t found = 0;
 	for (const auto &tb : tbs) {
-		for (const auto &tp : tb->tracepoints) { found += (tp->msg() == msg); }
+		std::cout << "tb = " << tb->name() << std::endl;
+		for (const auto &tp : tb->tracepoints) {
+			found += (tp->msg() == msg);
+			std::cout << "    tp->msg() = " << tp->msg() << std::endl;
+		}
 	}
 	EXPECT_EQ(found, 1);
 }

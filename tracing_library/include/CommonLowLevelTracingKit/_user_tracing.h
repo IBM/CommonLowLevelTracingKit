@@ -24,11 +24,7 @@
 
 #define _CLLTK_TRACEBUFFER_MACRO_VALUE(_NAME_) _NAME_
 
-#if defined(_CLLTK_INTERNAL)
-#define _CLLTK_INTERNAL_HIDE(X)
-#else
-#define _CLLTK_INTERNAL_HIDE(X) X,
-#endif
+#if !defined(_CLLTK_INTERNAL)
 
 _CLLTK_EXTERN_C_BEGIN
 
@@ -37,7 +33,7 @@ _CLLTK_EXTERN_C_BEGIN
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
 #endif
 
-__attribute__((_CLLTK_INTERNAL_HIDE(constructor(101)) used)) static void _clltk_constructor(void)
+__attribute__((constructor(101), used)) static void _clltk_constructor(void)
 {
 	static const char _empty[]
 		__attribute__((used, section("_clltk_tracebuffer_handler_ptr"))) = {};
@@ -59,7 +55,7 @@ __attribute__((_CLLTK_INTERNAL_HIDE(constructor(101)) used)) static void _clltk_
 	}
 }
 
-__attribute__((_CLLTK_INTERNAL_HIDE(destructor(102)), used)) static void _clltk_destructor(void)
+__attribute__((destructor(102), used)) static void _clltk_destructor(void)
 {
 	extern _clltk_tracebuffer_handler_t *const __start__clltk_tracebuffer_handler_ptr;
 	extern _clltk_tracebuffer_handler_t *const __stop__clltk_tracebuffer_handler_ptr;
@@ -74,6 +70,8 @@ __attribute__((_CLLTK_INTERNAL_HIDE(destructor(102)), used)) static void _clltk_
 #pragma clang diagnostic pop
 #endif
 _CLLTK_EXTERN_C_END
+
+#endif
 
 #define _CLLTK_STATIC_TRACEBUFFER(_NAME_, _SIZE_)                                            \
 	_CLLTK_EXTERN_C_BEGIN                                                                    \

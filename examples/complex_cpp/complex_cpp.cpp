@@ -27,7 +27,10 @@ int main(int argc, char *argv[])
 {
 	int LOOPS = 1;
 	if (argc == 2) {
+		_CLLTK_PRAGMA_DIAG(push)
+		_CLLTK_PRAGMA_DIAG(ignored "-Wunsafe-buffer-usage")
 		char *a = argv[1];
+		_CLLTK_PRAGMA_DIAG(pop)
 		LOOPS = atoi(a);
 	}
 
@@ -70,12 +73,14 @@ void different_formats(void) // for python test
 								  "\",\"expected\":\"" EXPECT "\",\"got\":\"" FORMAT  \
 								  "\"}" __VA_OPT__(, __VA_ARGS__))
 
+	_CLLTK_PRAGMA_DIAG(push)
+	_CLLTK_PRAGMA_DIAG(ignored "-Wformat")
 	FORMAT_TEST("", "string argument", "%s", "string argument");
 	FORMAT_TEST("", "01", "%02lu", 1lu);
 	FORMAT_TEST("", "01", "%02u", (bool)1);
-	FORMAT_TEST("", "A", "%X", 0xA);
-	FORMAT_TEST("", "a", "%x", 0xA);
-	FORMAT_TEST("", "0a", "%02x", 0xA);
+	FORMAT_TEST("", "A", "%X", 0xAu);
+	FORMAT_TEST("", "a", "%x", 0xAu);
+	FORMAT_TEST("", "0a", "%02x", 0xAu);
 	FORMAT_TEST("", "001", "%03lu", 1lu);
 	FORMAT_TEST("", "1.0e+01", "%.1e", 1e1);
 	FORMAT_TEST("", "1.0E+01", "%.1E", 1e1);
@@ -119,7 +124,7 @@ void different_formats(void) // for python test
 	}
 
 	FORMAT_TEST("empty string", "", "");
-
+	_CLLTK_PRAGMA_DIAG(pop)
 #undef TEST
 }
 
@@ -167,7 +172,7 @@ void dynamic_tracing(void)
 
 void typedef_example(void)
 {
-	typedef int raw;
+	typedef unsigned int raw;
 	raw value = 1;
 	CLLTK_TRACEPOINT(COMPLEX_CPP, "%u", value);
 }
@@ -305,7 +310,10 @@ void thread_function(const size_t thread_id, std::barrier<> &sync_point,
 
 void template_second_function()
 {
+	_CLLTK_PRAGMA_DIAG(push)
+	_CLLTK_PRAGMA_DIAG(ignored "-Wctad-maybe-unsupported")
 	std::barrier sync_point(NumThreads);
+	_CLLTK_PRAGMA_DIAG(pop)
 	std::atomic<int> current_index{0};
 
 	std::array<std::thread, NumThreads> threads;

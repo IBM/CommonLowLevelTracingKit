@@ -1,13 +1,10 @@
 {
 	"name": "CommonLowLevelTracingKit dev container",
-	"initializeCommand": "./scripts/container.sh echo 'container done'",
+	"initializeCommand": "${localWorkspaceFolder}//scripts/container.sh echo 'container done'",
 	"build": {
-		"dockerfile": "./scripts/container.Dockerfile",
-		"options": [
-			"--no-cache",
-		]
+		"dockerfile": "${localWorkspaceFolder}//scripts/container.Dockerfile",
 	},
-	"workspaceMount": "source=/${localWorkspaceFolder}/,target=/clltk-workspace-base/,type=bind,consistency=cached",
+	"workspaceMount": "source=${localWorkspaceFolder}/,target=/clltk-workspace-base/,type=bind,consistency=cached",
 	"workspaceFolder": "/clltk-workspace-base/",
 	"containerUser": "root",
 	"remoteUser": "root",
@@ -15,9 +12,9 @@
 		"source=${localEnv:HOME}/.ccache,target=/root/.ccache,type=bind,consistency=cached",
 		"source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,readonly",
 		"source=${localEnv:HOME}/.gitconfig,target=/root/.gitconfig,type=bind,readonly",
-		"source=./build/in_container/amd64/build/,target=//clltk-workspace-base/build/,type=bind,consistency=cached",
-		"source=./build/in_container/amd64/traces,target=/tmp/traces/,type=bind,consistency=cached",
-		"source=./build/in_container/.bash_history,target=/root/.bash_history,type=bind,consistency=cached"
+		"source=${localWorkspaceFolder}/build/in_container/amd64/build/,target=//clltk-workspace-base/build/,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/build/in_container/amd64/traces,target=/tmp/traces/,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/build/in_container/.bash_history,target=/root/.bash_history,type=bind,consistency=cached"
 	],
 	"runArgs": [
 		"--network=host", // use host network inside container
@@ -28,7 +25,7 @@
 	"containerEnv": {
 		"CLLTK_TRACING_PATH": "/tmp/traces/",
 		"BUILD_DIR": "/clltk-workspace-base/build/",
-		"PERSITENT_ARTIFACTS": "/clltk-workspace-base/build/persistent/",
+		"PERSITENT_ARTIFACTS": "/clltk-workspace-base/build_kernel/persistent/",
 		"CCACHE_DIR": "/root/.ccache/",
 		"INATALL_DIR": "/clltk-workspace-base/install/",
 		"CLLTK_CI_VERSION_STEP_REQUIRED": "true"

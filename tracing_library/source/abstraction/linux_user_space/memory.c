@@ -16,6 +16,23 @@ void init_page_size(void)
 	page_size = (size_t)getpagesize();
 }
 
+void *memcpy_and_flush(void *dest, const void *src, size_t count)
+{
+	void *restult_dest;
+	restult_dest = memcpy(dest, src, count);
+
+#ifdef __aarch64__
+	for (uintptr_t ptr = (uintptr_t)dest; ptr < ((uintptr_t)dest + count); ptr += 64) {
+		__asm__ volatile("dc cvac, %0" : : "r"(ptr) : "memory");
+	}
+	__asm__ volatile("dsb ish" : : : "memory");
+	__asm__ volatile("isb" : : : "memory");
+#else
+	(void)(uintptr_t)0; // prevent the removal of header for uintptr_t
+#endif
+	return restult_dest;
+}
+
 void *memory_heap_allocation(size_t size)
 {
 	void *ptr = malloc(size);

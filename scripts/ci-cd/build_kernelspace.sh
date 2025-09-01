@@ -74,9 +74,7 @@ extract () {
     local target=$2
 
     echo "=> extracting $archive > $target" >&2
-    cd $target
-    tar xfk $archive
-    cd -
+    tar xfk $archive -C $target
 }
 
 
@@ -203,16 +201,16 @@ do
    esac
 done
 
-PERSITENT_ARTIFACTS=${PERSITENT_ARTIFACTS:-"./build/persistent"}
-CACHED_PREFIX=$PERSITENT_ARTIFACTS/kernel/
-DOWNLOAD_FOLDER="$CACHED_PREFIX/"
+PERSITENT_ARTIFACTS="${PERSITENT_ARTIFACTS:-"./build_kernel/persistent"}"
+CACHED_PREFIX="$PERSITENT_ARTIFACTS/kernel"
+DOWNLOAD_FOLDER="$CACHED_PREFIX"
 
-BUILDDIR=${BUILDDIR:-"./build/kernel"}
+BUILDDIR="${BUILDDIR:-"./build_kernel/kernel"}"
 mkdir -p $BUILDDIR
-RUNTIME_PREFIX=$(realpath -m $BUILDDIR)/runtime/
-ROOTFS_FOLDER="$RUNTIME_PREFIX/rootfs/"
-TRACES_FOLDER="$RUNTIME_PREFIX/traces/"
-TESTS_FOLDER="$RUNTIME_PREFIX/tests/"
+RUNTIME_PREFIX="$(realpath -m "$BUILDDIR")/runtime"
+ROOTFS_FOLDER="$RUNTIME_PREFIX/rootfs"
+TRACES_FOLDER="$RUNTIME_PREFIX/traces"
+TESTS_FOLDER="$RUNTIME_PREFIX/tests"
 
 # if no version is set looku newest version
 if [ -z $KVERSION ]; then

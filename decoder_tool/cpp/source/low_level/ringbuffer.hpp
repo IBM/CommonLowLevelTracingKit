@@ -9,6 +9,7 @@
 #include <mutex>
 #include <span>
 #include <stdint.h>
+#include <variant>
 #include <vector>
 
 #include "file.hpp"
@@ -83,7 +84,6 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		};
 
 		Ringbuffer(FilePart &&file);
-		virtual ~Ringbuffer() = default;
 		Ringbuffer(const Ringbuffer &) = delete;
 		Ringbuffer &operator=(const Ringbuffer &) = delete;
 		Ringbuffer(Ringbuffer &&) = delete;
@@ -108,7 +108,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			return std::min(pending, m_body_size - 1);
 		}
 
-		EntryPtr getNextEntry();
+		std::variant<EntryPtr, std::string> getNextEntry() noexcept;
 
 	  private:
 		std::mutex m_this_lock;
@@ -126,7 +126,6 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		CONST_INLINE size_t size() const noexcept { return m_body.size(); }
 
 		static constexpr uint8_t header_size = 4;
-		virtual ~Entry() = default;
 
 		static EntryPtr make(const uint64_t a_entry_number, const uint64_t a_body_start,
 							 const size_t a_body_size, const FilePart &a_rb_body,

@@ -31,6 +31,14 @@ namespace CommonLowLevelTracingKit::decoder::exception {
 		InvalidMeta(const std::string &msg, const char *file, unsigned long line)
 			: Exception("InvalidMeta: " + msg, file, line) {}
 	};
+	struct Synchronisation : public Exception {
+		Synchronisation(const std::string &msg, const char *file, unsigned long line)
+			: Exception("Synchronisation: " + msg, file, line) {}
+	};
+	struct InvalidTracebuffer : public Exception {
+		InvalidTracebuffer(const std::string &msg, const char *file, unsigned long line)
+			: Exception("InvalidTracebuffer: " + msg, file, line) {}
+	};
 #define CLLTK_DECODER_THROW(TYPE, MSG) throw TYPE(MSG, __FILE__, __LINE__)
 
 } // namespace CommonLowLevelTracingKit::decoder::exception

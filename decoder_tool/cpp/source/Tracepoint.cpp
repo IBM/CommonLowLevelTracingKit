@@ -15,14 +15,22 @@
 
 using namespace CommonLowLevelTracingKit::decoder;
 using ToString = CommonLowLevelTracingKit::decoder::source::low_level::ToString;
+using namespace std::string_literals;
 
-TraceEntryHead::TraceEntryHead(const std::span<const uint8_t> &body)
-	: m_pid(get<uint32_t>(body, 6))
+TraceEntryHead::TraceEntryHead(std::string_view tb, uint64_t n, uint64_t t,
+							   const std::span<const uint8_t> &body)
+	: Tracepoint(tb, n, t)
+	, m_pid(get<uint32_t>(body, 6))
 	, m_tid(get<uint32_t>(body, 10)) {}
 
+TraceEntryHead::TraceEntryHead(std::string_view tb, uint64_t n, uint64_t t, uint32_t pid,
+							   uint32_t tid)
+	: Tracepoint(tb, n, t)
+	, m_pid(pid)
+	, m_tid(tid) {};
+
 TracepointDynamic::TracepointDynamic(const std::string_view &tb, source::Ringbuffer::EntryPtr a_e)
-	: Tracepoint(tb, a_e->nr, get<uint64_t>(a_e->body(), 14))
-	, TraceEntryHead(a_e->body())
+	: TraceEntryHead(tb, a_e->nr, get<uint64_t>(a_e->body(), 14), a_e->body())
 	, e(std::move(a_e)) {
 	const size_t size = e->body().size();
 	const char *const begin = reinterpret_cast<const char *>(e->body().begin().base());
@@ -53,8 +61,7 @@ TracepointDynamic::TracepointDynamic(const std::string_view &tb, source::Ringbuf
 using FilePtr = source::internal::FilePtr;
 TracepointStatic::TracepointStatic(const std::string_view &tb, source::Ringbuffer::EntryPtr &&a_e,
 								   const std::span<const uint8_t> &m, const FilePtr &&f)
-	: Tracepoint(tb, a_e->nr, get<uint64_t>(a_e->body(), 14))
-	, TraceEntryHead(a_e->body())
+	: TraceEntryHead(tb, a_e->nr, get<uint64_t>(a_e->body(), 14), a_e->body())
 	, e(std::move(a_e))
 	, m_keep_memory(f)
 	, m_type(toMetaType(get<uint8_t>(m, 5)))
@@ -66,16 +73,21 @@ TracepointStatic::TracepointStatic(const std::string_view &tb, source::Ringbuffe
 
 const std::string_view TracepointStatic::msg() const {
 	if (m_msg.empty()) {
-		std::span<const uint8_t> args_raw{&e->body()[22], e->size() - 22};
-		if (m_type == MetaType::printf) [[likely]]
+		const uint8_t *const arg_start = (e->size() > 22) ? &e->body()[22] : nullptr;
+		const size_t arg_size = (e->size() > 22) ? (e->size() - 22) : 0;
+		std::span<const uint8_t> args_raw{arg_start, arg_size};
+		if (m_type == MetaType::printf) [[likely]] {
 			m_msg = source::formatter::printf(m_format, m_arg_types, args_raw);
-		else if (m_type == MetaType::dump)
+		} else if (m_type == MetaType::dump) {
 			m_msg = source::formatter::dump(m_format, m_arg_types, args_raw);
-		else
-			m_msg = "<invalid meta data>";
+		} else {
+			CLLTK_DECODER_THROW(exception::InvalidMeta,
+								"invalid meta data: "s + std::to_string((char)m_type));
+		}
 	}
 	return m_msg;
 }
+
 std::string Tracepoint::date_and_time_str() const noexcept {
 	return ToString::date_and_time(timestamp_ns);
 }

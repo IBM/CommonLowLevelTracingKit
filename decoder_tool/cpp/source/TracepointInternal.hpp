@@ -20,15 +20,17 @@ INLINE static constexpr T get(R r, size_t offset = 0) {
 
 namespace CommonLowLevelTracingKit::decoder {
 
-	struct TraceEntryHead : virtual public Tracepoint {
+	struct TraceEntryHead : public Tracepoint {
 		const uint32_t m_pid;
 		const uint32_t m_tid;
-		TraceEntryHead(const std::span<const uint8_t> &body);
+		TraceEntryHead(std::string_view tb, uint64_t n, uint64_t t,
+					   const std::span<const uint8_t> &body);
+		TraceEntryHead(std::string_view tb, uint64_t n, uint64_t t, uint32_t pid, uint32_t tid);
 		uint32_t pid() const noexcept override { return m_pid; };
 		uint32_t tid() const noexcept override { return m_tid; };
 	};
 
-	class TracepointDynamic final : virtual public Tracepoint, public TraceEntryHead {
+	class TracepointDynamic final : public TraceEntryHead {
 	  public:
 		~TracepointDynamic() = default;
 		TracepointDynamic(const std::string_view &tb, source::Ringbuffer::EntryPtr a_e);
@@ -53,7 +55,7 @@ namespace CommonLowLevelTracingKit::decoder {
 		else
 			return MetaType::undefined;
 	}
-	class TracepointStatic final : virtual public Tracepoint, public TraceEntryHead {
+	class TracepointStatic final : public TraceEntryHead {
 	  public:
 		~TracepointStatic() = default;
 		TracepointStatic(const std::string_view &tb, source::Ringbuffer::EntryPtr &&a_e,
@@ -74,6 +76,47 @@ namespace CommonLowLevelTracingKit::decoder {
 		const std::string_view m_file;
 		const std::string_view m_format;
 		mutable std::string m_msg;
+	};
+
+	struct VirtualTracepoint : public TraceEntryHead {
+		VirtualTracepoint(const std::string tb, const std::string &msg)
+			: TraceEntryHead(tb, 0, 0, 0, 0)
+			, m_tb(std::move(tb))
+			, m_msg(msg)
+			, m_file()
+			, m_line() {}
+		VirtualTracepoint(const std::string tb, const source::Ringbuffer::Entry &e,
+						  const std::string &msg)
+			: TraceEntryHead(tb, e.nr, get<uint64_t>(e.body(), 14), 0, 0)
+			, m_tb(std::move(tb))
+			, m_msg(msg)
+			, m_file()
+			, m_line() {}
+
+		~VirtualTracepoint() = default;
+		Type type() const noexcept override { return Type::Virtual; }
+		const std::string_view file() const noexcept override { return m_file; }
+		uint64_t line() const noexcept override { return m_line; }
+		const std::string_view msg() const override { return m_msg; }
+
+		template <class... Args>
+		static INLINE constexpr auto make(const std::string_view tb, Args &&...args) {
+			return std::make_unique<VirtualTracepoint>(std::string{tb.data(), tb.size()},
+													   std::forward<Args>(args)...);
+		}
+
+	  protected:
+		const std::string m_tb;
+		const std::string m_msg;
+		const std::string m_file;
+		const uint32_t m_line;
+	};
+
+	struct ErrorTracepoint : public VirtualTracepoint {
+		using VirtualTracepoint::VirtualTracepoint;
+		~ErrorTracepoint() = default;
+		Type type() const noexcept override { return Type::Error; }
+		using VirtualTracepoint::make;
 	};
 
 } // namespace CommonLowLevelTracingKit::decoder

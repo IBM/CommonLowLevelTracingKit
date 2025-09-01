@@ -39,6 +39,7 @@ using namespace CommonLowLevelTracingKit::decoder;
 using namespace CommonLowLevelTracingKit::decoder::source;
 using namespace std::string_literals;
 using namespace std::chrono;
+using EntryPtr = Ringbuffer::EntryPtr;
 class decoder_ringbuffer : public ::testing::Test
 {
   protected:
@@ -67,51 +68,51 @@ TEST_F(decoder_ringbuffer, empty)
 	TracebufferFile tb{m_file_name};
 	[[maybe_unused]]
 	Ringbuffer &rb = tb.getRingbuffer();
-	EXPECT_FALSE(rb.getNextEntry());
+	EXPECT_FALSE(get<0>(rb.getNextEntry()));
 }
 TEST_F(decoder_ringbuffer, get_one_entries)
 {
 	TracebufferFile tb{m_file_name};
 	Ringbuffer &rb = tb.getRingbuffer();
-	ASSERT_FALSE(rb.getNextEntry());
+	ASSERT_FALSE(get<0>(rb.getNextEntry()));
 	TP("Hello World");
-	EXPECT_TRUE(rb.getNextEntry());
-	EXPECT_FALSE(rb.getNextEntry());
+	EXPECT_TRUE(get<0>(rb.getNextEntry()));
+	EXPECT_FALSE(get<0>(rb.getNextEntry()));
 }
 TEST_F(decoder_ringbuffer, get_two_entries)
 {
 	TracebufferFile tb{m_file_name};
 	Ringbuffer &rb = tb.getRingbuffer();
-	ASSERT_FALSE(rb.getNextEntry());
+	ASSERT_FALSE(get<0>(rb.getNextEntry()));
 	TP("Hello World");
 	TP("Hello World");
-	EXPECT_TRUE(rb.getNextEntry());
-	EXPECT_TRUE(rb.getNextEntry());
-	EXPECT_FALSE(rb.getNextEntry());
+	EXPECT_TRUE(get<0>(rb.getNextEntry()));
+	EXPECT_TRUE(get<0>(rb.getNextEntry()));
+	EXPECT_FALSE(get<0>(rb.getNextEntry()));
 }
 TEST_F(decoder_ringbuffer, get_wrapped)
 {
 	Ringbuffer::EntryPtr e{nullptr};
 	TracebufferFile tb{m_file_name};
 	Ringbuffer &rb = tb.getRingbuffer();
-	e = rb.getNextEntry();
+	e = get<0>(rb.getNextEntry());
 	ASSERT_FALSE(e);
 
 	clltk_dynamic_tracepoint_execution(m_tb_name.c_str(), "", 0, 0, 0, "A");
 
-	e = rb.getNextEntry();
+	e = get<0>(rb.getNextEntry());
 	ASSERT_TRUE(e);
 	ASSERT_EQ(e->size(), 33);
 	ASSERT_EQ(e->body()[31], 'A');
 
 	clltk_dynamic_tracepoint_execution(m_tb_name.c_str(), "", 0, 0, 0, "B");
-	e = rb.getNextEntry();
+	e = get<0>(rb.getNextEntry());
 	ASSERT_TRUE(e);
 	ASSERT_EQ(e->size(), 33);
 	ASSERT_EQ(e->body()[31], 'B');
 
 	clltk_dynamic_tracepoint_execution(m_tb_name.c_str(), "", 0, 0, 0, "C");
-	e = rb.getNextEntry();
+	e = get<0>(rb.getNextEntry());
 	ASSERT_TRUE(e);
 	ASSERT_EQ(e->size(), 33);
 	ASSERT_EQ(e->body()[31], 'C');
@@ -122,16 +123,16 @@ TEST_F(decoder_ringbuffer, get_entries)
 	clltk_dynamic_tracebuffer_creation(m_tb_name.c_str(), 33 + 16);
 	TracebufferFile tb{m_file_name};
 	Ringbuffer &rb = tb.getRingbuffer();
-	e = rb.getNextEntry();
+	e = get<0>(rb.getNextEntry());
 	ASSERT_FALSE(e);
 	for (char i = 0; i < 10; i++) {
 		std::string msg = {(char)('A' + i), '\0'};
 		clltk_dynamic_tracepoint_execution(m_tb_name.c_str(), "", 0, 0, 0, "%s", msg.c_str());
-		e = rb.getNextEntry();
+		e = get<0>(rb.getNextEntry());
 		EXPECT_TRUE(e);
 		ASSERT_EQ(e->size(), 33);
 		ASSERT_EQ(e->body()[31], msg[0]) << "index = " << (int)i;
-		ASSERT_FALSE(rb.getNextEntry()) << "index = " << (int)i;
+		ASSERT_FALSE(get<0>(rb.getNextEntry())) << "index = " << (int)i;
 	}
 }
 TEST_F(decoder_ringbuffer, overtaken)
@@ -139,20 +140,20 @@ TEST_F(decoder_ringbuffer, overtaken)
 	clltk_dynamic_tracepoint_execution(m_tb_name.c_str(), __FILE__, __LINE__, 0, 0, "Hello World");
 	TracebufferFile tb{m_file_name};
 	Ringbuffer &rb = tb.getRingbuffer();
-	EXPECT_TRUE(rb.getNextEntry());
-	EXPECT_FALSE(rb.getNextEntry());
+	EXPECT_TRUE(get<0>(rb.getNextEntry()));
+	EXPECT_FALSE(get<0>(rb.getNextEntry()));
 	for (size_t i = 0; i < 20; i++) {
 		clltk_dynamic_tracepoint_execution(m_tb_name.c_str(), __FILE__, __LINE__, 0, 0,
 										   "Hello World");
 	}
-	EXPECT_TRUE(rb.getNextEntry());
+	EXPECT_TRUE(get<0>(rb.getNextEntry()));
 }
 
 TEST_F(decoder_ringbuffer, recover_after_reset)
 {
 	const auto tp = []() { CLLTK_TRACEPOINT(TB, "a"); };
 	const auto hash = [](auto &rb) {
-		const auto entry = rb.getNextEntry();
+		const auto entry = get<0>(rb.getNextEntry());
 		const auto body = entry->body();
 		const std::string_view sv{reinterpret_cast<const char *>(body.data()), body.size()};
 		return std::hash<std::string_view>{}(sv);
@@ -168,7 +169,7 @@ TEST_F(decoder_ringbuffer, recover_after_reset)
 	EXPECT_TRUE(know.insert(hash(rb)).second);
 	rb.reset();
 	EXPECT_TRUE(know.insert(hash(rb)).second);
-	EXPECT_FALSE(rb.getNextEntry());
+	EXPECT_FALSE(get<0>(rb.getNextEntry()));
 }
 TEST_F(decoder_ringbuffer, recover_after_drop)
 {
@@ -179,11 +180,12 @@ TEST_F(decoder_ringbuffer, recover_after_drop)
 	Ringbuffer &rb = tb.getRingbuffer();
 	ASSERT_FALSE(rb.getDropped());
 	while (rb.pendingBytes() < rb.getSize() / 2) tp();
-	while (rb.pendingBytes()) ASSERT_TRUE(know.insert(hash(rb.getNextEntry()->body())).second);
+	while (rb.pendingBytes())
+		ASSERT_TRUE(know.insert(hash(get<0>(rb.getNextEntry())->body())).second);
 	while (!rb.getDropped()) tp();
 	while (const auto r = rb.pendingBytes()) {
 		std::cout << " pending " << r << std::endl;
-		ASSERT_TRUE(know.insert(hash(rb.getNextEntry()->body())).second);
+		ASSERT_TRUE(know.insert(hash(get<0>(rb.getNextEntry())->body())).second);
 	}
 }
 
@@ -206,7 +208,7 @@ TEST_F(decoder_ringbuffer, write_read_parallel_one_thread)
 	for (uint64_t read_index = 0; read_index < 100; read_index++) {
 		auto lastMsg = steady_clock::now();
 		while ((steady_clock::now() - lastMsg) < milliseconds(10)) {
-			const auto e = rb.getNextEntry();
+			const auto e = get<0>(rb.getNextEntry());
 			if (e == nullptr) continue;
 			EXPECT_TRUE(known.insert(hash(e->body())).second);
 			r++;
@@ -217,7 +219,7 @@ TEST_F(decoder_ringbuffer, write_read_parallel_one_thread)
 	keep_running.store(false, std::memory_order_relaxed);
 	write_thread.join();
 	while (rb.pendingBytes()) {
-		const auto e = rb.getNextEntry();
+		const auto e = get<0>(rb.getNextEntry());
 		if (!e) continue;
 		EXPECT_TRUE(known.insert(hash(e->body())).second);
 	}
@@ -228,7 +230,6 @@ TEST_F(decoder_ringbuffer, write_read_parallel_one_thread)
 // might fail during debugging
 TEST_F(decoder_ringbuffer, write_read_parallel_overwhelmed)
 {
-	Ringbuffer::EntryPtr e{nullptr};
 	constexpr size_t n_threads = 100;
 	constexpr size_t n_tp_per_thread = 1000;
 	constexpr size_t n_tp_total = n_threads * n_tp_per_thread;
@@ -252,13 +253,15 @@ TEST_F(decoder_ringbuffer, write_read_parallel_overwhelmed)
 
 	auto lastMsg = steady_clock::now();
 	while ((steady_clock::now() - lastMsg) < milliseconds(100)) {
-		e = rb.getNextEntry();
+		auto rc = rb.getNextEntry();
+		if (rc.index() != 0) continue;
+		auto e = std::move(get<0>(rc));
 		if (e == nullptr) continue;
 		lastMsg = steady_clock::now();
 		known.push_back(e->nr);
 	}
 	std::for_each(threads.begin(), threads.end(), [](std::thread &t) { t.join(); });
-	EXPECT_FALSE(rb.getNextEntry()) << "there should be no new tracepoints";
+	EXPECT_FALSE(get<0>(rb.getNextEntry())) << "there should be no new tracepoints";
 
 	std::set<uint64_t> set{};
 	for (const uint64_t n : known) EXPECT_TRUE(set.insert(n).second) << "double = " << n;
@@ -287,7 +290,7 @@ TEST_F(decoder_ringbuffer, read_parallel_overwhelmed)
 		}
 	};
 
-	ASSERT_FALSE(rb.getNextEntry());
+	ASSERT_FALSE(rb.pendingBytes());
 	std::array<std::thread, n_threads> threads;
 	std::for_each(threads.begin(), threads.end(),
 				  [&](std::thread &t) { t = std::thread{write_thread_func, n_tp_per_thread}; });
@@ -297,13 +300,15 @@ TEST_F(decoder_ringbuffer, read_parallel_overwhelmed)
 	l.arrive_and_wait();
 	auto lastMsg = steady_clock::now();
 	while ((steady_clock::now() - lastMsg) < milliseconds(100)) {
-		if (const auto tp = rb.getNextEntry()) {
+		if (auto rc = rb.getNextEntry(); rc.index() == 0) {
+			const auto tp = std::move(get<0>(rc));
+			if (tp == nullptr) continue;
 			lastMsg = steady_clock::now();
 			nrs_vector.push_back(tp->nr);
 		};
 	}
 	std::for_each(threads.begin(), threads.end(), [](std::thread &t) { t.join(); });
-	EXPECT_FALSE(rb.getNextEntry()) << "there should be no new tracepoints";
+	EXPECT_EQ(rb.pendingBytes(), 0) << "there should be no new tracepoints ";
 
 	std::map<uint64_t, uint64_t> frequency;
 	for (uint64_t num : nrs_vector) { frequency[num]++; }
@@ -329,13 +334,13 @@ TEST_F(decoder_ringbuffer, get_pendingBytes)
 	const auto tp_size = rb.pendingBytes();
 	std::cout << "tp_size = " << tp_size << std::endl;
 	EXPECT_TRUE(tp_size);
-	ASSERT_TRUE(rb.getNextEntry());
+	ASSERT_TRUE(get<0>(rb.getNextEntry()));
 	EXPECT_FALSE(rb.pendingBytes());
 	tp();
 	EXPECT_EQ(tp_size, rb.pendingBytes());
-	ASSERT_TRUE(rb.getNextEntry());
+	ASSERT_TRUE(get<0>(rb.getNextEntry()));
 	EXPECT_FALSE(rb.pendingBytes());
-	ASSERT_FALSE(rb.getNextEntry());
+	ASSERT_FALSE(get<0>(rb.getNextEntry()));
 	EXPECT_FALSE(rb.pendingBytes());
 
 	const size_t max_tp_count = rb.getSize() / tp_size;
@@ -344,7 +349,7 @@ TEST_F(decoder_ringbuffer, get_pendingBytes)
 	for (uint32_t i = 1; i <= max_tp_count; i++) {
 		tp();
 		ASSERT_EQ(rb.pendingBytes(), i * tp_size) << i;
-		ASSERT_TRUE(rb.getNextEntry());
+		ASSERT_TRUE(get<0>(rb.getNextEntry()));
 		ASSERT_EQ(rb.pendingBytes(), (i - 1) * tp_size) << i;
 		tp();
 		ASSERT_EQ(rb.pendingBytes(), i * tp_size) << i;
@@ -356,7 +361,7 @@ TEST_F(decoder_ringbuffer, get_pendingBytes)
 		ASSERT_EQ(rb.pendingBytes(), max_tp_count * tp_size);
 		tp();
 		ASSERT_EQ(rb.pendingBytes(), max_tp_count * tp_size) << i;
-		EXPECT_TRUE(rb.getNextEntry());
+		EXPECT_TRUE(get<0>(rb.getNextEntry()));
 		EXPECT_EQ(rb.pendingBytes(), (max_tp_count - 1) * tp_size) << i;
 		tp();
 	}
@@ -376,13 +381,13 @@ TEST_F(decoder_ringbuffer, pendingBytes_always_full)
 
 	for (size_t arg_size = 0; arg_size < sv.size(); arg_size++) {
 		std::cout << "\narg_size = " << arg_size << std::endl;
-		while (rb.getNextEntry()); // clear ringbuffer
+		while (get<0>(rb.getNextEntry())); // clear ringbuffer
 		EXPECT_FALSE(rb.pendingBytes());
 		tp(arg_size);
 		const auto tp_size = rb.pendingBytes();
 		std::cout << "tp_size = " << tp_size << std::endl;
 		EXPECT_TRUE(tp_size);
-		EXPECT_TRUE(rb.getNextEntry());
+		EXPECT_TRUE(get<0>(rb.getNextEntry()));
 		EXPECT_FALSE(rb.pendingBytes());
 		while (rb.pendingBytes() <= (rb.getSize() - tp_size))
 			(tp(arg_size)); // fill ringbuffer with current size
@@ -414,13 +419,13 @@ TEST_F(decoder_ringbuffer, pendingBytes_always_full_with_getNext)
 
 	for (size_t arg_size = 0; arg_size < sv.size(); arg_size++) {
 		std::cout << "\narg_size = " << arg_size << std::endl;
-		while (rb.getNextEntry()); // clear ringbuffer
+		while (get<0>(rb.getNextEntry())); // clear ringbuffer
 		EXPECT_FALSE(rb.pendingBytes());
 		tp(arg_size);
 		const auto tp_size = rb.pendingBytes();
 		std::cout << "tp_size = " << tp_size << std::endl;
 		EXPECT_TRUE(tp_size);
-		EXPECT_TRUE(rb.getNextEntry());
+		EXPECT_TRUE(get<0>(rb.getNextEntry()));
 		EXPECT_FALSE(rb.pendingBytes());
 		while (rb.pendingBytes() <= (rb.getSize() - tp_size))
 			(tp(arg_size)); // fill ringbuffer with current size
@@ -437,7 +442,7 @@ TEST_F(decoder_ringbuffer, pendingBytes_always_full_with_getNext)
 		std::cout << "max_tp_count = " << max_tp_count << std::endl;
 		for (uint32_t i = 1; i <= max_tp_count * tp_size * 10; i++) {
 			tp(arg_size);
-			const auto e = rb.getNextEntry();
+			const auto e = get<0>(rb.getNextEntry());
 			ASSERT_TRUE(known.insert(e->nr).second);
 			tp(arg_size);
 		}

@@ -36,8 +36,8 @@ static size_t strnlen_s(const char *str, size_t len)
 
 #endif
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstack-protector"
+_CLLTK_PRAGMA_DIAG(push)
+_CLLTK_PRAGMA_DIAG(ignored "-Wstack-protector")
 void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 										const _clltk_file_offset_t in_file_offset,
 										const char *const file, const uint32_t line,
@@ -170,18 +170,22 @@ void clltk_dynamic_tracepoint_execution(const char *name, const char *file, cons
 	char *message;
 	va_list args;
 	va_start(args, format);
-	int unused __attribute__((unused)) = vasprintf(&message, format, args);
+	const int print_rc = vasprintf(&message, format, args);
 	va_end(args);
+	if (print_rc < 0) {
+		ERROR_LOG("print failed with (%d) in %s:%ld", print_rc, file, line);
+		return;
+	}
 
 	// calculate entry size
 	const size_t file_len = strnlen_s(file, CLLTK_MAX_FILENAME_SIZE) + 1;
-	const size_t message_len = strnlen_s(message, CLLTK_MAX_MESSAGE_SIZE) + 1;
+	const size_t message_len = (size_t)print_rc + 1;
 	const size_t line_len = sizeof(line);
 
 	size_t raw_entry_size = sizeof(traceentry_head);
 	raw_entry_size += file_len;
 	raw_entry_size += line_len;
-	raw_entry_size += message_len;
+	raw_entry_size += (size_t)message_len;
 
 	// create entry
 	if (raw_entry_size >= UINT16_MAX) {
@@ -221,4 +225,4 @@ void clltk_dynamic_tracepoint_execution(const char *name, const char *file, cons
 EXPORT_SYMBOL(clltk_dynamic_tracepoint_execution);
 #endif
 
-#pragma GCC diagnostic pop
+_CLLTK_PRAGMA_DIAG(pop)

@@ -15,7 +15,49 @@ cd "${ROOT_PATH}"
 rm -rf build
 cmake --preset unittests --fresh -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCLLTK_EXAMPLES=OFF -DENABLE_CODE_COVERAGE=ON
 cmake --build --preset unittests --target all -- -j32
-ctest --preset unittests
+ctest --preset unittests  $@
+
+rm -rf build/coverage
+mkdir -p build/coverage/{gcovr,lcov}
+gcovr --root $ROOT_PATH \
+    --gcov-executable "llvm-cov gcov" \
+    --exclude ".*/?build/.*" \
+    --exclude ".*/?command_line_tool/.*" \
+    --exclude ".*/?examples/.*" \
+    --exclude ".*/?tests/.*" \
+    --exclude-lines-by-pattern ".*extern.*" \
+    --exclude-lines-by-pattern ".*ERROR_AND_EXIT.*" \
+    --exclude-noncode-lines \
+    --exclude-function-lines \
+    --exclude-unreachable-branches \
+    --exclude-throw-branches \
+    --merge-mode-functions=separate \
+    --merge-mode-conditions=fold \
+    --html --html-details -o build/coverage/gcovr/coverage.html \
+    --lcov build/coverage/lcov/coverage_raw.info \
+
+lcov --remove build/coverage/lcov/coverage_raw.info '/usr/* '\
+     --demangle-cpp \
+    --branch-coverage \
+    --ignore-errors inconsistent,inconsistent \
+    --ignore-errors mismatch,mismatch \
+    --ignore-errors source,source \
+    --ignore-errors unused \
+    -o build/coverage/lcov/coverage.info
+
+genhtml build/coverage/lcov/coverage.info \
+    --output-directory build/coverage/lcov/ \
+    --ignore-errors inconsistent,inconsistent \
+    --ignore-errors mismatch,mismatch \
+    --ignore-errors source,source \
+    --ignore-errors unused \
+    --no-checksum \
+    --demangle-cpp \
+    --branch-coverage \
+    --function-coverage \
+    --legend \
+    --title "CommonLowLevelTracingKit" \
+    --show-details
 
 rm -rf build/profraw
 MAP_FILE="build/build_hash_map.txt"
@@ -42,7 +84,8 @@ find build -type f -name '*.profraw' -print0 |
     xargs -0 -P8 -I{} bash -c 'move_prof_file "$0"' {}
 
 mkdir -p build/coverage
-rm -rf build/coverage/*
+find build/coverage/ -name merged.profdata -delete
+find build/coverage/ -name combined-coverage.info -delete
 
 output=()
 for hash in "${!build_hash_map[@]}"; do
@@ -55,7 +98,8 @@ for hash in "${!build_hash_map[@]}"; do
         output+=("$exe empty($dir)")
     else
         name="$(basename "$exe")"
-        llvm-profdata merge -sparse $dir/*.profraw -o $dir/merged.profdata
+        llvm-profdata merge -sparse $dir/*.profraw \
+        -o $dir/merged.profdata
 
         # for single exe report
         llvm-cov show $exe \
@@ -70,39 +114,12 @@ for hash in "${!build_hash_map[@]}"; do
             --ignore-filename-regex='(_deps|test)' \
             -show-instantiations
         output+=("$name build/coverage/$name/index.html")
-
-        # for total report
-        llvm-cov export \
-            -format=lcov \
-            -instr-profile=$dir/merged.profdata \
-            --ignore-filename-regex='(_deps|test|/build/)' \
-            $exe \
-            >$dir/combined-coverage.info
     fi
     echo "$exe" >"$dir/name"
 done
 
-# merge all to one report
-lcov \
-    -j $(nproc --ignore=1) \
-    --branch-coverage \
-    --base-director $ROOT_PATH \
-    $(find build/profraw -name 'combined-coverage.info' -exec printf -- '-a %s ' {} \;) \
-    -o build/profraw/merged.info
-
-# create one total report
-genhtml build/profraw/merged.info \
-    --show-details \
-    --prefix $ROOT_PATH \
-    --output-directory build/coverage/total \
-    --function-coverage \
-    --demangle-cpp \
-    --highlight \
-    --legend \
-    --sort \
-    --quiet
-
 printf "%s\n" "${output[@]}" | column -t | sort
-echo ""
-echo "total - build/coverage/total/index.html"
 rm -rf build/profraw
+
+echo "build/coverage/gcovr/coverage.html"
+echo build/coverage/lcov/index.html

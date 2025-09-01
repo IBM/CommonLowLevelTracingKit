@@ -22,6 +22,7 @@ using Archive = CommonLowLevelTracingKit::decoder::source::low_level::Archive;
 static constexpr std::string_view little_ending_magic{"?#$~tracebuffer", 16};
 static constexpr std::string_view big_ending_maci{"cart~$#?\0reffube", 16};
 namespace fs = std::filesystem;
+using namespace std::string_literals;
 using namespace CommonLowLevelTracingKit::decoder;
 using namespace CommonLowLevelTracingKit::decoder::exception;
 using namespace source;
@@ -31,12 +32,15 @@ class SyncTbInternal : public SyncTracebuffer {
 		: SyncTracebuffer(a_path)
 		, m_tb(a_path)
 		, m_file(m_tb.getFilePart())
-		, m_file_size(m_file.getFileSize()) {}
+		, m_file_size(m_file.getFileSize()) {
+		if (size() < 3) CLLTK_DECODER_THROW(InvalidTracebuffer, "ringbuffer to smale");
+	}
 	~SyncTbInternal() override {}
 	const std::string_view name() const noexcept override;
 	size_t size() const noexcept override;
 
-	TracepointPtr next(const TracepointFilterFunc &filter) override;
+	TracepointPtr next() noexcept;
+	TracepointPtr next(const TracepointFilterFunc &filter) noexcept override;
 	uint64_t pending() noexcept override;
 	uint64_t current_top_entries_nr() const noexcept override;
 
@@ -63,10 +67,12 @@ uint64_t SyncTbInternal::current_top_entries_nr() const noexcept {
 	return m_tb.getRingbuffer().getEntrieCount();
 };
 
-TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) {
+TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) noexcept {
 	while (true) {
-
-		auto e = m_tb.getRingbuffer().getNextEntry();
+		auto ringbuffer_entry = m_tb.getRingbuffer().getNextEntry();
+		if (auto s = std::get_if<std::string>(&ringbuffer_entry))
+			return ErrorTracepoint::make(name(), *s);
+		auto &e = std::get<Ringbuffer::EntryPtr>(ringbuffer_entry);
 		if (e == nullptr) return {};
 
 		const uint64_t fileoffset = get<uint64_t>(e->body()) & ((1ULL << 48) - 1);
@@ -74,13 +80,13 @@ TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) {
 			auto tp = std::make_unique<TracepointDynamic>(name(), std::move(e));
 			if (!filter || filter(*tp)) return tp;
 		} else if (fileoffset < 0xFF) {
-			CLLTK_DECODER_THROW(InvalidEntry, "invalid file offset");
+			return ErrorTracepoint::make(name(), "invalid file offset");
 		} else {
 			if (fileoffset > m_file_size) m_file_size = m_file.doGrow();
 			if (fileoffset > m_file_size)
-				CLLTK_DECODER_THROW(InvalidEntry, "file offset bigger than file");
+				return ErrorTracepoint::make(name(), "file offset bigger than file");
 			if (m_file.get<char>(fileoffset) != '{')
-				CLLTK_DECODER_THROW(InvalidMeta, "invalid meta magic");
+				return ErrorTracepoint::make(name(), "invalid meta magic");
 			const uint32_t meta_size = m_file.get<uint32_t>(fileoffset + 1);
 			const std::span<const uint8_t> meta{&m_file.getRef<const uint8_t>(fileoffset),
 												meta_size};
@@ -107,7 +113,7 @@ bool Tracebuffer::is_tracebuffer(const fs::path &path) {
 	if (!file) { return false; }
 	std::array<char, 16> fileHead{};
 	file.read(fileHead.begin(), fileHead.size());
-	if (safe_narrow_cast<size_t>(file.gcount()) < fileHead.size()) { return false; }
+	if (safe_cast<size_t>(file.gcount()) < fileHead.size()) { return false; }
 
 	const std::string_view magic{fileHead.data(), fileHead.size()};
 	if (magic == little_ending_magic) return true;
@@ -127,7 +133,8 @@ SnapTracebuffer::SnapTracebuffer(const std::filesystem::path &path, TracepointCo
 	, m_name(std::move(name))
 	, m_size(size) {}
 
-SnapTracebufferPtr SnapTracebuffer::make(const fs::path &path, TracepointFilterFunc tpFilter) {
+SnapTracebufferPtr SnapTracebuffer::make(const fs::path &path,
+										 const TracepointFilterFunc &tpFilter) {
 	auto sync_tb = SyncTracebuffer::make(path);
 	if (!sync_tb) return {};
 	std::string name{sync_tb->name()};
@@ -136,11 +143,9 @@ SnapTracebufferPtr SnapTracebuffer::make(const fs::path &path, TracepointFilterF
 	const uint64_t top_nr = sync_tb->current_top_entries_nr();
 
 	while (true) {
-		try {
-			TracepointPtr e = sync_tb->next();
-			if (!e || (e->nr > top_nr)) break;
-			if (!tpFilter || tpFilter(*e)) tps.push_back(std::move(e));
-		} catch (CommonLowLevelTracingKit::decoder::exception::Exception &) {}
+		TracepointPtr e = sync_tb->next();
+		if (!e || (e->nr > top_nr)) break;
+		if (!tpFilter || tpFilter(*e)) tps.push_back(std::move(e));
 	}
 
 	static constexpr auto cmp = [](const auto &a, const auto &b) -> bool {
@@ -155,8 +160,8 @@ static INLINE void add(SnapTracebufferCollection &out, SnapTracebufferCollection
 		if (t) out.push_back(std::move(t));
 }
 SnapTracebufferCollection SnapTracebuffer::collect(const fs::path &path,
-												   TracebufferFilterFunc tbFilter,
-												   TracepointFilterFunc tpFilter) {
+												   const TracebufferFilterFunc &tbFilter,
+												   const TracepointFilterFunc &tpFilter) {
 	SnapTracebufferCollection out{};
 	if (!fs::exists(path)) return out;
 	if (fs::is_directory(path)) {
