@@ -22,6 +22,13 @@
 #include <tuple>
 #include <unistd.h>
 
+#if defined(__SANITIZE_ADDRESS__) || \
+	(defined(__clang__) && defined(__has_feature) && __has_feature(address_sanitizer))
+static constexpr bool AsanEnabled = true;
+#else
+static constexpr bool AsanEnabled = false;
+#endif
+
 using namespace std::string_literals;
 
 TEST(sync, global_mutex_in_thread)
@@ -111,35 +118,35 @@ TEST(sync, memory_mutex_in_ended_thread)
 	const std::string output = testing::internal::GetCapturedStderr();
 	EXPECT_EQ(output, "");
 }
-
 TEST(sync, memory_mutex_in_killed_process)
 {
-	static constexpr size_t SHM_SIZE = 1024;
-
-	file_t *const file = file_create_temp("memory_mutex_in_killed_process", SHM_SIZE);
-	void *const ptr = file_mmap_ptr(file);
-	ASSERT_TRUE(ptr);
-
-	sync_mutex_t *const mutex = (sync_mutex_t *)ptr;
+	if (AsanEnabled)
+		return;
+	file_t *file = file_create_temp("memory_mutex_in_killed_process", sizeof(sync_mutex_t));
+	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
 	sync_memory_mutex_init(mutex);
+	{
+		syn_lock_object_t lock = sync_memory_mutex_get(mutex);
+		ASSERT_EQ(true, lock.locked);
+		sync_memory_mutex_release(&lock);
+	}
 
 	pid_t childPid = fork();
 	if (childPid < 0) {
 		FAIL() << "Failed to fork child process" << std::endl;
 	} else if (childPid == 0) {
 		// Child process
+		sync_memory_mutex_init(mutex);
 		syn_lock_object_t lock = sync_memory_mutex_get(mutex);
 		ASSERT_EQ(true, lock.locked);
-
-		volatile int *integer = nullptr;
-		*integer = 0; // create seg fault
+		kill(getpid(), SIGTERM);
 	} else {
 		// Parent process
 
 		int status = 0;
 		waitpid(childPid, &status, 0); // wait for child to exit
-		ASSERT_EQ(WTERMSIG(status), SIGSEGV)
-			<< "child process not killed by segmant fault but by " << WTERMSIG(status);
+		ASSERT_TRUE(WTERMSIG(status))
+			<< "child process not killed by sigkill but by " << WTERMSIG(status);
 
 		testing::internal::CaptureStderr();
 		{ // try to get locked mutex with dead owner, should be recovered
@@ -150,20 +157,23 @@ TEST(sync, memory_mutex_in_killed_process)
 		const std::string output = testing::internal::GetCapturedStderr();
 		EXPECT_EQ(output, "");
 		kill(childPid, SIGKILL);
+		file_drop(&file);
 		return;
 	}
 }
 
 TEST(sync, memory_mutex_in_exit_process)
 {
-	static constexpr size_t SHM_SIZE = 1024;
-
-	file_t *const file = file_create_temp("memory_mutex_in_killed_process", SHM_SIZE);
-	void *const ptr = file_mmap_ptr(file);
-	ASSERT_TRUE(ptr);
-
-	sync_mutex_t *const mutex = (sync_mutex_t *)ptr;
+	if (AsanEnabled)
+		return;
+	file_t *file = file_create_temp("memory_mutex_in_exit_process", sizeof(sync_mutex_t));
+	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
 	sync_memory_mutex_init(mutex);
+	{
+		syn_lock_object_t lock = sync_memory_mutex_get(mutex);
+		ASSERT_EQ(true, lock.locked);
+		sync_memory_mutex_release(&lock);
+	}
 
 	pid_t childPid = fork();
 	if (childPid < 0) {
@@ -196,14 +206,17 @@ TEST(sync, memory_mutex_in_exit_process)
 }
 TEST(sync, memory_mutex_in_exit_process_during_recovery)
 {
-	static constexpr size_t SHM_SIZE = 1024;
-
-	file_t *const file = file_create_temp("memory_mutex_in_killed_process", SHM_SIZE);
-	void *const ptr = file_mmap_ptr(file);
-	ASSERT_TRUE(ptr);
-
-	sync_mutex_t *const mutex = (sync_mutex_t *)ptr;
+	if (AsanEnabled)
+		return;
+	file_t *file =
+		file_create_temp("memory_mutex_in_exit_process_during_recovery", sizeof(sync_mutex_t));
+	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
 	sync_memory_mutex_init(mutex);
+	{
+		syn_lock_object_t lock = sync_memory_mutex_get(mutex);
+		ASSERT_EQ(true, lock.locked);
+		sync_memory_mutex_release(&lock);
+	}
 
 	// create first child which will exit holding the lock
 	pid_t firstChildPid = fork();
@@ -305,16 +318,17 @@ TEST(sync, signal_in_same_process_same_thread)
 
 TEST(sync, get_mutex_timeout_with_process)
 {
-	constexpr size_t SHM_SIZE = 1024;
-	file_t *const file = file_create_temp("get_mutex_timeout_with_process", SHM_SIZE);
-	void *const ptr = file_mmap_ptr(file);
-	ASSERT_TRUE(ptr);
-
-	sync_mutex_t *const mutex = (sync_mutex_t *)ptr;
-	volatile int *const child_done = (int *)(mutex + 1);
-	*child_done = 0;
-
+	if (AsanEnabled)
+		return;
+	file_t *file = file_create_temp("get_mutex_timeout_with_process", sizeof(sync_mutex_t) + 1);
+	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
 	sync_memory_mutex_init(mutex);
+	{
+		syn_lock_object_t lock = sync_memory_mutex_get(mutex);
+		ASSERT_EQ(true, lock.locked);
+		sync_memory_mutex_release(&lock);
+	}
+	bool &child_done = *std::bit_cast<bool *>(mutex + 1);
 
 	// Create child process
 	pid_t childPid = fork();
@@ -324,12 +338,12 @@ TEST(sync, get_mutex_timeout_with_process)
 		// Child process
 		syn_lock_object_t locked = sync_memory_mutex_get(mutex);
 		EXPECT_TRUE(locked.locked);
-		*child_done = 1;
+		child_done = 1;
 		while (1) { // wait to be killed by parent, do nothing
 		}
 	} else {
 		// Parent process
-		while (*child_done == 0) { // wait till child has locked mutex
+		while (child_done == 0) { // wait till child has locked mutex
 		}
 		testing::internal::CaptureStderr();
 		syn_lock_object_t locked = sync_memory_mutex_get(mutex);

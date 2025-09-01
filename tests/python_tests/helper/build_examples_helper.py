@@ -17,16 +17,7 @@ class unittest(unittest.TestCase):
     decoded: pd.DataFrame = None
     tmp_folder : tempfile.TemporaryDirectory = None
     env : dict = {}
-
-    def setUp(self) -> None:
-        assert isinstance(self.target, str), f"target not set ({self.target})"
-        assert pathlib.Path(self.root).resolve().is_dir(), f"root not a folder ({self.root})"
-        self.trace_folder = self.root.joinpath("build", "traces", self.target).absolute()
-        os.makedirs(self.trace_folder, exist_ok=True)
-        assert self.trace_folder.is_dir() and self.trace_folder.exists()
-        self.build_target()
-        pass
-
+    
     def setUp(self):
         self.tmp_folder = tempfile.TemporaryDirectory()
         self.env = {**os.environ , "CLLTK_TRACING_PATH": self.tmp_folder.name}

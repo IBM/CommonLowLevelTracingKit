@@ -31,7 +31,8 @@ typedef struct vector_data vector_data;
 
 static vector_data *vector_get_data(vector vec)
 {
-	return &((vector_data *)vec)[-1];
+
+	return ((vector_data *)vec - 1);
 }
 
 vector vector_create(void)
@@ -106,7 +107,7 @@ void *_vector_insert(vector *vec_addr, vec_type_t type_size, vec_size_t pos)
 	return &v_data->buff[pos * type_size];
 }
 
-void _vector_erase(vector *vec_addr, vec_type_t type_size, vec_size_t pos, vec_size_t len)
+void _vector_erase(vector vec_addr, vec_type_t type_size, vec_size_t pos, vec_size_t len)
 {
 	vector_data *v_data = vector_get_data(vec_addr);
 	// anyone who puts in a bad index can face the consequences on their own
@@ -115,7 +116,7 @@ void _vector_erase(vector *vec_addr, vec_type_t type_size, vec_size_t pos, vec_s
 	v_data->length -= len;
 }
 
-void _vector_remove(vector *vec_addr, vec_type_t type_size, vec_size_t pos)
+void _vector_remove(vector vec_addr, vec_type_t type_size, vec_size_t pos)
 {
 	_vector_erase(vec_addr, type_size, pos, 1);
 }

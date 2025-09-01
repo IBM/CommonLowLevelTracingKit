@@ -23,9 +23,6 @@ typedef void
 typedef size_t vec_size_t;		  // stores the number of elements
 typedef unsigned char vec_type_t; // stores the number of bytes for a type
 
-typedef int *vec_int;
-typedef char *vec_char;
-
 #ifndef _MSC_VER
 
 // shortcut defines
@@ -43,7 +40,7 @@ typedef char *vec_char;
 
 // vec is a vector (aka type*)
 #define vector_erase(vec, pos, len) (_vector_erase((vector)vec, sizeof(__typeof__(*vec)), pos, len))
-#define vector_remove(vec, pos) (_vector_remove((vector *)vec, sizeof(__typeof__(*vec)), pos))
+#define vector_remove(vec, pos) (_vector_remove((vector)vec, sizeof(__typeof__(*vec)), pos))
 #define vector_find(vec, match_func, context)                                                 \
 	(_vector_find((vector)vec, sizeof(__typeof__(*vec)), (vector_match_function_t)match_func, \
 				  (void *)context))
@@ -62,8 +59,8 @@ typedef char *vec_char;
 #define vector_insert(vec_addr, type, pos, value) (*vector_insert_asg(vec_addr, type, pos) = value)
 
 // vec is a vector (aka type*)
-#define vector_erase(vec, type, pos, len) (_vector_erase((vector *)vec, sizeof(type), pos, len))
-#define vector_remove(vec, type, pos) (_vector_remove((vector *)vec, sizeof(type), pos))
+#define vector_erase(vec, type, pos, len) (_vector_erase((vector)vec, sizeof(type), pos, len))
+#define vector_remove(vec, type, pos) (_vector_remove((vector)vec, sizeof(type), pos))
 #define vector_find(vec, match_func, context)                                                  \
 	_vector_find((vector *)vec, sizeof(__typeof__(*vec)), (vector_match_function_t)match_func, \
 				 (void *)context)
@@ -78,9 +75,9 @@ void *_vector_add(vector *vec_addr, vec_type_t type_size);
 
 void *_vector_insert(vector *vec_addr, vec_type_t type_size, vec_size_t pos);
 
-void _vector_erase(vector *vec_addr, vec_type_t type_size, vec_size_t pos, vec_size_t len);
+void _vector_erase(vector vec_addr, vec_type_t type_size, vec_size_t pos, vec_size_t len);
 
-void _vector_remove(vector *vec_addr, vec_type_t type_size, vec_size_t pos);
+void _vector_remove(vector vec_addr, vec_type_t type_size, vec_size_t pos);
 
 vec_size_t vector_size(vector vec);
 

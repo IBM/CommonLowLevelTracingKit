@@ -4,9 +4,9 @@
 
 
 add_library(clltk_snapshot_static STATIC
-    ./source/file.cpp
-    ./source/snapshot_tar.cpp
-    ./source/snapshot_gzip.cpp
+    source/file.cpp
+    source/snapshot_tar.cpp
+    source/snapshot_gzip.cpp
 )
 
 target_include_directories(clltk_snapshot_static
@@ -31,8 +31,9 @@ set_target_properties(clltk_snapshot_static
 )
 
 add_library(clltk_snapshot_shared SHARED
-    ./source/snapshot_tar.cpp
-    ./source/snapshot_gzip.cpp
+    source/file.cpp
+    source/snapshot_tar.cpp
+    source/snapshot_gzip.cpp
 )
 
 target_include_directories(clltk_snapshot_shared

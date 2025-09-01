@@ -2,8 +2,13 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "CommonLowLevelTracingKit/tracing.h"
+#include <array>
+#include <atomic>
+#include <barrier>
 #include <stdio.h>
 #include <stdlib.h>
+#include <thread>
+#include <utility>
 
 CLLTK_TRACEBUFFER(COMPLEX_CPP, 100 * 1024);
 
@@ -15,6 +20,7 @@ void inline_functions(void);
 void namespace_functions(void);
 void tracepoint_dump(void);
 void template_function(void);
+void template_second_function(void);
 void corner_cases(void);
 
 int main(int argc, char *argv[])
@@ -39,6 +45,7 @@ int main(int argc, char *argv[])
 		namespace_functions();
 		tracepoint_dump();
 		template_function();
+		template_second_function();
 	}
 
 	return 0;
@@ -247,6 +254,67 @@ void template_function(void)
 {
 	t.normal_func();
 	t.static_func();
+	static Template<bool> a;
+	a.normal_func();
+	a.static_func();
+	Template<char> b;
+	b.normal_func();
+	b.static_func();
 	Template<double>::static_func();
 	Template<double>{}.normal_func();
+}
+
+CLLTK_TRACEBUFFER(TEMPLATE_B, 1024 * 1024);
+template <int N> struct TemplateClass {
+	static void run(const size_t thread_id)
+	{
+		CLLTK_TRACEPOINT(TEMPLATE_B, "[%d] (%lu) %s", N, thread_id, __PRETTY_FUNCTION__);
+	}
+};
+
+constexpr int NumThreads = 100;
+constexpr int MaxTemplates = 256;
+
+// Helper: compile-time dispatch using index_sequence
+template <std::size_t... Is>
+void dispatch_run(const size_t thread_id, int idx, std::index_sequence<Is...>)
+{
+	// Fold expression to match the index and call the correct run
+	((idx == Is ? (TemplateClass<Is + 1>::run(thread_id), void()) : void()), ...);
+}
+
+// Thread function using direct dispatch
+void thread_function(const size_t thread_id, std::barrier<> &sync_point,
+					 std::atomic<int> &current_index)
+{
+	while (true) {
+		sync_point.arrive_and_wait();
+
+		int idx = current_index.load();
+		if (idx >= MaxTemplates)
+			break;
+
+		dispatch_run(thread_id, idx, std::make_index_sequence<MaxTemplates>{});
+
+		sync_point.arrive_and_wait();
+		if (thread_id == 0) {
+			current_index.fetch_add(1);
+		}
+	}
+}
+
+void template_second_function()
+{
+	std::barrier sync_point(NumThreads);
+	std::atomic<int> current_index{0};
+
+	std::array<std::thread, NumThreads> threads;
+	for (size_t thread_index = 0; thread_index < NumThreads; ++thread_index) {
+		threads[thread_index] = std::thread(thread_function, thread_index, std::ref(sync_point),
+											std::ref(current_index));
+	}
+
+	for (auto &this_thread : threads) {
+		this_thread.join();
+	}
 }

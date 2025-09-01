@@ -70,7 +70,6 @@ static void only_once_called(void)
 	if (context.root_dir == -1) {
 		ERROR_AND_EXIT("failed to get tracing path (%s) with %s", context.root, strerror(errno));
 	}
-	context.files = vector_create();
 }
 
 static void init_context(void)
@@ -86,10 +85,13 @@ static const uint32_t ALL_READ_AND_WRITE = S_IREAD | S_IWUSR | S_IRGRP | S_IWGRP
 
 __attribute__((returns_nonnull)) pthread_mutex_t *get_files_lock()
 {
+	init_context();
 	const int rc = pthread_mutex_lock(&context.files_lock);
 	if (rc != 0) {
 		ERROR_AND_EXIT("failed to get files lock with %d", rc);
 	}
+	if (context.files == NULL)
+		context.files = vector_create();
 	return &context.files_lock;
 }
 
@@ -402,4 +404,5 @@ void file_reset(void)
 				ERROR_AND_EXIT("remove %s at %s failed", name, root);
 		}
 	}
+	closedir(directory);
 }

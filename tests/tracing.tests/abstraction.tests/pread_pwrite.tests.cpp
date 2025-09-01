@@ -33,6 +33,7 @@ TEST_F(file_pwrite, write)
 	file_pread(fd, data.data(), data.size(), 0);
 	using namespace std::string_literals;
 	EXPECT_EQ(std::string(data.data(), data.size()), "ABCDEFG"s);
+	file_drop(&fd);
 }
 
 TEST_F(file_pwrite, write_after_file_end)
@@ -45,6 +46,7 @@ TEST_F(file_pwrite, write_after_file_end)
 	std::array<char, 3> data = {};
 	file_pread(fd, data.data(), data.size(), file_size);
 	EXPECT_EQ(std::string(data.data(), data.size()), str);
+	file_drop(&fd);
 }
 
 TEST_F(file_pwrite, write_at_file_end)
@@ -57,6 +59,7 @@ TEST_F(file_pwrite, write_at_file_end)
 	std::array<char, 3> data = {};
 	file_pread(fd, data.data(), data.size(), file_size - 2);
 	EXPECT_EQ(std::string(data.data(), data.size()), str);
+	file_drop(&fd);
 }
 
 TEST_F(file_pread, read)
@@ -72,13 +75,13 @@ TEST_F(file_pread, read)
 		using namespace std::string_literals;
 		EXPECT_EQ(std::string(data.data(), data.size()), "ABC"s);
 	}
-
 	{
 		std::array<char, 3> data{};
 		::file_pread(fd, data.data(), data.size(), 3);
 		using namespace std::string_literals;
 		EXPECT_EQ(std::string(data.data(), data.size()), "DEF"s);
 	}
+	file_drop(&fd);
 }
 TEST_F(file_pread, read_at_file_end)
 {
@@ -88,6 +91,7 @@ TEST_F(file_pread, read_at_file_end)
 	std::array<char, 32> data{};
 	EXPECT_EXIT(::file_pread(fd, data.data(), data.size(), file_size - (data.size() / 2)),
 				::testing::ExitedWithCode(1), "clltk unrecoverable");
+	file_drop(&fd);
 }
 
 TEST_F(file_pread, read_after_file_end)
@@ -99,4 +103,5 @@ TEST_F(file_pread, read_after_file_end)
 
 	EXPECT_EXIT(::file_pread(fd, data.data(), data.size(), file_size), ::testing::ExitedWithCode(1),
 				"clltk unrecoverable");
+	file_drop(&fd);
 }

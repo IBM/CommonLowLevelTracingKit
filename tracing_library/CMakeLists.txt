@@ -76,6 +76,7 @@ elseif(${CMAKE_C_COMPILER_ID} MATCHES "Clang")
         -Wno-declaration-after-statement
         -Wno-gnu-zero-variadic-macro-arguments
         -Wno-date-time
+        -Wno-pre-c11-compat
     )
 
 else()

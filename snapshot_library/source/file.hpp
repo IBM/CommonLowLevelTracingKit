@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <stddef.h>
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>

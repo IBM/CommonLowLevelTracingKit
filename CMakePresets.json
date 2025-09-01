@@ -13,15 +13,27 @@
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_BUILD_TYPE": "Debug",
-                "STANDALONE_PROJECT" : "ON"
+                "STANDALONE_PROJECT": "ON"
             }
         },
         {
             "name": "unittests",
-            "inherits" : "default",
+            "inherits": "default",
             "cacheVariables": {
-                "ENABLE_CODE_COVERAGE" : "ON",
                 "CLLTK_EXAMPLES": "ON"
+            }
+        },
+        {
+            "name": "release",
+            "inherits": "default",
+            "displayName": "Release",
+            "description": "Optimized release build with LTO and native architecture tuning.",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_FLAGS_RELEASE": "-O3 -march=native -flto -DNDEBUG",
+                "CMAKE_C_FLAGS_RELEASE": "-O3 -march=native -flto -DNDEBUG",
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "TRUE",
+                "CLLTK_TESTS": "OFF"
             }
         },
         {
@@ -59,6 +71,13 @@
             "targets": [
                 "all"
             ]
+        },
+        {
+            "name": "release",
+            "configurePreset": "release",
+            "targets": [
+                "all"
+            ]
         }
     ],
     "testPresets": [
@@ -71,6 +90,9 @@
             "execution": {
                 "noTestsAction": "error",
                 "stopOnFailure": true
+            },
+            "environment": {
+                "LLVM_PROFILE_FILE": "%p.profraw"
             }
         }
     ],

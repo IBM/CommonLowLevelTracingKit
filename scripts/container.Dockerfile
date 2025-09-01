@@ -19,6 +19,7 @@ RUN dnf -y install \
     valgrind \
     lcov \
     gcovr \
+    libasan \
     rpmdevtools
 
 RUN dnf -y install \
@@ -38,6 +39,7 @@ RUN dnf -y install \
     libtar-devel \
     cli11-devel \
     nlohmann-json-devel \
+    boost-devel \
     java-17-openjdk-devel
 
 # clang-format specific version may need to be installed via LLVM repo or built from source.

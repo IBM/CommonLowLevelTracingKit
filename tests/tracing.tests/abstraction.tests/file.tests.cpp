@@ -24,6 +24,7 @@ TEST_F(file, normal_flow_with_create)
 		auto fh = file_temp_to_final(&temp_file);
 		EXPECT_EQ(temp_file, nullptr);
 		EXPECT_NE(fh, nullptr);
+		file_drop(&fh);
 	}
 }
 
@@ -34,34 +35,35 @@ TEST_F(file, open_file_twice)
 		auto fh = ::file_try_get(name);
 		EXPECT_FALSE(fh);
 	}
-	{
-		auto temp_file = file_create_temp(name, 1024);
-		EXPECT_TRUE(temp_file);
-		auto fh = file_temp_to_final(&temp_file);
-		EXPECT_FALSE(temp_file);
-		EXPECT_TRUE(fh);
-	}
+
+	auto temp_file = file_create_temp(name, 1024);
+	EXPECT_TRUE(temp_file);
+	auto fh = file_temp_to_final(&temp_file);
+	EXPECT_FALSE(temp_file);
+	EXPECT_TRUE(fh);
+
 	{
 		auto fh0 = ::file_try_get(name);
 		EXPECT_TRUE(fh0);
 		auto fh1 = ::file_try_get(name);
 		EXPECT_TRUE(fh1);
 		EXPECT_EQ(fh0, fh1);
+		file_drop(&fh0);
+		file_drop(&fh1);
 	}
+	file_drop(&fh);
 }
 
 TEST_F(file, open_file_three_times)
 {
 	const char name[] = "open_file_three_times";
-	{
-		auto fh = ::file_try_get(name);
-		EXPECT_FALSE(fh);
-		auto temp_file = file_create_temp(name, 1024);
-		EXPECT_TRUE(temp_file);
-		fh = file_temp_to_final(&temp_file);
-		EXPECT_FALSE(temp_file);
-		EXPECT_TRUE(fh);
-	}
+	auto fh = ::file_try_get(name);
+	EXPECT_FALSE(fh);
+	auto temp_file = file_create_temp(name, 1024);
+	EXPECT_TRUE(temp_file);
+	fh = file_temp_to_final(&temp_file);
+	EXPECT_FALSE(temp_file);
+	EXPECT_TRUE(fh);
 	{
 		auto fh0 = ::file_try_get(name);
 		EXPECT_TRUE(fh0);
@@ -72,7 +74,11 @@ TEST_F(file, open_file_three_times)
 		EXPECT_EQ(fh0, fh1);
 		EXPECT_EQ(fh1, fh2);
 		EXPECT_EQ(fh2, fh0);
+		file_drop(&fh0);
+		file_drop(&fh1);
+		file_drop(&fh2);
 	}
+	file_drop(&fh);
 }
 
 TEST_F(file, file_temp_to_final_return_is_new)
@@ -84,6 +90,7 @@ TEST_F(file, file_temp_to_final_return_is_new)
 	EXPECT_FALSE(temp_file);
 	EXPECT_TRUE(final_file);
 	EXPECT_NE(temp_file, final_file);
+	file_drop(&final_file);
 }
 
 TEST_F(file, temp_file_size_0_exits)
@@ -103,6 +110,7 @@ TEST_F(file, temp_file_size_1)
 	EXPECT_TRUE(final_file);
 	EXPECT_EQ(1, file_get_size(final_file));
 	EXPECT_NE(temp_file, final_file);
+	file_drop(&final_file);
 }
 
 TEST_F(file, temp_file_size_1KB)
@@ -116,6 +124,7 @@ TEST_F(file, temp_file_size_1KB)
 	EXPECT_TRUE(final_file);
 	EXPECT_EQ(1024, file_get_size(final_file));
 	EXPECT_NE(temp_file, final_file);
+	file_drop(&final_file);
 }
 
 TEST_F(file, temp_file_size_1MB)
@@ -129,6 +138,7 @@ TEST_F(file, temp_file_size_1MB)
 	EXPECT_TRUE(final_file);
 	EXPECT_EQ(1024 * 1024, file_get_size(final_file));
 	EXPECT_NE(temp_file, final_file);
+	file_drop(&final_file);
 }
 
 TEST_F(file, two_temp_file)
@@ -150,4 +160,6 @@ TEST_F(file, two_temp_file)
 	EXPECT_TRUE(final_file_1);
 
 	EXPECT_EQ(final_file_0, final_file_1);
+	file_drop(&final_file_0);
+	file_drop(&final_file_1);
 }

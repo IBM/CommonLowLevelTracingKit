@@ -46,6 +46,22 @@ TEST_F(api, full_test)
 		_clltk_tracebuffer_deinit(&tb);
 }
 
+TEST_F(api, _clltk_static_tracepoint_with_args)
+{
+	const static std::array<uint8_t, 10 * 1024> meta = {};
+	_clltk_tracebuffer_handler_t hdl = {{"DUMMPY", 1024}, {meta.begin(), &meta.back()}, {}};
+	_clltk_tracebuffer_init(&hdl);
+	ASSERT_TRUE(hdl.runtime.tracebuffer);
+	// test stack increase
+	const auto offset = _clltk_tracebuffer_add_to_stack(&hdl, meta.data(), (uint32_t)meta.size());
+	ASSERT_TRUE(_CLLTK_FILE_OFFSET_IS_STATIC(offset));
+	static _clltk_argument_types_t types{};
+	_clltk_static_tracepoint_with_args(&hdl, 0x101, __FILE__, __LINE__, &types,
+									   "const char *const format");
+
+	_clltk_tracebuffer_deinit(&hdl);
+}
+
 TEST_F(api, delete_tracebuffer)
 {
 	// nothing here, just to trigger SetUp()

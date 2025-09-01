@@ -242,6 +242,11 @@ template <_clltk_argument_t arg_type> constexpr bool _CLLTK_TYPE_IS_FLEX_TEMP(vo
 
 static inline uint32_t _clltk_type_to_size(_clltk_argument_t type)
 {
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcovered-switch-default"
+#endif
+
 	switch (type) {
 	case _clltk_argument_t_uint8:
 		return sizeof(uint8_t);
@@ -275,7 +280,12 @@ static inline uint32_t _clltk_type_to_size(_clltk_argument_t type)
 		return 8;
 	case _clltk_argument_t_unknown:
 		return 0;
+	default:
+		return 0;
 	}
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 	return 0;
 }
 

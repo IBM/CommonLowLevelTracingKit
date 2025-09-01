@@ -17,7 +17,7 @@ add_dependencies(example-complex_cpp
 
 set_target_properties(example-complex_cpp
     PROPERTIES
-        CXX_STANDARD 17
+        CXX_STANDARD 20
         CXX_EXTENSIONS OFF
         CXX_STANDARD_REQUIRED ON
         COMPILE_WARNING_AS_ERROR ON

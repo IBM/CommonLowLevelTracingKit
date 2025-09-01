@@ -111,7 +111,7 @@
 				"type": "lldb",
 				"request": "launch",
 				"cwd": "${workspaceFolder}",
-				"program": "${command:cmake.buildDirectory}/clltk_cmd/clltk",
+				"program": "${command:cmake.buildDirectory}/command_line_tool/clltk",
 				"sourceLanguages": [
 					"c",
 					"c++"

@@ -42,6 +42,7 @@ TEST_F(read_write_mmap, write_read)
 		<< "could not read the right number of bytes";
 
 	EXPECT_EQ(std::string(data.begin(), data.end()), str) << "read back from file failed";
+	file_drop(&fh);
 }
 
 TEST_F(read_write_mmap, mmap_read)
@@ -59,6 +60,7 @@ TEST_F(read_write_mmap, mmap_read)
 		<< "could not read the right number of bytes";
 
 	EXPECT_EQ(std::string(data.begin(), data.end()), str) << "read back from file failed";
+	file_drop(&fh);
 }
 
 TEST_F(read_write_mmap, write_mmap)
@@ -76,6 +78,7 @@ TEST_F(read_write_mmap, write_mmap)
 
 	EXPECT_EQ(str, std::string(static_cast<const char *>(ptr), data.size()))
 		<< "read with mmap failed";
+	file_drop(&fh);
 }
 
 TEST_F(read_write_mmap, write_more_than_file_size)
@@ -85,4 +88,5 @@ TEST_F(read_write_mmap, write_more_than_file_size)
 	file_t *fh = file_create_temp("file name", str.size() - 1);
 	EXPECT_EQ(str.size(), file_pwrite(fh, str.data(), str.size(), 0));
 	EXPECT_EQ(str.size(), file_get_size(fh));
+	file_drop(&fh);
 }
