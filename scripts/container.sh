@@ -30,9 +30,7 @@ MD5_SUM=($(md5sum ./scripts/container.Dockerfile))
 
 if is_podman $CONTAINER_CMD ; then
     # podman
-    info="$($CONTAINER_CMD info)"
-    osarch_line="${info##*OsArch: linux/}"
-    CONTAINER_ARCH=${CONTAINER_ARCH:="${osarch_line%%$'\n'*}"}
+    CONTAINER_ARCH=${CONTAINER_ARCH:="$(uname -m)"}
     TAG="clltk_ci-$CONTAINER_TARGET-$MD5_SUM-$CONTAINER_ARCH"
 else
     # docker
