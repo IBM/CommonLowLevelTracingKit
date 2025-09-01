@@ -2,6 +2,7 @@
 
 # Change log
 ## 1.2.46
+- decoder in c++
 - improve the setup based on ASAN
 ## 1.2.45
 - CI changes

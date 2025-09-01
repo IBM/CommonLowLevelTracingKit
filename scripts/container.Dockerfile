@@ -39,6 +39,8 @@ RUN dnf -y install \
     libtar-devel \
     cli11-devel \
     nlohmann-json-devel \
+    libffi-devel \
+    libarchive-devel \
     boost-devel \
     java-17-openjdk-devel
 
