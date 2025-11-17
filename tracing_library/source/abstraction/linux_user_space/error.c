@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "abstraction/error.h"
-#include "CommonLowLevelTracingKit/tracing.h"
 
 #if defined(__KERNEL__)
 #include <linux/kernel.h>

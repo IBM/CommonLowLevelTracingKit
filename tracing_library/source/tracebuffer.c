@@ -13,6 +13,7 @@
 #include "abstraction/error.h"
 #include "abstraction/file.h"
 #include "abstraction/memory.h"
+#include "abstraction/optimization.h"
 #include "abstraction/sync.h"
 #include "unique_stack/unique_stack.h"
 
@@ -101,7 +102,7 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 	sync_memory_mutex_init(&ringbuffer->mutex);
 
 	unique_stack_handler_t stack = unique_stack_init(temp_file, file_head.stack_section_offset);
-	if (!unique_stack_valid(&stack)) {
+	if (unique_stack_valid(&stack) == false) {
 		ERROR_AND_EXIT("failed to init stack");
 	}
 	sync_mutex_t *const stack_mutex =
@@ -129,13 +130,13 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 	// create tracebuffer handler
 	_clltk_tracebuffer_t *const tracebuffer_handler =
 		memory_heap_allocation(sizeof(*tracebuffer_handler));
-	if (!tracebuffer_handler) {
+	if (tracebuffer_handler == NULL) {
 		ERROR_AND_EXIT("failed to allocate space for tracebuffer_handler for %s", name);
 	}
 	memset(tracebuffer_handler, 0, sizeof(*tracebuffer_handler));
 	const size_t name_length = strnlen_s(name, CLLTK_MAX_NAME_SIZE);
 	tracebuffer_handler->name = memory_heap_allocation(name_length + 1);
-	if (!tracebuffer_handler->name) {
+	if (tracebuffer_handler->name == NULL) {
 		ERROR_AND_EXIT("failed to allocate space for name for %s", name);
 	}
 	memcpy(tracebuffer_handler->name, name, name_length);
@@ -164,14 +165,14 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 	void *const ringbuffer_ptr = (void *)((uint64_t)file_mmap_ptr(tracebuffer_handler->file) +
 										  file_head.ringbuffer_section_offset);
 	tracebuffer_handler->ringbuffer = ringbuffer_open(ringbuffer_ptr);
-	if (NULL == (tracebuffer_handler->ringbuffer)) {
+	if (tracebuffer_handler->ringbuffer == NULL) {
 		ERROR_AND_EXIT("failed to init ringbuffer");
 	}
 	tracebuffer_handler->ringbuffer_mutex = &tracebuffer_handler->ringbuffer->mutex;
 
 	tracebuffer_handler->stack =
 		unique_stack_open(tracebuffer_handler->file, file_head.stack_section_offset);
-	if (!unique_stack_valid(&tracebuffer_handler->stack)) {
+	if (unique_stack_valid(&tracebuffer_handler->stack) == false) {
 		ERROR_AND_EXIT("failed to init stack");
 	}
 	unique_stack_header_t *const stack_header =
@@ -182,6 +183,33 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 	vector_add(&tracebufferes, tracebuffer_handler);
 
 	return tracebuffer_handler;
+}
+
+_clltk_file_offset_t _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_handler_t *buffer,
+														   const void *const this_meta,
+														   const uint32_t this_meta_size)
+{
+	const uintptr_t elf_sec_start = (uintptr_t)buffer->meta.start;
+	const uintptr_t elf_sec_stop = (uintptr_t)buffer->meta.stop;
+	const uint32_t elf_sec_size = (uint32_t)(elf_sec_stop - elf_sec_start);
+	const uintptr_t this_start = (uintptr_t)this_meta;
+	const uintptr_t this_stop = (uintptr_t)this_meta + (uintptr_t)this_meta_size;
+
+	if ((buffer->runtime.file_offset == _clltk_file_offset_unset) && (elf_sec_size > 0))
+		buffer->runtime.file_offset =
+			_clltk_tracebuffer_add_to_stack(buffer, (const void *)elf_sec_start, elf_sec_size);
+
+	if (buffer->runtime.file_offset == _clltk_file_offset_invalid)
+		return _clltk_file_offset_invalid;
+
+	if ((elf_sec_start <= this_start) && (this_stop <= elf_sec_stop)) {
+		// if meta for this tracepoint is in section
+		return buffer->runtime.file_offset + (_clltk_file_offset_t)(this_start - elf_sec_start);
+	} else {
+		// if meta for this tracepoint is not in section
+		// this will happen with template functions
+		return _clltk_tracebuffer_add_to_stack(buffer, this_meta, this_meta_size);
+	}
 }
 
 void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
@@ -208,7 +236,7 @@ void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
 {
 	SYNC_GLOBAL_LOCK(global_lock); // global lock while removing tracebuffer
-	if (buffer->runtime.tracebuffer == NULL)
+	if (unlikely(buffer->runtime.tracebuffer == NULL))
 		return;
 
 	buffer->runtime.tracebuffer->used--;
@@ -258,7 +286,7 @@ _clltk_file_offset_t _clltk_tracebuffer_add_to_stack(_clltk_tracebuffer_handler_
 	}
 
 	SYNC_MEMORY_LOCK(lock, buffer->stack_mutex);
-	if (!lock.locked) {
+	if (lock.locked == false) {
 		ERROR_LOG("could not lock stack update. ERROR was: %s", lock.error_msg);
 		return _clltk_file_offset_invalid;
 	}
@@ -274,7 +302,7 @@ void add_to_ringbuffer(_clltk_tracebuffer_handler_t *handler, const void *const 
 	}
 
 	SYNC_MEMORY_LOCK(lock, buffer->ringbuffer_mutex);
-	if (!lock.locked)
+	if (lock.locked == false)
 		ERROR_LOG("could not lock ringbuffer update. ERROR was: %s", lock.error_msg);
 	else if (0 == ringbuffer_in(buffer->ringbuffer, entry, size))
 		ERROR_LOG("ringbuffer in failed for add_to_ringbuffer");

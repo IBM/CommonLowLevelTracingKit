@@ -31,7 +31,8 @@ typedef struct vector_data vector_data;
 
 static vector_data *vector_get_data(vector vec)
 {
-	return &((vector_data *)vec)[-1];
+
+	return ((vector_data *)vec - 1);
 }
 
 vector vector_create(void)
@@ -84,29 +85,14 @@ void *_vector_add(vector *vec_addr, vec_type_t type_size)
 	if (vec_addr == NULL || *vec_addr == NULL)
 		return NULL;
 	vector_data *v_data = vector_get_data(*vec_addr);
-	if (!vector_has_space(v_data)) {
+	if (vector_has_space(v_data) == false) {
 		v_data = vector_realloc(v_data, type_size);
 		*vec_addr = v_data->buff;
 	}
 	return (void *)&v_data->buff[type_size * v_data->length++];
 }
 
-void *_vector_insert(vector *vec_addr, vec_type_t type_size, vec_size_t pos)
-{
-	vector_data *v_data = vector_get_data(*vec_addr);
-	vec_size_t new_length = v_data->length + 1;
-	// make sure there is enough room for the new element
-	if (!vector_has_space(v_data)) {
-		v_data = vector_realloc(v_data, type_size);
-	}
-	memmove(&v_data->buff[(pos + 1) * type_size], &v_data->buff[pos * type_size],
-			(v_data->length - pos) * type_size); // move trailing elements
-
-	v_data->length = new_length;
-	return &v_data->buff[pos * type_size];
-}
-
-void _vector_erase(vector *vec_addr, vec_type_t type_size, vec_size_t pos, vec_size_t len)
+void _vector_erase(vector vec_addr, vec_type_t type_size, vec_size_t pos, vec_size_t len)
 {
 	vector_data *v_data = vector_get_data(vec_addr);
 	// anyone who puts in a bad index can face the consequences on their own
@@ -115,7 +101,7 @@ void _vector_erase(vector *vec_addr, vec_type_t type_size, vec_size_t pos, vec_s
 	v_data->length -= len;
 }
 
-void _vector_remove(vector *vec_addr, vec_type_t type_size, vec_size_t pos)
+void _vector_remove(vector vec_addr, vec_type_t type_size, vec_size_t pos)
 {
 	_vector_erase(vec_addr, type_size, pos, 1);
 }
@@ -126,7 +112,7 @@ vector_entry_match_t _vector_find(vector vec, vec_type_t type_size,
 	vector_entry_match_t match = {0};
 	if (vec == NULL)
 		return match;
-	if (!match_func)
+	if (match_func == NULL)
 		return match;
 	const vector_data *const v_data = vector_get_data(vec);
 	for (size_t index = 0; index < v_data->length; index++) {

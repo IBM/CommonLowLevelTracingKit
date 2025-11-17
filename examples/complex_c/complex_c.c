@@ -16,7 +16,10 @@ int main(int argc, char *argv[])
 {
 	int LOOPS = 1;
 	if (argc == 2) {
+		_CLLTK_PRAGMA_DIAG(push)
+		_CLLTK_PRAGMA_DIAG(ignored "-Wunsafe-buffer-usage")
 		char *a = argv[1];
+		_CLLTK_PRAGMA_DIAG(pop)
 		LOOPS = atoi(a);
 	}
 
@@ -54,17 +57,18 @@ void different_formats(void) // for python test
 
 	TEST("", "string argument", "%s", "string argument");
 	TEST("", "01", "%02lu", 1lu);
-	TEST("", "A", "%X", 0xA);
-	TEST("", "a", "%x", 0xA);
-	TEST("", "0a", "%02x", 0xA);
+	TEST("", "A", "%X", 0xAu);
+	TEST("", "a", "%x", 0xAu);
+	TEST("", "0a", "%02x", 0xAu);
 	TEST("", "001", "%03lu", 1lu);
 	TEST("", "1.0e+01", "%.1e", 1e1);
 	TEST("", "1.0E+01", "%.1E", 1e1);
 	TEST("", "s0 s1", "%s %s", "s0", "s1");
-	enum { test_enum_value = 1 };
-	TEST("", "1", "%u", test_enum_value);
-	TEST("", "1", "%x", test_enum_value);
-	TEST("", "1", "%d", test_enum_value);
+	enum : unsigned { test_enum_uint = 1 };
+	enum : signed { test_enum_sint = -1 };
+	TEST("", "1", "%u", test_enum_uint);
+	TEST("", "1", "%x", test_enum_uint);
+	TEST("", "-1", "%d", test_enum_sint);
 
 #undef TEST
 }

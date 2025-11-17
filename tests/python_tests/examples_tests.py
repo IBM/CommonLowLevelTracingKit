@@ -129,6 +129,17 @@ class complex_cpp(unittest):
         self.assertEqual(5 + TRACEBUFFER_INFO_COUNT, len(DESTRUCTOR))
         pass 
     pass
+    
+    def test_TEMPLATE(self: TestCase):
+        data: pd.DataFrame = self.decoded
+        TEMPLATE = data[data.tracebuffer == "TEMPLATE"]
+        TEMPLATE = TEMPLATE[ ~ TEMPLATE['formatted'].str.contains(r'tracebuffer info')]
+        TEMPLATE['type'] = TEMPLATE['formatted'].str.extract(r'(?<=\[with Type = )(.*)(?=\])')
+        grouped = TEMPLATE.groupby('type')
+        for group_name, group_df in grouped:
+            self.assertEqual(len(group_df), 3)
+            self.assertIn(group_name, ('double','char','int','bool'))
+    pass
 
 class format_c(unittest):
     target = "example-gen_format_c"

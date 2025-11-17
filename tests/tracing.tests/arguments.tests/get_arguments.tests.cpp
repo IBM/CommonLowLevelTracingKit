@@ -40,7 +40,7 @@ TEST(get_argument, types_null)
 TEST(get_argument, types_str_str_str)
 {
 	_clltk_argument_types_t types = {
-		3, 1, 0, {_clltk_argument_t_string, _clltk_argument_t_string, _clltk_argument_t_string}};
+		3, 1, 0, {_clltk_argument_string, _clltk_argument_string, _clltk_argument_string}};
 
 	uint8_t buffer[4096] = {0};
 	_helper("%s %s %s", buffer, &types, "arg0", "arg1", "arg2");
@@ -72,7 +72,7 @@ TEST(get_argument, types_str_str_str)
 TEST(get_argument, types_str_int64_str)
 {
 	_clltk_argument_types_t types = {
-		3, 1, 0, {_clltk_argument_t_string, _clltk_argument_t_int64, _clltk_argument_t_string}};
+		3, 1, 0, {_clltk_argument_string, _clltk_argument_sint64, _clltk_argument_string}};
 
 	uint8_t buffer[4096] = {0};
 	_helper("%s %u %s", buffer, &types, "some arg", 0x4d61696e6c6f6f70,
@@ -105,7 +105,7 @@ TEST(get_argument, types_str_int64_str)
 
 TEST(get_argument, types_str)
 {
-	_clltk_argument_types_t types = {1, 1, 0, {_clltk_argument_t_string}};
+	_clltk_argument_types_t types = {1, 1, 0, {_clltk_argument_string}};
 
 	uint8_t buffer[4096] = {0};
 	_helper("%s", buffer, &types, "Mainloop");

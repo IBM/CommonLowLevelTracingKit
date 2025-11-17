@@ -183,7 +183,7 @@ struct file_t *file_try_get(const char *name)
 {
 	pr_debug("> file_try_get name(%s)\n", name);
 	init_context();
-	struct save_lock *lock CLEANUP(cleanup_file_lock) = get_files_lock();
+	struct save_lock *lock SYNC_CLEANUP(cleanup_file_lock) = get_files_lock();
 
 	// check file already open
 	struct file_t *file = find_file(name);
@@ -250,7 +250,7 @@ struct file_t *file_create_temp(const char *name, const size_t file_size)
 	const size_t file_size_aligned = PAGE_ALIGN(file_size);
 	pr_debug(">> file_create_temp name(%s) size(0x%lx)\n", name, file_size_aligned);
 	init_context();
-	struct save_lock *lock CLEANUP(cleanup_file_lock) = get_files_lock();
+	struct save_lock *lock SYNC_CLEANUP(cleanup_file_lock) = get_files_lock();
 
 	struct file_t *file = kzalloc(sizeof(struct file), GFP_KERNEL);
 	if (file == NULL) {
@@ -345,7 +345,7 @@ size_t file_mmap_size(const struct file_t *fh)
 
 void file_drop(struct file_t **const fh)
 {
-	struct save_lock *lock CLEANUP(cleanup_file_lock) = get_files_lock();
+	struct save_lock *lock SYNC_CLEANUP(cleanup_file_lock) = get_files_lock();
 	// currently we never drop files
 	// this will very likely never be implemented for kernel
 }

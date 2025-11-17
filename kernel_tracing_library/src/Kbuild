@@ -11,7 +11,7 @@ ccflags-y := \
 obj-m := clltk_kernel_tracing.o
 
 # abstaction
-ccflags-y += -I$(src)/../../tracing_library/source/
+ccflags-y += -I$(src)/../../tracing_library/source/ -I$(src)/../../tracing_library/source/abstraction/include/
 clltk_kernel_tracing-y +=  $(addprefix abstraction/, \
 							error.o \
 							file.o \

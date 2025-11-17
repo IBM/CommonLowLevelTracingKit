@@ -74,7 +74,7 @@ syn_lock_object_t sync_memory_mutex_get(sync_mutex_t *const ptr)
 	struct timespec abs_timeout = {0};
 	if (clock_gettime(CLOCK_MONOTONIC, &abs_timeout) == -1)
 		ERROR_AND_EXIT("reading system time failed");
-	abs_timeout.tv_sec += 1; // 1 second timeout from current time on
+	abs_timeout.tv_sec += 2; // 1 second timeout from current time on
 
 	pthread_mutex_t *mutex = (pthread_mutex_t *)ptr;
 	const int status = pthread_mutex_clocklock(mutex, CLOCK_MONOTONIC, &abs_timeout);

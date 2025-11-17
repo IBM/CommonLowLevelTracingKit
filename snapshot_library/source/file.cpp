@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "file.hpp"
-#include <bits/struct_stat.h>
+
 #include <cstdint>
 #include <fcntl.h>
 #include <filesystem>

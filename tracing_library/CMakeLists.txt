@@ -1,107 +1,79 @@
 # Copyright (c) 2024, International Business Machines
 # SPDX-License-Identifier: BSD-2-Clause-Patent
+# Common flags shared by all compilers
+set(clltk_private_compiler_flags
+    -fPIC
+    -D_GNU_SOURCE
+    -D_CLLTK_INTERNAL
+    -D_CLLTK_VERSION_BY_CMAKE=${CLLTK_VERSION_UINT64}
+    -Wall
+    -Werror
+    -Wextra
+    -Wstack-protector
+    -Wswitch
+    -Wcast-align
+    -Wdisabled-optimization
+    -Winit-self
+    -Wmissing-include-dirs
+    -Wshadow
+    -Wstrict-overflow=5
+    -Wundef
+    -Wuninitialized
+    -Wunused-parameter
+    -Wunused-variable
+    -Wunused-function
+    -Wunused-label
+    -Wunused-value
+    -Wpointer-arith
+    -Wsign-compare
+    -Wconversion
+    -Warray-bounds
+    -fvisibility=hidden
+)
+set(clltk_public_compiler_flags
+    -Werror=format
+    -Wformat=2
+    -Wformat-security
+)
 
 if (${CMAKE_C_COMPILER_ID} MATCHES "GNU")
-    set(clltk_private_compiler_flags 
-        -fPIC
-        -D_GNU_SOURCE
-        -D_CLLTK_INTERNAL
-        -D_CLLTK_VERSION_BY_CMAKE=${CLLTK_VERSION_UINT64} # parse clltk version, used in cmake, to version.h to ensure there are the same
-        -Wall 
-        -Werror 
-        -Wextra 
-        -Wstack-protector 
-        -Wswitch 
-        -Wlogical-op 
-        -Wcast-align 
-        -Wdisabled-optimization 
-        -Winit-self 
-        -Wmissing-include-dirs 
-        -Wshadow 
-        -Wstrict-overflow=5 
-        -Wundef 
-        -Wuninitialized  
-        -Wunused-parameter 
-        -Wunused-variable 
-        -Wunused-function 
-        -Wunused-label 
-        -Wunused-value 
-        -Wpointer-arith 
-        -Wsign-compare 
-        -Wconversion 
-        -Warray-bounds
-        -fvisibility=hidden
-    )
-    set(clltk_public_compiler_flags
-        -Wformat=2
-        -Wformat-security
-    )
+    list(APPEND clltk_private_compiler_flags)
+    list(APPEND clltk_public_compiler_flags)
 
 elseif(${CMAKE_C_COMPILER_ID} MATCHES "Clang")
-    set(clltk_private_compiler_flags 
-        -fPIC
-        -D_GNU_SOURCE
-        -D_CLLTK_INTERNAL
-        -D_CLLTK_VERSION_BY_CMAKE=${CLLTK_VERSION_UINT64} # parse clltk version, used in cmake, to version.h to ensure there are the same
-        -Wall 
-        -Werror 
-        -Wextra 
-        -Wstack-protector 
-        -Wswitch 
-        -Wcast-align 
-        -Wdisabled-optimization 
-        -Winit-self 
-        -Wmissing-include-dirs 
-        -Wshadow 
-        -Wstrict-overflow=5 
-        -Wundef 
-        -Wuninitialized  
-        -Wunused-parameter 
-        -Wunused-variable 
-        -Wunused-function 
-        -Wunused-label 
-        -Wunused-value 
-        -Wpointer-arith 
-        -Wsign-compare 
-        -Wconversion 
-        -Warray-bounds
+    list(APPEND clltk_private_compiler_flags
         -Wno-format-nonliteral
-        -fvisibility=hidden
     )
-    set(clltk_public_compiler_flags
-        -Wformat=2
-        -Wformat-security
+    list(APPEND clltk_public_compiler_flags
         -Wno-gnu-empty-initializer
         -Wno-zero-length-array
         -Wno-declaration-after-statement
         -Wno-gnu-zero-variadic-macro-arguments
         -Wno-date-time
+        -Wno-pre-c11-compat
     )
 
 else()
-    message(FATAL_ERROR "no flags for this compiler")
+    message(FATAL_ERROR "No flags configured for compiler '${CMAKE_C_COMPILER_ID}'")
 endif()
 
 set(CLLTK_TRACING_SOURCE
-    ./source/abstraction/linux_user_space/file.c
-    ./source/abstraction/linux_user_space/sync.c
-    ./source/abstraction/linux_user_space/info.c
-    ./source/abstraction/linux_user_space/error.c
-    ./source/abstraction/linux_user_space/memory.c
+    source/c-vector/vec.c
+    source/md5/md5.c
 
-    ./source/c-vector/vec.c
-    ./source/md5/md5.c
+    source/ringbuffer/ringbuffer.c
+    source/ringbuffer/ringbuffer_layout_assert.c
+    source/unique_stack/unique_stack.c
+    source/unique_stack/unique_stack_layout_assert.c
 
-    ./source/ringbuffer/ringbuffer.c
-    ./source/ringbuffer/ringbuffer_layout_assert.c
-    ./source/unique_stack/unique_stack.c
-    ./source/unique_stack/unique_stack_layout_assert.c
-
-    ./source/tracebuffer.c
-    ./source/tracepoint.c
-    ./source/tracepoint_layout_assert.c
-    ./source/arguments.c
+    source/tracebuffer.c
+    source/tracepoint.c
+    source/tracepoint_layout_assert.c
+    source/arguments.c
 )
+
+add_subdirectory(source/abstraction)
+
 
 add_library(clltk_tracing_static STATIC
     ${CLLTK_TRACING_SOURCE}
@@ -116,8 +88,8 @@ target_include_directories(clltk_tracing_static
 
 target_link_libraries(clltk_tracing_static
     PRIVATE
+        clltk_tracing_abstraction
         clltk-version
-        pthread
 )
 
 set_target_properties(clltk_tracing_static
@@ -151,8 +123,8 @@ target_include_directories(clltk_tracing_shared
 
 target_link_libraries(clltk_tracing_shared
     PRIVATE
+        clltk_tracing_abstraction
         clltk-version
-        pthread
 )
 
 set_target_properties(clltk_tracing_shared

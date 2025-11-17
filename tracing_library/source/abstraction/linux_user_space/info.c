@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "abstraction/info.h"
+#include "abstraction/optimization.h"
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stddef.h>
@@ -38,17 +39,16 @@ static void init(void)
 
 uint64_t info_get_timestamp_ns()
 {
-	init();
 	struct timespec t = {0};
 	timespec_get(&t, TIME_UTC);
-	return (uint64_t)t.tv_sec * 1000lu * 1000lu * 1000lu + (uint64_t)t.tv_nsec;
+	return (uint64_t)t.tv_sec * 1000000000ULL + (uint64_t)t.tv_nsec;
 }
 
 uint32_t info_get_thread_id()
 {
 	init();
 	uint32_t value = atomic_load(&cached_tip);
-	if (value)
+	if (likely(value))
 		return value;
 	update_cache();
 	return info_get_thread_id();
@@ -58,7 +58,7 @@ uint32_t info_get_process_id()
 {
 	init();
 	uint32_t value = atomic_load(&cached_pid);
-	if (value)
+	if (likely(value))
 		return value;
 	update_cache();
 	return info_get_process_id();

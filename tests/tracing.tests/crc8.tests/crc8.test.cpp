@@ -38,11 +38,24 @@ TEST_P(with_parameter, crc8_continue)
 	}
 }
 
+TEST_F(with_parameter, null_input)
+{
+	const uint8_t crc = crc8_continue(42, nullptr, 10);
+	EXPECT_EQ(crc, 42);
+}
+TEST_F(with_parameter, zero_input_size)
+{
+	const char *const data = "ABC";
+	const uint8_t crc = crc8_continue(42, std::bit_cast<uint8_t *>(data), 0);
+	EXPECT_EQ(crc, 42);
+}
+
 #define Value(_STR_, _C_) \
 	std::make_tuple<std::string, uint8_t>(std::string(_STR_, sizeof(_STR_) - 1), _C_)
 INSTANTIATE_TEST_CASE_P(
 	crc8, with_parameter,
 	::testing::Values(
+		Value("\xEF\xBE", 0xB3),
 		Value("K5yLcCyPcglzklIeagvgmQqZf717PTSKI3dUCv2RJRQ6u65sM04ieTxK3psk3YQhcRkklG0XCpP", 'U'),
 		Value(
 			"X2wMAZ0exXPvTvN2EpAtw1OIWokYr7UcwVE8V9BkyQgInVHERdAtVniKX5dLB3zdRzqKX214y34xWWLBhHrYS",

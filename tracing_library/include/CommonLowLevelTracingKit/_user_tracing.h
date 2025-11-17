@@ -25,7 +25,13 @@
 #define _CLLTK_TRACEBUFFER_MACRO_VALUE(_NAME_) _NAME_
 
 #if !defined(_CLLTK_INTERNAL)
+
 _CLLTK_EXTERN_C_BEGIN
+
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
 
 __attribute__((constructor(101), used)) static void _clltk_constructor(void)
 {
@@ -60,7 +66,11 @@ __attribute__((destructor(101), used)) static void _clltk_destructor(void)
 	}
 }
 
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 _CLLTK_EXTERN_C_END
+
 #endif
 
 #define _CLLTK_STATIC_TRACEBUFFER(_NAME_, _SIZE_)                                            \
@@ -83,65 +93,65 @@ _CLLTK_EXTERN_C_END
                                                                                              \
 	_CLLTK_EXTERN_C_END
 
-#define _CLLTK_STATIC_TRACEPOINT(_BUFFER_, _FORMAT_, ...)                                        \
-	do {                                                                                         \
-		/* ------- compile time stuff ------- */                                                 \
-                                                                                                 \
-		_CLLTK_STATIC_ASSERT(_CLLTK_NARGS(__VA_ARGS__) <= 10,                                    \
-							 "only supporting up to 10 arguments");                              \
-		_CLLTK_CHECK_FOR_ARGUMENTS(__VA_ARGS__);                                                 \
-                                                                                                 \
-		/* create meta data for this tracepoint */                                               \
-		/* and add them to section */                                                            \
-		_CLLTK_CREATE_META_ENTRY_ARGS(_meta, _CLLTK_PLACE_IN(_BUFFER_), _FORMAT_, __VA_ARGS__);  \
-                                                                                                 \
-		/* create type information for va_list access at runtime. */                             \
-		/* it is not possible to use meta data because there is no */                            \
-		/* common meta data struct usable for all tracepoints. */                                \
-		static _clltk_argument_types_t _clltk_types = _CLLTK_CREATE_TYPES(__VA_ARGS__);          \
-                                                                                                 \
-		static _clltk_tracebuffer_handler_t *const tb = &_clltk_##_BUFFER_;                      \
-                                                                                                 \
-		/* ------- runtime time stuff ------- */                                                 \
-                                                                                                 \
-		if ((tb->runtime.tracebuffer == NULL)) {                                                 \
-			_clltk_tracebuffer_init(tb);                                                         \
-		}                                                                                        \
-                                                                                                 \
-		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                    \
-		if (_clltk_offset == _clltk_file_offset_unset) {                                         \
-			_clltk_offset = _clltk_tracebuffer_get_in_file_offset(tb, &_meta, sizeof(_meta));    \
-		}                                                                                        \
-                                                                                                 \
-		/* at runtime execute trace point */                                                     \
-		_clltk_static_tracepoint_with_args(tb, _clltk_offset, __FILE__, __LINE__, &_clltk_types, \
-										   _FORMAT_ _CLLTK_CAST(__VA_ARGS__));                   \
+#define _CLLTK_STATIC_TRACEPOINT(_BUFFER_, _FORMAT_, ...)                                         \
+	do {                                                                                          \
+		/* ------- compile time stuff ------- */                                                  \
+                                                                                                  \
+		_CLLTK_STATIC_ASSERT(_CLLTK_NARGS(__VA_ARGS__) <= 10,                                     \
+							 "only supporting up to 10 arguments");                               \
+		_CLLTK_CHECK_FOR_ARGUMENTS(__VA_ARGS__);                                                  \
+                                                                                                  \
+		/* create meta data for this tracepoint */                                                \
+		/* and add them to section */                                                             \
+		_CLLTK_CREATE_META_ENTRY_ARGS(_meta, _CLLTK_PLACE_IN(_BUFFER_), _FORMAT_, __VA_ARGS__);   \
+                                                                                                  \
+		/* create type information for va_list access at runtime. */                              \
+		/* it is not possible to use meta data because there is no */                             \
+		/* common meta data struct usable for all tracepoints. */                                 \
+		static _clltk_argument_types_t _clltk_types = _CLLTK_CREATE_TYPES(__VA_ARGS__);           \
+                                                                                                  \
+		static _clltk_tracebuffer_handler_t *const _tb = &_clltk_##_BUFFER_;                      \
+                                                                                                  \
+		/* ------- runtime time stuff ------- */                                                  \
+                                                                                                  \
+		if ((_tb->runtime.tracebuffer == NULL)) {                                                 \
+			_clltk_tracebuffer_init(_tb);                                                         \
+		}                                                                                         \
+                                                                                                  \
+		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                     \
+		if (_clltk_offset == _clltk_file_offset_unset) {                                          \
+			_clltk_offset = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta));    \
+		}                                                                                         \
+                                                                                                  \
+		/* at runtime execute trace point */                                                      \
+		_clltk_static_tracepoint_with_args(_tb, _clltk_offset, __FILE__, __LINE__, &_clltk_types, \
+										   _FORMAT_ _CLLTK_CAST(__VA_ARGS__));                    \
 	} while (0)
 
-#define _CLLTK_STATIC_TRACEPOINT_DUMP(_BUFFER_, _MESSAGE_, _ADDRESS_, _SIZE_)                    \
-	do {                                                                                         \
-		/* ------- compile time stuff ------- */                                                 \
-                                                                                                 \
-		/* create meta data for this tracepoint */                                               \
-		/* and add them to section */                                                            \
-		_CLLTK_CREATE_META_ENTRY_DUMP(_meta, _CLLTK_PLACE_IN(_BUFFER_), _MESSAGE_);              \
-                                                                                                 \
-		static _clltk_tracebuffer_handler_t *const tb = &_clltk_##_BUFFER_;                      \
-                                                                                                 \
-		/* ------- runtime time stuff ------- */                                                 \
-                                                                                                 \
-		if ((tb->runtime.tracebuffer == NULL)) {                                                 \
-			_clltk_tracebuffer_init(tb);                                                         \
-		}                                                                                        \
-                                                                                                 \
-		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                    \
-		if (_clltk_offset == _clltk_file_offset_unset) {                                         \
-			_clltk_offset = _clltk_tracebuffer_get_in_file_offset(tb, &_meta, sizeof(_meta));    \
-		}                                                                                        \
-                                                                                                 \
-		/* at runtime execute trace point */                                                     \
-		_clltk_static_tracepoint_with_dump(tb, _clltk_offset, _meta.file, _meta.line, _ADDRESS_, \
-										   _SIZE_);                                              \
+#define _CLLTK_STATIC_TRACEPOINT_DUMP(_BUFFER_, _MESSAGE_, _ADDRESS_, _SIZE_)                     \
+	do {                                                                                          \
+		/* ------- compile time stuff ------- */                                                  \
+                                                                                                  \
+		/* create meta data for this tracepoint */                                                \
+		/* and add them to section */                                                             \
+		_CLLTK_CREATE_META_ENTRY_DUMP(_meta, _CLLTK_PLACE_IN(_BUFFER_), _MESSAGE_);               \
+                                                                                                  \
+		static _clltk_tracebuffer_handler_t *const _tb = &_clltk_##_BUFFER_;                      \
+                                                                                                  \
+		/* ------- runtime time stuff ------- */                                                  \
+                                                                                                  \
+		if ((_tb->runtime.tracebuffer == NULL)) {                                                 \
+			_clltk_tracebuffer_init(_tb);                                                         \
+		}                                                                                         \
+                                                                                                  \
+		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                     \
+		if (_clltk_offset == _clltk_file_offset_unset) {                                          \
+			_clltk_offset = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta));    \
+		}                                                                                         \
+                                                                                                  \
+		/* at runtime execute trace point */                                                      \
+		_clltk_static_tracepoint_with_dump(_tb, _clltk_offset, _meta.file, _meta.line, _ADDRESS_, \
+										   _SIZE_);                                               \
 	} while (0)
 
 #endif

@@ -4,6 +4,7 @@
 #ifndef _CLLTK_TRACING_H_
 #define _CLLTK_TRACING_H_
 
+// Choose implementation based on environment
 #if defined(__KERNEL__)
 #include "CommonLowLevelTracingKit/_kernel_tracing.h"
 #else
@@ -13,7 +14,6 @@
 #define CLLTK_MAX_NAME_SIZE 255
 
 #define CLLTK_MAX_FILENAME_SIZE 4096
-#define CLLTK_MAX_MESSAGE_SIZE 4096
 
 /*
 value for tracebuffer identifier as macro define
@@ -69,7 +69,7 @@ example:
 	clltk_dynamic_tracepoint_execution(_BUFFER_, __FILE__, __LINE__, 0, 0, \
 									   _FORMAT_ __VA_OPT__(, __VA_ARGS__))
 
-#ifdef __cplusplus
+#ifdef CLLTK_FOR_CPP
 extern "C" {
 #endif
 
@@ -83,7 +83,7 @@ void clltk_dynamic_tracepoint_execution(const char *buffer_name, const char *fil
 
 void clltk_unrecoverbale_error_callback(const char *const) __attribute__((weak, noreturn));
 
-#ifdef __cplusplus
+#ifdef CLLTK_FOR_CPP
 }
 #endif
 

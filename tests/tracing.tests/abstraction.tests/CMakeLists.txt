@@ -27,7 +27,7 @@ target_include_directories(${Exe_Name}
 target_link_libraries(${Exe_Name}
     GTest::gtest_main
     GTest::gmock_main
-    clltk_tracing_static
+    clltk_tracing_abstraction
 )
 
 gtest_discover_tests(${Exe_Name})

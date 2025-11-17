@@ -5,7 +5,22 @@
 #define _CLLTK_MACROS_H_
 // IWYU pragma: private, include "CommonLowLevelTracingKit/tracing.h"
 
-#ifdef __cplusplus
+#if defined(__GNUC__)
+#define INLINE __attribute__((hot, always_inline, artificial, flatten)) inline
+#define CONST_INLINE __attribute__((const, hot, always_inline, artificial, flatten)) inline
+#elif defined(__clang__)
+#define INLINE __attribute__((hot, always_inline, artificial, flatten)) inline
+#define CONST_INLINE __attribute__((const, hot, always_inline, artificial, flatten)) inline
+#else
+#define INLINE inline
+#define CONST_INLINE inline
+#endif
+
+#if defined(__cplusplus) && !defined(CLLTK_FORCE_C) // allow overwrite for testing
+#define CLLTK_FOR_CPP
+#endif // !CLLTK_FORCE_C
+
+#ifdef CLLTK_FOR_CPP
 #define _CLLTK_EXTERN_C_BEGIN extern "C" {
 #define _CLLTK_EXTERN_C_END }
 #else
@@ -23,11 +38,14 @@
 #define _CLLTK_PLACE_IN(_NAME_) __attribute__((used, section("_clltk_" #_NAME_ "_meta")))
 #endif
 
-#ifdef __cplusplus
-// C++
-
+#if defined(__cplusplus)
 #define _CLLTK_STATIC_ASSERT(VALUE, MESSAGE) static_assert(VALUE, MESSAGE)
+#else
+#define _CLLTK_STATIC_ASSERT(VALUE, MESSAGE) _Static_assert(VALUE, MESSAGE)
+#endif
 
+#ifdef CLLTK_FOR_CPP
+// C++
 #include <type_traits>
 template <typename T>
 __attribute__((always_inline)) static inline constexpr auto _clltk_cast(T value)
@@ -41,7 +59,6 @@ __attribute__((always_inline)) static inline constexpr auto _clltk_cast(T value)
 
 #else
 // C
-#define _CLLTK_STATIC_ASSERT(VALUE, MESSAGE) _Static_assert(VALUE, MESSAGE)
 
 #define _CLLTK_SINGLE_CAST(_INDEX_, _VALUE_) _VALUE_
 
@@ -108,20 +125,20 @@ __attribute__((always_inline)) static inline constexpr auto _clltk_cast(T value)
 	t(0, x0) s() t(1, x1) s() t(2, x2) s() t(3, x3) s() t(4, x4) s() t(5, x5) s() t(6, x6) s() \
 		t(7, x7) s() t(8, x8) s() t(9, x9)
 
-#ifndef __cplusplus // only for c
-
-#if defined(__clang__)
+#if !defined(__cplusplus) || (defined(__clang__) && defined(CLLTK_FORCE_C))
 #define _CLLTK_GENERIC_CASE(_KEY_, _VALUE_) \
 	_KEY_:                                  \
 	_VALUE_
-#elif defined(__GNUC__)
-#define _CLLTK_GENERIC_CASE(_KEY_, _VALUE_)         \
-	/* because `_Generic` differentiated between:*/ \
-	/* const and none-const we need both cases*/    \
-	_KEY_:                                          \
-	_VALUE_, const _KEY_ : _VALUE_
 #endif
 
-#endif
+#define _CLLTK_STR_INTERNAL(...) #__VA_ARGS__
+#define _CLLTK_STR(...) _CLLTK_STR_INTERNAL(__VA_ARGS__)
 
+#if defined(__GNU__)
+#define _CLLTK_PRAGMA_DIAG(...) _Pragma(_CLLTK_STR(GCC diagnostic __VA_ARGS__))
+#elif defined(__clang__)
+#define _CLLTK_PRAGMA_DIAG(...) _Pragma(_CLLTK_STR(clang diagnostic __VA_ARGS__))
+#else
+#define _CLLTK_PRAGMA_DIAG(...)
+#endif
 #endif

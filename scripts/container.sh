@@ -30,7 +30,7 @@ MD5_SUM=($(md5sum ./scripts/container.Dockerfile))
 
 if is_podman $CONTAINER_CMD ; then
     # podman
-    CONTAINER_ARCH=${CONTAINER_ARCH:="$($CONTAINER_CMD info | grep -oP '(?<=OsArch: linux/)\S+')"}
+    CONTAINER_ARCH=${CONTAINER_ARCH:="$(uname -m)"}
     TAG="clltk_ci-$CONTAINER_TARGET-$MD5_SUM-$CONTAINER_ARCH"
 else
     # docker
@@ -89,11 +89,11 @@ if [ -n "${SONAR_TOKEN}" ]; then
 fi
 
 if [[ ! -z $PERSITENT_ARTIFACTS ]]; then
-    container_cmd+=" --volume ${PERSITENT_ARTIFACTS}:$container_workdir/build/persistent/:z"
+    container_cmd+=" --volume ${PERSITENT_ARTIFACTS}:$container_workdir/build_kernel/persistent/:z"
 else
-    mkdir -p $catch_dir/build/persistent
+    mkdir -p $catch_dir/build_kernel/persistent
 fi
-container_cmd+=" --env PERSITENT_ARTIFACTS=$container_workdir/build/persistent/"
+container_cmd+=" --env PERSITENT_ARTIFACTS=$container_workdir/build_kernel/persistent/"
 
 mkdir -p $catch_dir/traces/
 container_cmd+=" --env CLLTK_TRACING_PATH=/tmp/traces/"

@@ -17,7 +17,7 @@
 #include <stdint.h>
 #endif
 
-#ifdef __cplusplus
+#ifdef CLLTK_FOR_CPP
 extern "C" {
 #endif
 
@@ -48,28 +48,28 @@ _CLLTK_STATIC_ASSERT(sizeof(_clltk_meta_enty_type) == 1, "should be of size 1");
 						   /*.file = */ {__FILE__},                                              \
 						   /*.str = */ {_STR_}}
 
-#define _CLLTK_CREATE_META_ENTRY_DUMP(_VAR_, _ATTRIBUTE_, _MSG_)                 \
-                                                                                 \
-	_CLLTK_STATIC_ASSERT(__LINE__ <= UINT32_MAX, "line fits not in uint32");     \
-	static const struct __attribute__((packed)) {                                \
-		const char magic;                                                        \
-		const uint32_t size;                                                     \
-		const _clltk_meta_enty_type type;                                        \
-		const uint32_t line;                                                     \
-		const uint8_t argument_count;                                            \
-		const char argument_type_array[1 + 1];                                   \
-		const char file[sizeof(__FILE__)];                                       \
-		const char str[sizeof(_MSG_)];                                           \
-	} _VAR_ _ATTRIBUTE_ = {/*.magic = */ '{',                                    \
-						   /*.size = */ sizeof(_VAR_),                           \
-						   /*.type = */ _clltk_meta_enty_type_dump,              \
-						   /*.line = */ __LINE__,                                \
-						   /*.argument_count = */ 1,                             \
-						   /*.argument_type_array = */ {_clltk_argument_t_dump}, \
-						   /*.file = */ {__FILE__},                              \
+#define _CLLTK_CREATE_META_ENTRY_DUMP(_VAR_, _ATTRIBUTE_, _MSG_)               \
+                                                                               \
+	_CLLTK_STATIC_ASSERT(__LINE__ <= UINT32_MAX, "line fits not in uint32");   \
+	static const struct __attribute__((packed)) {                              \
+		const char magic;                                                      \
+		const uint32_t size;                                                   \
+		const _clltk_meta_enty_type type;                                      \
+		const uint32_t line;                                                   \
+		const uint8_t argument_count;                                          \
+		const char argument_type_array[1 + 1];                                 \
+		const char file[sizeof(__FILE__)];                                     \
+		const char str[sizeof(_MSG_)];                                         \
+	} _VAR_ _ATTRIBUTE_ = {/*.magic = */ '{',                                  \
+						   /*.size = */ sizeof(_VAR_),                         \
+						   /*.type = */ _clltk_meta_enty_type_dump,            \
+						   /*.line = */ __LINE__,                              \
+						   /*.argument_count = */ 1,                           \
+						   /*.argument_type_array = */ {_clltk_argument_dump}, \
+						   /*.file = */ {__FILE__},                            \
 						   /*.str = */ {_MSG_}}
 
-#ifdef __cplusplus
+#ifdef CLLTK_FOR_CPP
 }
 #endif
 

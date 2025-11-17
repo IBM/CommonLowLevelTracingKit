@@ -101,6 +101,21 @@ TEST_F(SnapshotTest, TestUncompressedSnapshot)
 	ASSERT_TRUE(count);
 	EXPECT_TRUE(count.value());
 }
+TEST_F(SnapshotTest, verbose)
+{
+	static const write_function_t func = [](const void *, size_t size) -> std::optional<size_t> {
+		return size;
+	};
+	static const auto verbose = [](const std::string &cout, const std::string &cerr) {
+		if (!cerr.empty())
+			std::cout << cerr << std::endl;
+		if (!cout.empty())
+			std::cout << cout << std::endl;
+	};
+	const auto count = take_snapshot(func, {}, false, 4094, verbose);
+	ASSERT_TRUE(count);
+	EXPECT_TRUE(count.value());
+}
 
 TEST_F(SnapshotTest, TestCompressedSnapshot)
 {

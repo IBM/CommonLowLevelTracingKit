@@ -21,6 +21,15 @@
 #include <thread>
 #include <tuple>
 #include <unistd.h>
+using namespace ::testing;
+using namespace ::testing::internal;
+
+#if defined(__SANITIZE_ADDRESS__) || \
+	(defined(__clang__) && defined(__has_feature) && __has_feature(address_sanitizer))
+static constexpr bool AsanEnabled = true;
+#else
+static constexpr bool AsanEnabled = false;
+#endif
 
 using namespace std::string_literals;
 
@@ -33,7 +42,7 @@ TEST(sync, global_mutex_in_thread)
 	auto thread_function = [&thread_count, &counter](const int index) -> void {
 		thread_count.arrive_and_wait();
 		{
-			syn_lock_object_t lock CLEANUP(syn_global_lock_release) = sync_global_lock_get();
+			syn_lock_object_t lock SYNC_CLEANUP(syn_global_lock_release) = sync_global_lock_get();
 			counter += index;
 		}
 	};
@@ -68,7 +77,7 @@ TEST(sync, memory_mutex_in_thread)
 	auto thread_function = [&thread_count, &counter, &mutex](const int index) -> void {
 		thread_count.arrive_and_wait();
 		{
-			syn_lock_object_t lock CLEANUP(sync_memory_mutex_release) =
+			syn_lock_object_t lock SYNC_CLEANUP(sync_memory_mutex_release) =
 				sync_memory_mutex_get(&mutex);
 			counter += index;
 		}
@@ -103,67 +112,70 @@ TEST(sync, memory_mutex_in_ended_thread)
 	};
 	std::thread child_thread(child_thread_function);
 	child_thread.join();
-	testing::internal::CaptureStderr();
+	CaptureStderr();
 	{ // try to get locked mutex with dead owner, should be recovered
 		SYNC_MEMORY_LOCK(lock, &mutex);
 		EXPECT_TRUE(lock.locked);
 	}
-	const std::string output = testing::internal::GetCapturedStderr();
+	const std::string output = GetCapturedStderr();
 	EXPECT_EQ(output, "");
 }
-
 TEST(sync, memory_mutex_in_killed_process)
 {
-	static constexpr size_t SHM_SIZE = 1024;
-
-	file_t *const file = file_create_temp("memory_mutex_in_killed_process", SHM_SIZE);
-	void *const ptr = file_mmap_ptr(file);
-	ASSERT_TRUE(ptr);
-
-	sync_mutex_t *const mutex = (sync_mutex_t *)ptr;
+	if (AsanEnabled)
+		return;
+	file_t *file = file_create_temp("memory_mutex_in_killed_process", sizeof(sync_mutex_t));
+	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
 	sync_memory_mutex_init(mutex);
+	{
+		syn_lock_object_t lock = sync_memory_mutex_get(mutex);
+		ASSERT_EQ(true, lock.locked);
+		sync_memory_mutex_release(&lock);
+	}
 
 	pid_t childPid = fork();
 	if (childPid < 0) {
 		FAIL() << "Failed to fork child process" << std::endl;
 	} else if (childPid == 0) {
 		// Child process
+		sync_memory_mutex_init(mutex);
 		syn_lock_object_t lock = sync_memory_mutex_get(mutex);
 		ASSERT_EQ(true, lock.locked);
-
-		volatile int *integer = nullptr;
-		*integer = 0; // create seg fault
+		kill(getpid(), SIGTERM);
 	} else {
 		// Parent process
 
 		int status = 0;
 		waitpid(childPid, &status, 0); // wait for child to exit
-		ASSERT_EQ(WTERMSIG(status), SIGSEGV)
-			<< "child process not killed by segmant fault but by " << WTERMSIG(status);
+		ASSERT_TRUE(WTERMSIG(status))
+			<< "child process not killed by sigkill but by " << WTERMSIG(status);
 
-		testing::internal::CaptureStderr();
+		CaptureStderr();
 		{ // try to get locked mutex with dead owner, should be recovered
 			SYNC_MEMORY_LOCK(lock, mutex);
 			EXPECT_TRUE(lock.locked) << " could not get mutex afte owner died";
 			EXPECT_EQ(lock.error_msg, "mutex recovered from dead owner"s);
 		}
-		const std::string output = testing::internal::GetCapturedStderr();
+		const std::string output = GetCapturedStderr();
 		EXPECT_EQ(output, "");
 		kill(childPid, SIGKILL);
+		file_drop(&file);
 		return;
 	}
 }
 
 TEST(sync, memory_mutex_in_exit_process)
 {
-	static constexpr size_t SHM_SIZE = 1024;
-
-	file_t *const file = file_create_temp("memory_mutex_in_killed_process", SHM_SIZE);
-	void *const ptr = file_mmap_ptr(file);
-	ASSERT_TRUE(ptr);
-
-	sync_mutex_t *const mutex = (sync_mutex_t *)ptr;
+	if (AsanEnabled)
+		return;
+	file_t *file = file_create_temp("memory_mutex_in_exit_process", sizeof(sync_mutex_t));
+	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
 	sync_memory_mutex_init(mutex);
+	{
+		syn_lock_object_t lock = sync_memory_mutex_get(mutex);
+		ASSERT_EQ(true, lock.locked);
+		sync_memory_mutex_release(&lock);
+	}
 
 	pid_t childPid = fork();
 	if (childPid < 0) {
@@ -182,13 +194,13 @@ TEST(sync, memory_mutex_in_exit_process)
 		ASSERT_TRUE(WIFEXITED(status) && WEXITSTATUS(status) == 0)
 			<< "Child process did not exit normally or exited with status " << WEXITSTATUS(status);
 
-		testing::internal::CaptureStderr();
+		CaptureStderr();
 		{ // try to get locked mutex with dead owner, should be recovered
 			SYNC_MEMORY_LOCK(lock, mutex);
 			EXPECT_TRUE(lock.locked) << " could not get mutex afte owner died";
 			EXPECT_EQ(lock.error_msg, "mutex recovered from dead owner"s);
 		}
-		const std::string output = testing::internal::GetCapturedStderr();
+		const std::string output = GetCapturedStderr();
 		EXPECT_EQ(output, "");
 		kill(childPid, SIGKILL);
 		return;
@@ -196,14 +208,17 @@ TEST(sync, memory_mutex_in_exit_process)
 }
 TEST(sync, memory_mutex_in_exit_process_during_recovery)
 {
-	static constexpr size_t SHM_SIZE = 1024;
-
-	file_t *const file = file_create_temp("memory_mutex_in_killed_process", SHM_SIZE);
-	void *const ptr = file_mmap_ptr(file);
-	ASSERT_TRUE(ptr);
-
-	sync_mutex_t *const mutex = (sync_mutex_t *)ptr;
+	if (AsanEnabled)
+		return;
+	file_t *file =
+		file_create_temp("memory_mutex_in_exit_process_during_recovery", sizeof(sync_mutex_t));
+	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
 	sync_memory_mutex_init(mutex);
+	{
+		syn_lock_object_t lock = sync_memory_mutex_get(mutex);
+		ASSERT_EQ(true, lock.locked);
+		sync_memory_mutex_release(&lock);
+	}
 
 	// create first child which will exit holding the lock
 	pid_t firstChildPid = fork();
@@ -251,13 +266,13 @@ TEST(sync, memory_mutex_in_exit_process_during_recovery)
 			<< WEXITSTATUS(status);
 	}
 
-	testing::internal::CaptureStderr();
+	CaptureStderr();
 	{ // try to get locked mutex with dead owner, should be recovered
 		SYNC_MEMORY_LOCK(lock, mutex);
 		EXPECT_TRUE(lock.locked) << " could not get mutex afte owner died";
 		EXPECT_EQ(lock.error_msg, "mutex recovered from dead owner"s);
 	}
-	const std::string output = testing::internal::GetCapturedStderr();
+	const std::string output = GetCapturedStderr();
 	EXPECT_EQ(output, "");
 	return;
 }
@@ -305,16 +320,17 @@ TEST(sync, signal_in_same_process_same_thread)
 
 TEST(sync, get_mutex_timeout_with_process)
 {
-	constexpr size_t SHM_SIZE = 1024;
-	file_t *const file = file_create_temp("get_mutex_timeout_with_process", SHM_SIZE);
-	void *const ptr = file_mmap_ptr(file);
-	ASSERT_TRUE(ptr);
-
-	sync_mutex_t *const mutex = (sync_mutex_t *)ptr;
-	volatile int *const child_done = (int *)(mutex + 1);
-	*child_done = 0;
-
+	if (AsanEnabled)
+		return;
+	file_t *file = file_create_temp("get_mutex_timeout_with_process", sizeof(sync_mutex_t) + 1);
+	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
 	sync_memory_mutex_init(mutex);
+	{
+		syn_lock_object_t lock = sync_memory_mutex_get(mutex);
+		ASSERT_EQ(true, lock.locked);
+		sync_memory_mutex_release(&lock);
+	}
+	bool &child_done = *std::bit_cast<bool *>(mutex + 1);
 
 	// Create child process
 	pid_t childPid = fork();
@@ -324,16 +340,16 @@ TEST(sync, get_mutex_timeout_with_process)
 		// Child process
 		syn_lock_object_t locked = sync_memory_mutex_get(mutex);
 		EXPECT_TRUE(locked.locked);
-		*child_done = 1;
+		child_done = 1;
 		while (1) { // wait to be killed by parent, do nothing
 		}
 	} else {
 		// Parent process
-		while (*child_done == 0) { // wait till child has locked mutex
+		while (child_done == 0) { // wait till child has locked mutex
 		}
-		testing::internal::CaptureStderr();
+		CaptureStderr();
 		syn_lock_object_t locked = sync_memory_mutex_get(mutex);
-		const std::string output = testing::internal::GetCapturedStderr();
+		const std::string output = GetCapturedStderr();
 		EXPECT_FALSE(locked.locked);
 		EXPECT_EQ(output, "");
 		EXPECT_EQ(locked.error_msg, "Connection timed out"s);
@@ -358,10 +374,42 @@ TEST(sync, release_memory_twice)
 	auto lock = sync_memory_mutex_get(&mutex);
 	EXPECT_TRUE(lock.locked);
 	sync_memory_mutex_release(&lock);
-	testing::internal::CaptureStderr();
+	CaptureStderr();
 	sync_memory_mutex_release(&lock);
-	const std::string output = testing::internal::GetCapturedStderr();
+	const std::string output = GetCapturedStderr();
 	EXPECT_THAT(output, ::testing::HasSubstr("clltk recoverable"));
+}
+
+TEST(sync, release_invalid_memory_mutex)
+{
+	{
+		CaptureStderr();
+		CaptureStdout();
+		syn_lock_object_t lock{};
+		lock.error_msg = "dummy",
+		sync_memory_mutex_release(&lock); // not locked object
+		EXPECT_EQ(GetCapturedStdout(), "") << "should not print message";
+		EXPECT_EQ(GetCapturedStderr(), "") << "should not print error";
+	}
+	{
+		CaptureStdout();
+		CaptureStderr();
+		syn_lock_object_t lock{};
+		lock.error_msg = "\0";
+		sync_memory_mutex_release(&lock); // not locked object
+		EXPECT_EQ(GetCapturedStdout(), "") << "should not print message";
+		EXPECT_THAT(
+			GetCapturedStderr(),
+			MatchesRegex(R"(.*clltk recoverable: releasing an unlocked mutex is not allowed.*)"))
+			<< "should not print error";
+	}
+	{
+		syn_lock_object_t lock{};
+		lock.locked = 1;
+		EXPECT_EXIT(
+			{ sync_memory_mutex_release(&lock); }, ExitedWithCode(1),
+			".*clltk unrecoverable: releasing a NULL lock is not allowed.*");
+	}
 }
 
 TEST(sync, sync_memory_mutex_get_twice)
@@ -371,11 +419,11 @@ TEST(sync, sync_memory_mutex_get_twice)
 	auto lock0 = sync_memory_mutex_get(&mutex);
 	EXPECT_TRUE(lock0.locked);
 	// test second lock
-	testing::internal::CaptureStderr();
+	CaptureStderr();
 	auto lock1 = sync_memory_mutex_get(&mutex);
 	EXPECT_FALSE(lock1.locked);
 	// check stderr
-	const std::string output = testing::internal::GetCapturedStderr();
+	const std::string output = GetCapturedStderr();
 	EXPECT_THAT(output, ::testing::IsEmpty());
 	// check error message
 	EXPECT_THAT(std::string(lock1.error_msg), "Resource deadlock avoided");

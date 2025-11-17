@@ -12,8 +12,8 @@ using namespace std::string_literals;
 CommonLowLevelTracingKit::cmd::interface::validator::TracebufferName::TracebufferName(void)
 	: CLI::Validator("BufferName")
 {
+	static const std::regex pattern{std::string{"^[a-zA-Z][a-zA-Z0-9_]{0,256}$"}};
 	func_ = [](const std::string &filename) {
-		std::regex pattern{"^[a-zA-Z][a-zA-Z0-9_]*$"};
 		if (std::regex_match(filename, pattern))
 			return std::string(); // valid
 		else

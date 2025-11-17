@@ -29,10 +29,6 @@ static int closefunc(int /*index*/)
 {
 	return 0;
 }
-static ssize_t readfunc(int /*index*/, void * /*data*/, size_t /*size*/)
-{
-	return -1;
-}
 
 // Define thread-local variables for the libtar file I/O operations
 thread_local write_function_t current_writefunc;
@@ -53,7 +49,7 @@ static ssize_t writefunc(int /*index*/, const void *data, size_t size)
 // This structure specifies the functions to be called by libtar
 static tartype_t handler{.openfunc = openfunc,
 						 .closefunc = closefunc,
-						 .readfunc = readfunc,
+						 .readfunc = nullptr,
 						 .writefunc = writefunc};
 
 enum class ReturnCode {

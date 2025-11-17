@@ -111,7 +111,7 @@ def build_new_format(match):
             f"{flags if flags is not None else '0'}" + \
             f"{min_field_width if min_field_width is not None else '0'}" + \
             f"{precision if precision is not None else '.0'}" + \
-            "X"
+            "x"
     else:
         format = f"%" + \
             f"{flags if flags is not None else ''}" + \
@@ -123,6 +123,7 @@ def build_new_format(match):
 
 def clean_up_format(format: str) -> str:
     format = format_regex.sub(build_new_format, format)
+    format = re.sub(r'\\n', ' ', format)
     return format
 
 
@@ -576,7 +577,7 @@ class StaticTraceentry:
             string_length = get_int(raw, offset, 4)
             offset += 4
             value = get(raw, offset, string_length)
-            value = " ".join(f"0x{x:02X}" for x in value)
+            value = " ".join(f"{x:02X}" for x in value)
             offset += string_length
         else:
             assert 0, "type unkown"

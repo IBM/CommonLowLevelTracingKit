@@ -18,6 +18,7 @@ class unique_stack_init : public testing::Test
 
   protected:
 	void SetUp() override { file_reset(); }
+	void TearDown() override { file_reset(); }
 };
 
 TEST_F(unique_stack_init, simple)
@@ -27,6 +28,7 @@ TEST_F(unique_stack_init, simple)
 	unique_stack_handler_t uq = ::unique_stack_init(fd, 0);
 	EXPECT_TRUE(unique_stack_valid(&uq));
 	unique_stack_close(&uq);
+	file_drop(&fd);
 }
 
 class unique_stack_open : public unique_stack_init
@@ -48,6 +50,7 @@ TEST_F(unique_stack_open, simple)
 		unique_stack_handler_t uq = ::unique_stack_open(fd, 0);
 		EXPECT_TRUE(unique_stack_valid(&uq));
 	}
+	file_drop(&fd);
 }
 
 TEST_F(unique_stack_open, invalid_file)
@@ -71,6 +74,7 @@ TEST_F(unique_stack_open, bad_file_descriptor)
 	close(f->file_descriptor);
 	EXPECT_EXIT(::unique_stack_init(fd, 0), ::testing::ExitedWithCode(1),
 				"clltk unrecoverable: pwrite failed ");
+	file_drop(&fd);
 }
 
 class unique_stack_close : public unique_stack_init
@@ -84,6 +88,7 @@ TEST_F(unique_stack_close, simple)
 	unique_stack_handler_t uq = ::unique_stack_init(fd, 0);
 	::unique_stack_close(&uq);
 	EXPECT_FALSE(unique_stack_valid(&uq));
+	file_drop(&fd);
 }
 
 class unique_stack_add : public unique_stack_init
@@ -98,6 +103,7 @@ TEST_F(unique_stack_add, simple)
 	std::string in = "A B C D E F G";
 	uint64_t id = ::unique_stack_add(&uq, in.data(), (uint32_t)in.size());
 	EXPECT_GT(id, 0);
+	file_drop(&fd);
 }
 
 TEST_F(unique_stack_add, bad_file_descriptor)
@@ -109,6 +115,7 @@ TEST_F(unique_stack_add, bad_file_descriptor)
 	std::string in = "A B C D E F G";
 	uint64_t id = ::unique_stack_add(&uq, in.data(), (uint32_t)in.size());
 	EXPECT_GT(id, 0);
+	file_drop(&fd);
 }
 
 TEST_F(unique_stack_add, bigger_than_file)
@@ -120,6 +127,7 @@ TEST_F(unique_stack_add, bigger_than_file)
 	uint64_t id = ::unique_stack_add(&uq, in.data(), (uint32_t)in.size());
 	EXPECT_GT(id, 0);
 	EXPECT_GT(file_get_size(fd), file_size);
+	file_drop(&fd);
 }
 
 TEST_F(unique_stack_add, twice_same_data0)
@@ -133,6 +141,7 @@ TEST_F(unique_stack_add, twice_same_data0)
 	EXPECT_GT(id0, 0);
 	EXPECT_GT(id1, 0);
 	EXPECT_EQ(id0, id1);
+	file_drop(&fd);
 }
 
 TEST_F(unique_stack_add, twice_different_data0)
@@ -145,6 +154,7 @@ TEST_F(unique_stack_add, twice_different_data0)
 	std::string in1 = "G F E D C B A";
 	uint64_t id1 = ::unique_stack_add(&uq, in1.data(), (uint32_t)in1.size());
 	EXPECT_NE(id0, id1);
+	file_drop(&fd);
 }
 
 TEST_F(unique_stack_add, three_different_data0)
@@ -165,6 +175,7 @@ TEST_F(unique_stack_add, three_different_data0)
 	uint64_t id2 = ::unique_stack_add(&uq, in2.data(), (uint32_t)in2.size());
 	EXPECT_TRUE(id2);
 	EXPECT_NE(id0, id2);
+	file_drop(&fd);
 }
 
 TEST_F(unique_stack_add, add_second_page)
@@ -181,4 +192,5 @@ TEST_F(unique_stack_add, add_second_page)
 		EXPECT_GT(id, 0);
 	}
 	EXPECT_GT(file_get_size(fd), getpagesize());
+	file_drop(&fd);
 }

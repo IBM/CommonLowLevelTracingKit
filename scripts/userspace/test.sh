@@ -18,7 +18,7 @@ if [ -n "${CLLTK_TRACING_PATH}" ]; then
     rm -f ${CLLTK_TRACING_PATH}/*
 fi
 
-ctest --test-dir "$BUILD_DIR/"
+ctest --test-dir "$BUILD_DIR/" --output-on-failure
 if [ $? -eq 0 ];
 then
     echo "c/c++ test ok"

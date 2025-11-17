@@ -29,7 +29,7 @@ TEST(meta_macro, str)
 	EXPECT_EQ(type, _clltk_meta_enty_type_printf);
 	EXPECT_EQ(line, ref_line - 1);
 	EXPECT_EQ(arg_count, 1);
-	EXPECT_EQ(arg_types[0], _clltk_argument_t_string);
+	EXPECT_EQ(arg_types[0], _clltk_argument_string);
 	EXPECT_EQ(arg_types[arg_count], 0);
 	EXPECT_STRCASEEQ(meta_file_name, __FILE__);
 	EXPECT_STRCASEEQ(meta_format, "arg0 = %s");
@@ -58,8 +58,8 @@ TEST(meta_macro, str_str)
 	EXPECT_EQ(type, _clltk_meta_enty_type_printf);
 	EXPECT_EQ(line, ref_line - 1);
 	EXPECT_EQ(arg_count, 2);
-	EXPECT_EQ(arg_types[0], _clltk_argument_t_string);
-	EXPECT_EQ(arg_types[1], _clltk_argument_t_string);
+	EXPECT_EQ(arg_types[0], _clltk_argument_string);
+	EXPECT_EQ(arg_types[1], _clltk_argument_string);
 	EXPECT_EQ(arg_types[arg_count], 0);
 	EXPECT_STRCASEEQ(meta_file_name, __FILE__);
 	EXPECT_STRCASEEQ(meta_format, "arg0 = %s arg1 = %s");
@@ -87,7 +87,7 @@ TEST(meta_macro, int64)
 	EXPECT_EQ(type, _clltk_meta_enty_type_printf);
 	EXPECT_EQ(line, ref_line - 1);
 	EXPECT_EQ(arg_count, 1);
-	EXPECT_EQ(arg_types[0], _clltk_argument_t_int64);
+	EXPECT_EQ(arg_types[0], _clltk_argument_sint64);
 	EXPECT_EQ(arg_types[arg_count], 0);
 	EXPECT_STRCASEEQ(meta_file_name, __FILE__);
 	EXPECT_STRCASEEQ(meta_format, "arg0 = %ld");
@@ -119,7 +119,7 @@ TEST(meta_macro, two_tracepoints)
 		EXPECT_EQ(type, _clltk_meta_enty_type_printf);
 		EXPECT_EQ(line, ref_line - 1);
 		EXPECT_EQ(arg_count, 1);
-		EXPECT_EQ(arg_types[0], _clltk_argument_t_int64);
+		EXPECT_EQ(arg_types[0], _clltk_argument_sint64);
 		EXPECT_EQ(arg_types[arg_count], 0);
 		EXPECT_STRCASEEQ(meta_file_name, __FILE__);
 		EXPECT_STRCASEEQ(meta_format, "arg0 = %ld");
@@ -150,7 +150,7 @@ TEST(meta_macro, two_tracepoints)
 		EXPECT_EQ(type, _clltk_meta_enty_type_printf);
 		EXPECT_EQ(line, ref_line - 1);
 		EXPECT_EQ(arg_count, 1);
-		EXPECT_EQ(arg_types[0], _clltk_argument_t_int64);
+		EXPECT_EQ(arg_types[0], _clltk_argument_sint64);
 		EXPECT_EQ(arg_types[arg_count], 0);
 		EXPECT_STRCASEEQ(meta_file_name, __FILE__);
 		EXPECT_STRCASEEQ(meta_format, "arg0 = %ld");

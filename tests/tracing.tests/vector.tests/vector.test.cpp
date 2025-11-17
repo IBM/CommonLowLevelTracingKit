@@ -12,6 +12,7 @@ TEST(vector, vector_create)
 	int *const vec = (int *)vector_create();
 	ASSERT_TRUE(vec);
 	EXPECT_EQ(0, vector_size(vec));
+	vector_free(&vec);
 }
 
 TEST(vector, one_entry)
@@ -20,6 +21,7 @@ TEST(vector, one_entry)
 	ASSERT_TRUE(vec);
 	vector_add(&vec, 1);
 	EXPECT_EQ(1, vector_size(vec));
+	vector_free(&vec);
 }
 
 TEST(vector, two_entry)
@@ -29,6 +31,18 @@ TEST(vector, two_entry)
 	vector_add(&vec, 1);
 	vector_add(&vec, 2);
 	EXPECT_EQ(2, vector_size(vec));
+	vector_free(&vec);
+}
+
+TEST(vector, three_entry)
+{
+	int *vec = (int *)vector_create();
+	ASSERT_TRUE(vec);
+	vector_add(&vec, 1);
+	vector_add(&vec, 2);
+	vector_add(&vec, 3);
+	EXPECT_EQ(3, vector_size(vec));
+	EXPECT_GE(vector_get_alloc(vec), 3);
 }
 
 TEST(vector, add_until_relocated)
@@ -43,6 +57,7 @@ TEST(vector, add_until_relocated)
 	} while (old_vec == vec);
 	ASSERT_TRUE(vec);
 	EXPECT_EQ(counter, vector_size(vec));
+	vector_free(&vec);
 }
 
 TEST(vector, uint8)
@@ -54,6 +69,7 @@ TEST(vector, uint8)
 	EXPECT_EQ(2, vector_size(vec));
 	EXPECT_EQ(1, vec[0]);
 	EXPECT_EQ(2, vec[1]);
+	vector_free(&vec);
 }
 TEST(vector, uint16)
 {
@@ -64,6 +80,7 @@ TEST(vector, uint16)
 	EXPECT_EQ(2, vector_size(vec));
 	EXPECT_EQ(1, vec[0]);
 	EXPECT_EQ(2, vec[1]);
+	vector_free(&vec);
 }
 
 TEST(vector, struct)
@@ -78,6 +95,7 @@ TEST(vector, struct)
 	EXPECT_EQ(2, vector_size(vec));
 	EXPECT_EQ(1, vec[0].i);
 	EXPECT_EQ(2, vec[1].i);
+	vector_free(&vec);
 }
 
 bool matcher(const int *const vector_entry, const int *const search_value)
@@ -95,6 +113,7 @@ TEST(vector, find_in_empty)
 	EXPECT_FALSE(match.found);
 	EXPECT_EQ(0, match.position);
 	EXPECT_EQ(0, match.entry);
+	vector_free(&vec);
 }
 
 TEST(vector, find_not_in_one)
@@ -108,6 +127,7 @@ TEST(vector, find_not_in_one)
 	EXPECT_FALSE(match.found);
 	EXPECT_EQ(0, match.position);
 	EXPECT_EQ(0, match.entry);
+	vector_free(&vec);
 }
 
 TEST(vector, find_in_one)
@@ -121,6 +141,7 @@ TEST(vector, find_in_one)
 	EXPECT_TRUE(match.found);
 	EXPECT_EQ(0, match.position);
 	EXPECT_EQ(vec, match.entry);
+	vector_free(&vec);
 }
 
 TEST(vector, find_not_in_three)
@@ -136,6 +157,7 @@ TEST(vector, find_not_in_three)
 	EXPECT_FALSE(match.found);
 	EXPECT_EQ(0, match.position);
 	EXPECT_EQ(0, match.entry);
+	vector_free(&vec);
 }
 
 TEST(vector, find_in_three_first)
@@ -151,6 +173,7 @@ TEST(vector, find_in_three_first)
 	EXPECT_TRUE(match.found);
 	EXPECT_EQ(0, match.position);
 	EXPECT_EQ(&vec[0], match.entry);
+	vector_free(&vec);
 }
 
 TEST(vector, find_in_three_middle)
@@ -166,6 +189,7 @@ TEST(vector, find_in_three_middle)
 	EXPECT_TRUE(match.found);
 	EXPECT_EQ(1, match.position);
 	EXPECT_EQ(&vec[1], match.entry);
+	vector_free(&vec);
 }
 
 TEST(vector, find_in_three_first_last)
@@ -181,6 +205,7 @@ TEST(vector, find_in_three_first_last)
 	EXPECT_TRUE(match.found);
 	EXPECT_EQ(2, match.position);
 	EXPECT_EQ(&vec[2], match.entry);
+	vector_free(&vec);
 }
 
 TEST(vector, remove)
@@ -196,6 +221,44 @@ TEST(vector, remove)
 	vector_remove(vec, match.position);
 	match = vector_find(vec, matcher, &search);
 	EXPECT_FALSE(match.found);
+	vector_free(&vec);
+}
+TEST(vector, erase)
+{
+	int *vec = (int *)vector_create();
+	ASSERT_TRUE(vec);
+	vector_add(&vec, 1);
+	vector_add(&vec, 2);
+	vector_add(&vec, 3);
+	vector_add(&vec, 4);
+	ASSERT_EQ(4, vector_size(vec));
+	{
+		vector_erase(vec, 1, 2);
+	}
+	ASSERT_EQ(2, vector_size(vec));
+	{
+		int search = 1;
+		auto match = vector_find(vec, matcher, &search);
+		EXPECT_EQ(match.position, 0);
+		EXPECT_TRUE(match.found);
+	}
+	{
+		int search = 2;
+		auto match = vector_find(vec, matcher, &search);
+		EXPECT_FALSE(match.found);
+	}
+	{
+		int search = 3;
+		auto match = vector_find(vec, matcher, &search);
+		EXPECT_FALSE(match.found);
+	}
+	{
+		int search = 4;
+		auto match = vector_find(vec, matcher, &search);
+		EXPECT_EQ(match.position, 1);
+		EXPECT_TRUE(match.found);
+	}
+	vector_free(&vec);
 }
 
 TEST(vector, free)
