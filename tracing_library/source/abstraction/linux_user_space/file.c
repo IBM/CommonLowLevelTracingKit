@@ -228,19 +228,27 @@ void file_drop(file_t **const file)
 
 	(*file) = NULL;
 
-	((fh->mmapped.ptr != NULL) ? munmap(fh->mmapped.ptr, fh->mmapped.size) : 0);
-	((fh->file_descriptor > 0) ? close(fh->file_descriptor) : 0);
+	if (fh->mmapped.ptr != NULL) {
+		if (munmap(fh->mmapped.ptr, fh->mmapped.size) != 0) {
+			ERROR_LOG("failed to munmap file %s: %s", fh->path, strerror(errno));
+		}
+	}
+	if (fh->file_descriptor > 0) {
+		if (close(fh->file_descriptor) != 0) {
+			ERROR_LOG("failed to close file %s: %s", fh->path, strerror(errno));
+		}
+	}
 	fh->file_descriptor = 0;
 	((fh->path != NULL) ? free(fh->path) : 0);
 	fh->path = 0;
 	((fh->name != NULL) ? free(fh->name) : 0);
 	fh->name = 0;
 
-	free(fh);
-
 	if (match) {
 		SLIST_REMOVE(&context.files, match, file_t, files);
 	}
+
+	free(fh);
 	return;
 }
 
@@ -307,7 +315,9 @@ file_t *file_temp_to_final(file_t **temp_file)
 	// the file_file should now exist
 	file_t *const final_file = file_try_get(name);
 
-	unlink(old_file->path);
+	if (unlink(old_file->path) != 0) {
+		ERROR_LOG("failed to unlink temp file %s: %s", old_file->path, strerror(errno));
+	}
 	file_drop(temp_file);
 
 	return final_file;

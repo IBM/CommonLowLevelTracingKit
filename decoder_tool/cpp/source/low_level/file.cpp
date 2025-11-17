@@ -88,6 +88,7 @@ size_t internal::File::grow() const {
 	if (mprotect((void *)m_base, new_file_size, PROT_READ) == -1) {
 		throw std::runtime_error("Error mapping file: "s + strerror(errno));
 	}
+	if (madvise((void *)m_base, new_file_size, MADV_SEQUENTIAL) == -1) {}
 	m_size = new_file_size;
 	return m_size;
 }
@@ -144,7 +145,7 @@ source::FilePart::FilePart(const std::filesystem::path &a_path)
 size_t source::FilePart::getFileSize() const {
 	return m_file->size();
 }
-size_t source::FilePart::doGrow() const {
+size_t source::FilePart::grow() const {
 	return m_file->grow();
 }
 uint8_t source::FilePart::crc8(size_t size, size_t offset, size_t limit) const noexcept {

@@ -4,6 +4,7 @@
 #ifndef _CLLTK_TRACING_H_
 #define _CLLTK_TRACING_H_
 
+// Choose implementation based on environment
 #if defined(__KERNEL__)
 #include "CommonLowLevelTracingKit/_kernel_tracing.h"
 #else

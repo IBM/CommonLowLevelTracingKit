@@ -90,6 +90,8 @@ RUN dnf -y install \
     ninja-build \
     gdb \
     lldb \
+    perf \
+    npm \
     bash-completion
 
 RUN pip3 install \

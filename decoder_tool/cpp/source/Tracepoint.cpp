@@ -17,21 +17,22 @@ using namespace CommonLowLevelTracingKit::decoder;
 using ToString = CommonLowLevelTracingKit::decoder::source::low_level::ToString;
 using namespace std::string_literals;
 
-TraceEntryHead::TraceEntryHead(std::string_view tb, uint64_t n, uint64_t t,
+TraceEntryHead::TraceEntryHead(std::string_view tb_name, uint64_t n, uint64_t t,
 							   const std::span<const uint8_t> &body)
-	: Tracepoint(tb, n, t)
+	: Tracepoint(tb_name, n, t)
 	, m_pid(get<uint32_t>(body, 6))
 	, m_tid(get<uint32_t>(body, 10)) {}
 
-TraceEntryHead::TraceEntryHead(std::string_view tb, uint64_t n, uint64_t t, uint32_t pid,
+TraceEntryHead::TraceEntryHead(std::string_view tb_name, uint64_t n, uint64_t t, uint32_t pid,
 							   uint32_t tid)
-	: Tracepoint(tb, n, t)
+	: Tracepoint(tb_name, n, t)
 	, m_pid(pid)
 	, m_tid(tid) {};
 
-TracepointDynamic::TracepointDynamic(const std::string_view &tb, source::Ringbuffer::EntryPtr a_e)
-	: TraceEntryHead(tb, a_e->nr, get<uint64_t>(a_e->body(), 14), a_e->body())
-	, e(std::move(a_e)) {
+TracepointDynamic::TracepointDynamic(const std::string_view &tb_name,
+									 source::Ringbuffer::EntryPtr entry)
+	: TraceEntryHead(tb_name, entry->nr, get<uint64_t>(entry->body(), 14), entry->body())
+	, e(std::move(entry)) {
 	const size_t size = e->body().size();
 	const char *const begin = reinterpret_cast<const char *>(e->body().begin().base());
 	const char *current = begin + 22;
@@ -59,10 +60,11 @@ TracepointDynamic::TracepointDynamic(const std::string_view &tb, source::Ringbuf
 }
 
 using FilePtr = source::internal::FilePtr;
-TracepointStatic::TracepointStatic(const std::string_view &tb, source::Ringbuffer::EntryPtr &&a_e,
+TracepointStatic::TracepointStatic(const std::string_view &tb_name,
+								   source::Ringbuffer::EntryPtr &&entry,
 								   const std::span<const uint8_t> &m, const FilePtr &&f)
-	: TraceEntryHead(tb, a_e->nr, get<uint64_t>(a_e->body(), 14), a_e->body())
-	, e(std::move(a_e))
+	: TraceEntryHead(tb_name, entry->nr, get<uint64_t>(entry->body(), 14), entry->body())
+	, e(std::move(entry))
 	, m_keep_memory(f)
 	, m_type(toMetaType(get<uint8_t>(m, 5)))
 	, m_line(get<uint32_t>(m, 6))
@@ -81,8 +83,10 @@ const std::string_view TracepointStatic::msg() const {
 		} else if (m_type == MetaType::dump) {
 			m_msg = source::formatter::dump(m_format, m_arg_types, args_raw);
 		} else {
-			CLLTK_DECODER_THROW(exception::InvalidMeta,
-								"invalid meta data: "s + std::to_string((char)m_type));
+			CLLTK_DECODER_THROW(
+				exception::InvalidMeta,
+				"Invalid meta data type: " + std::to_string(static_cast<uint8_t>(m_type)) +
+					" (expected printf=1 or dump=2)");
 		}
 	}
 	return m_msg;

@@ -25,9 +25,9 @@ Entry::Entry(const uint64_t entry_nr, const uint64_t body_start, const size_t bo
 		rb_body.copyOut(m_static_body, body_start, body_size, rb_size);
 		m_body = std::span<const uint8_t>{m_static_body.data(), body_size};
 	} else {
-		m_dynmaic_body.resize(body_size);
-		rb_body.copyOut(m_dynmaic_body, body_start, body_size, rb_size);
-		m_body = std::span<const uint8_t>{m_dynmaic_body.data(), body_size};
+		m_dynamic_body.resize(body_size);
+		rb_body.copyOut(m_dynamic_body, body_start, body_size, rb_size);
+		m_body = std::span<const uint8_t>{m_dynamic_body.data(), body_size};
 	}
 
 	m_valid = (body_crc == crc8(m_body));
@@ -82,7 +82,7 @@ std::variant<EntryPtr, std::string> Ringbuffer::getNextEntry() noexcept {
 Ringbuffer::Ringbuffer(FilePart &&file)
 	: m_file(file)
 	, m_version(file.get<uint64_t>(0))
-	, m_headpart(&file.getRef<std::atomic<HeadPart>>(72))
+	, m_headpart(&file.getReference<std::atomic<HeadPart>>(72))
 	, m_read(capture())
 	, m_body(file.get(160))
 	, m_body_size(file.get<uint64_t>(72)) {}

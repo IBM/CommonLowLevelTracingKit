@@ -76,10 +76,10 @@ TEST_F(decoder_file_part, getRef)
 	outFile.write(reinterpret_cast<const char *>(m_data.data()), 256);
 	outFile.close();
 	const auto file = FilePart(m_file_name);
-	ASSERT_EQ(file.getRef<uint8_t>(), *reinterpret_cast<uint8_t *>(m_data.data()));
-	ASSERT_EQ(file.getRef<uint16_t>(), *reinterpret_cast<uint16_t *>(m_data.data()));
-	ASSERT_EQ(file.getRef<uint32_t>(), *reinterpret_cast<uint32_t *>(m_data.data()));
-	ASSERT_EQ(file.getRef<uint64_t>(), *reinterpret_cast<uint64_t *>(m_data.data()));
+	ASSERT_EQ(file.getReference<uint8_t>(), *reinterpret_cast<uint8_t *>(m_data.data()));
+	ASSERT_EQ(file.getReference<uint16_t>(), *reinterpret_cast<uint16_t *>(m_data.data()));
+	ASSERT_EQ(file.getReference<uint32_t>(), *reinterpret_cast<uint32_t *>(m_data.data()));
+	ASSERT_EQ(file.getReference<uint64_t>(), *reinterpret_cast<uint64_t *>(m_data.data()));
 
 	EXPECT_ANY_THROW(file.get<uint8_t>(257));
 }
@@ -91,11 +91,11 @@ TEST_F(decoder_file_part, getFilePart)
 	outFile.close();
 	const auto file = FilePart(m_file_name);
 	const auto subFile = file.get<FilePart>(1);
-	ASSERT_EQ(subFile.getRef<uint8_t>(), *reinterpret_cast<uint8_t *>(m_data.data() + 1));
-	ASSERT_EQ(subFile.getRef<uint16_t>(), *reinterpret_cast<uint16_t *>(m_data.data() + 1));
-	ASSERT_EQ(subFile.getRef<uint32_t>(), *reinterpret_cast<uint32_t *>(m_data.data() + 1));
-	ASSERT_EQ(subFile.getRef<uint64_t>(), *reinterpret_cast<uint64_t *>(m_data.data() + 1));
-	ASSERT_EQ(&file.getRef<uint8_t>(10), &subFile.getRef<uint8_t>(10 - 1));
+	ASSERT_EQ(subFile.getReference<uint8_t>(), *reinterpret_cast<uint8_t *>(m_data.data() + 1));
+	ASSERT_EQ(subFile.getReference<uint16_t>(), *reinterpret_cast<uint16_t *>(m_data.data() + 1));
+	ASSERT_EQ(subFile.getReference<uint32_t>(), *reinterpret_cast<uint32_t *>(m_data.data() + 1));
+	ASSERT_EQ(subFile.getReference<uint64_t>(), *reinterpret_cast<uint64_t *>(m_data.data() + 1));
+	ASSERT_EQ(&file.getReference<uint8_t>(10), &subFile.getReference<uint8_t>(10 - 1));
 }
 
 TEST_F(decoder_file_part, grow_auto)
@@ -123,7 +123,7 @@ TEST_F(decoder_file_part, grow)
 	ASSERT_EQ(file.getFileSize(), 1);
 	outFile.write(reinterpret_cast<const char *>(m_data.data()), 1).flush();
 	ASSERT_EQ(file.getFileSize(), 1);
-	file.doGrow();
+	file.grow();
 	ASSERT_EQ(file.getFileSize(), 2);
 }
 
@@ -146,7 +146,7 @@ TEST_F(decoder_file_part, mmap)
 	ptr[m_data.size() - 1] = 2;
 
 	auto file = FilePart(m_file_name);
-	EXPECT_NE(&file.getRef<uint8_t>(), ptr);
+	EXPECT_NE(&file.getReference<uint8_t>(), ptr);
 	EXPECT_EQ(file.get<uint8_t>(0), 1);
 	EXPECT_EQ(file.get<uint8_t>(m_data.size() - 1), 2);
 	munmap(ptr, m_data.size());

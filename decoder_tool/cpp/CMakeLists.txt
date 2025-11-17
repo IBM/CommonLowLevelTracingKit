@@ -67,6 +67,8 @@ target_compile_features(clltk_decoder_object PUBLIC cxx_std_20)
 set_target_properties(clltk_decoder_object PROPERTIES
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN ON
+    INTERPROCEDURAL_OPTIMIZATION_RELEASE ON
+    INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO ON
 )
 
 add_library(clltk_decoder_static STATIC

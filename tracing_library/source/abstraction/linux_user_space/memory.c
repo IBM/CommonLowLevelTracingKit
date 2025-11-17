@@ -18,8 +18,8 @@ void init_page_size(void)
 
 void *memcpy_and_flush(void *dest, const void *src, size_t count)
 {
-	void *restult_dest;
-	restult_dest = memcpy(dest, src, count);
+	void *result_dest;
+	result_dest = memcpy(dest, src, count);
 
 #ifdef __aarch64__
 	for (uintptr_t ptr = (uintptr_t)dest; ptr < ((uintptr_t)dest + count); ptr += 64) {
@@ -30,7 +30,7 @@ void *memcpy_and_flush(void *dest, const void *src, size_t count)
 #else
 	(void)(uintptr_t)0; // prevent the removal of header for uintptr_t
 #endif
-	return restult_dest;
+	return result_dest;
 }
 
 void *memory_heap_allocation(size_t size)
@@ -45,7 +45,11 @@ void *memory_heap_allocation(size_t size)
 
 void *memory_heap_realloc(void *old_ptr, size_t new_size)
 {
-	return realloc(old_ptr, new_size);
+	void *ptr = realloc(old_ptr, new_size);
+	if (new_size > 0 && ptr == NULL) {
+		ERROR_AND_EXIT("memory_heap_realloc failed");
+	}
+	return ptr;
 }
 
 void memory_heap_free(const void *ptr)

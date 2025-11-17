@@ -85,7 +85,7 @@ void *_vector_add(vector *vec_addr, vec_type_t type_size)
 	if (vec_addr == NULL || *vec_addr == NULL)
 		return NULL;
 	vector_data *v_data = vector_get_data(*vec_addr);
-	if (!vector_has_space(v_data)) {
+	if (vector_has_space(v_data) == false) {
 		v_data = vector_realloc(v_data, type_size);
 		*vec_addr = v_data->buff;
 	}
@@ -112,7 +112,7 @@ vector_entry_match_t _vector_find(vector vec, vec_type_t type_size,
 	vector_entry_match_t match = {0};
 	if (vec == NULL)
 		return match;
-	if (!match_func)
+	if (match_func == NULL)
 		return match;
 	const vector_data *const v_data = vector_get_data(vec);
 	for (size_t index = 0; index < v_data->length; index++) {

@@ -8,8 +8,8 @@ namespace CommonLowLevelTracingKit::decoder::source {
 	  public:
 		Definition(const FilePart &&a_file)
 			: m_file(a_file)
-			, m_name(std::string_view(&a_file.getRef<char>(sizeof(size_t)), a_file.get<size_t>())) {
-			};
+			, m_name(std::string_view(&a_file.getReference<char>(sizeof(size_t)),
+									  a_file.get<size_t>())) {};
 		Definition(const Definition &) = delete;
 		Definition &operator=(const Definition &) = delete;
 		Definition(Definition &&) = default;

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "arguments.h"
+#include "abstraction/optimization.h"
 
 #if defined(__KERNEL__)
 #include <linux/limits.h>
@@ -67,14 +68,14 @@ void first_time_check(const char *const format, _clltk_argument_types_t *types)
 uint32_t get_argument_sizes(const char *const format, uint32_t sizes_out[],
 							_clltk_argument_types_t *types, va_list args)
 {
-	if ((types == NULL) || (types->count == 0))
+	if (types == NULL || types->count == 0)
 		return 0;
 
-	if (!types->already_checked)
+	if (unlikely(types->already_checked == false))
 		first_time_check(format, types);
 
 	uint32_t size = 0;
-	if (!types->flex_size) {
+	if (likely(types->flex_size == false)) {
 		// everything is fixed so just use this values
 		for (size_t arg_index = 0; arg_index < types->count; arg_index++) {
 			const _clltk_argument_t type = types->types[arg_index];
@@ -117,7 +118,7 @@ uint32_t get_argument_sizes(const char *const format, uint32_t sizes_out[],
 			} break;
 			case _clltk_argument_float:
 			case _clltk_argument_double:
-#if !defined(__KERNEL__) // TODO create an error?
+#if !defined(__KERNEL__) // TODO: create an error?
 			{
 				const double value = va_arg(args_copy, __typeof__(value));
 				(void)value;
@@ -183,7 +184,7 @@ void get_arguments(void *_buffer, uint32_t sizes[], const _clltk_argument_types_
 			*(__uint128_t *)buffer = value;
 			buffer += fix_arg_size;
 		} break;
-#if !defined(__KERNEL__) // todo create an error?
+#if !defined(__KERNEL__) // TODO: create an error?
 		case _clltk_argument_float: {
 			const float value = (float)va_arg(args_copy, __typeof__(double));
 			*(float *)buffer = value;

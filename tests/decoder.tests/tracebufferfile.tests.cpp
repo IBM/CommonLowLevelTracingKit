@@ -84,7 +84,7 @@ TEST_F(decoder_tracebufferfile, version)
 	clltk_dynamic_tracebuffer_creation(m_tracebuffer_name.c_str(), 1024);
 	TracebufferFile tb{m_file_name};
 	using VersionType = std::array<char, 8>;
-	const auto rawVersion = tb.getFilePart().getRef<VersionType>(16);
+	const auto rawVersion = tb.getFilePart().getReference<VersionType>(16);
 	auto [major, minor, path] = tb.getVersion();
 	EXPECT_EQ(major, rawVersion.at(2));
 	EXPECT_EQ(minor, rawVersion.at(1));
@@ -128,10 +128,10 @@ TEST_F(decoder_tracebufferfile, ringbuffer_wrapped_dropped_and_entries)
 	EXPECT_GT(tb.getRingbuffer().getWrapped(), 0);
 	const auto dropped = tb.getRingbuffer().getDropped();
 	EXPECT_GT(dropped, 0);
-	const auto entryCount = tb.getRingbuffer().getEntrieCount();
+	const auto entryCount = tb.getRingbuffer().getEntryCount();
 	EXPECT_EQ(entryCount, 100);
 	clltk_dynamic_tracepoint_execution(m_tracebuffer_name.c_str(), __FILE__, __LINE__, 0, 0,
 									   "Hello World %d", 100);
 	EXPECT_EQ(dropped + 1, tb.getRingbuffer().getDropped());
-	EXPECT_EQ(entryCount + 1, tb.getRingbuffer().getEntrieCount());
+	EXPECT_EQ(entryCount + 1, tb.getRingbuffer().getEntryCount());
 }

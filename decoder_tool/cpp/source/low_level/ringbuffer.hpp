@@ -92,14 +92,14 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		CONST_INLINE uint64_t getSize() const noexcept { return m_body_size - 1; }
 		INLINE uint64_t getWrapped() const noexcept { return capture().wrapped; }
 		INLINE uint64_t getDropped() const noexcept { return capture().dropped; }
-		INLINE uint64_t getEntrieCount() const noexcept { return capture().entries; }
+		INLINE uint64_t getEntryCount() const noexcept { return capture().entries; }
 		INLINE const HeadPart capture() const noexcept {
 			return m_headpart->load(std::memory_order_relaxed);
 		}
 
 		INLINE void reset() noexcept { m_read.reset(capture()); }
 		INLINE size_t pendingBytes() noexcept { return pendingBytes(capture()); }
-		INLINE size_t pendingBytes(const HeadPart &c) noexcept {
+		INLINE size_t pendingBytes(const HeadPart &c) const noexcept {
 			const auto &r = m_read;
 			const auto head = c.next_free_abs();
 			const auto tail = std::max(c.last_valid_abs(), r.max_position_abs());
@@ -141,7 +141,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 		bool m_valid;
 		std::array<uint8_t, static_body_size> m_static_body;
-		std::vector<uint8_t> m_dynmaic_body;
+		std::vector<uint8_t> m_dynamic_body;
 		std::span<const uint8_t> m_body;
 
 		// never move or copy

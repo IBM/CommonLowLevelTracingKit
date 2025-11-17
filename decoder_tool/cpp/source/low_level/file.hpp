@@ -33,7 +33,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		FilePart &operator=(const FilePart &) = delete;
 		FilePart &operator=(FilePart &&) = delete;
 
-		template <internal::POD T> INLINE const T &getRef(size_t offset = 0) const {
+		template <internal::POD T> INLINE const T &getReference(size_t offset = 0) const {
 			const T &value = *(const T *)getPtr(offset, sizeof(T));
 			return value;
 		}
@@ -60,7 +60,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		uint8_t crc8(size_t size, size_t offset = 0, size_t limit = 0) const noexcept;
 
 		size_t getFileSize() const;
-		size_t doGrow() const;
+		size_t grow() const;
 
 		INLINE internal::FilePtr getFileInternal() const noexcept { return m_file; }
 

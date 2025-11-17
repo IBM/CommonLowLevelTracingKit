@@ -55,11 +55,11 @@ namespace CommonLowLevelTracingKit::decoder {
 	using SnapTracebufferPtr = std::unique_ptr<SnapTracebuffer>;
 	using SnapTracebufferCollection = std::vector<SnapTracebufferPtr>;
 	struct EXPORT SnapTracebuffer : Tracebuffer {
-		static SnapTracebufferCollection collect(const std::filesystem::path &,
-												 const TracebufferFilterFunc &tbFilter = {},
-												 const TracepointFilterFunc &tpFilter = {});
+		static SnapTracebufferCollection
+		collect(const std::filesystem::path &, const TracebufferFilterFunc &tracebufferFilter = {},
+				const TracepointFilterFunc &tracepointFilter = {});
 		static SnapTracebufferPtr make(const std::filesystem::path &,
-									   const TracepointFilterFunc &tpFilte = {});
+									   const TracepointFilterFunc &tracepointFilter = {});
 
 		TracepointCollection tracepoints;
 

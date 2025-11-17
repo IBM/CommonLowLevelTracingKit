@@ -160,6 +160,10 @@ INLINE static auto fix_types_based_on_format(const std::string_view &format,
 			if (c == '%') [[unlikely]] {
 				parse_state = other;
 			} else if (is_final_char(c)) { // end of format specifier
+				if (arg_count >= raw_types.size()) [[unlikely]] {
+					CLLTK_DECODER_THROW(FormattingFailed,
+										"format specifier count exceeds argument count");
+				}
 				char type = raw_types[arg_count];
 				if (c == 'p' && type == 's') [[unlikely]] {
 					// this case is handled by the tracing_library
@@ -206,10 +210,26 @@ static INLINE void clean_up_str(std::string &s) {
 	auto ptr = std::bit_cast<char *>(s.data());
 	size_t n = s.size();
 
-	PRAGMA_GCC(GCC ivdep)
-	PRAGMA_CLANG(unroll)
-	PRAGMA_CLANG(clang loop interleave(disable))
-	for (size_t i = 0; i < n; ++i) {
+	// ISA-independent optimized path
+	// Process 8 bytes at a time for better performance
+	size_t i = 0;
+	const size_t unroll_factor = 8;
+
+	// Main loop - process 8 characters at a time
+	for (; i + unroll_factor <= n; i += unroll_factor) {
+		// Manual unrolling for better performance
+		if (ptr[i + 0] < 32) ptr[i + 0] = ' ';
+		if (ptr[i + 1] < 32) ptr[i + 1] = ' ';
+		if (ptr[i + 2] < 32) ptr[i + 2] = ' ';
+		if (ptr[i + 3] < 32) ptr[i + 3] = ' ';
+		if (ptr[i + 4] < 32) ptr[i + 4] = ' ';
+		if (ptr[i + 5] < 32) ptr[i + 5] = ' ';
+		if (ptr[i + 6] < 32) ptr[i + 6] = ' ';
+		if (ptr[i + 7] < 32) ptr[i + 7] = ' ';
+	}
+
+	// Handle remainder
+	for (; i < n; ++i) {
 		if (ptr[i] < 32) ptr[i] = ' ';
 	}
 }
@@ -255,6 +275,26 @@ std::string formater::printf(const std::string_view &format, const std::span<con
 	PRAGMA_CLANG(clang loop interleave(disable))
 	for (size_t i = 0; i < total_arg_count; i++) values[i] = &arg_values[i];
 	int rc = 0;
+	// IMPORTANT: FFI (Foreign Function Interface) is necessary here and cannot be replaced
+	// with direct snprintf calls for the following reasons:
+	//
+	// 1. Type Safety: snprintf is a variadic function that requires arguments to be passed
+	//    with their correct types. We cannot pass all arguments as uint64_t or void*.
+	//    Example: snprintf(buf, size, "%s %d %f", str, num, flt) requires:
+	//    - str as char* (not uint64_t)
+	//    - num as int (not void*)
+	//    - flt as double (not uint64_t)
+	//
+	// 2. Runtime Argument Count: We have 0-10 arguments determined at runtime. C++ has no
+	//    clean way to call variadic functions with runtime-determined argument counts.
+	//    A switch with all combinations would need 11 cases × multiple type combinations.
+	//
+	// 3. Type Mixing: Arguments can be any combination of integers, floats, doubles, and
+	//    strings. Handling all possible type combinations for up to 10 arguments would
+	//    require an impractical number of switch cases.
+	//
+	// FFI solves this by dynamically constructing the function call with the correct
+	// types at runtime, which is exactly what we need for this use case.
 	ffi_call(&cif, (void (*)(void))snprintf, &rc, values); // first snprintf try
 	if (rc < 0) [[unlikely]]
 		CLLTK_DECODER_THROW(FormattingFailed, "first printf try failed");

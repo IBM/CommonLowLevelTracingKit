@@ -10,6 +10,7 @@
 #include "abstraction/error.h"
 #include "abstraction/info.h"
 #include "abstraction/memory.h"
+#include "abstraction/optimization.h"
 
 #if defined(__KERNEL__)
 #include <linux/kernel.h>
@@ -44,7 +45,7 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 										_clltk_argument_types_t *types, const char *const format,
 										...)
 {
-	if (false == _CLLTK_FILE_OFFSET_IS_STATIC(in_file_offset)) {
+	if (unlikely(false == _CLLTK_FILE_OFFSET_IS_STATIC(in_file_offset))) {
 		ERROR_LOG("invalid in_file_offset(%lu) at %s:%d for %s", in_file_offset, file, line,
 				  handler->definition.name);
 		return;
@@ -62,7 +63,7 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 	va_list args;
 	va_start(args, format);
 
-	if (types->count > 10) {
+	if (unlikely(types->count > 10)) {
 		ERROR_LOG("to much arguments (%d) in clltk tracepoint", types->count);
 		return;
 	}
@@ -71,15 +72,15 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 	raw_entry_size += get_argument_sizes(format, arg_sizes, types, args);
 
 	// create entry
-	if (raw_entry_size >= UINT16_MAX) {
+	if (unlikely(raw_entry_size >= UINT16_MAX)) {
 		ERROR_LOG("raw entry size (%ld) bigger than max size in %s:%d", raw_entry_size, file, line);
 		return;
 	}
 
 	uint8_t *raw_entry_buffer;
-	const bool raw_buffer_is_heap_allocated =
-		(types->flex_size && raw_entry_size > memory_get_page_size() / 2);
-	if (raw_buffer_is_heap_allocated) {
+	// Optimize: Only use heap for really large entries (>1KB instead of page_size/2)
+	const bool raw_buffer_is_heap_allocated = (types->flex_size && raw_entry_size > 1024);
+	if (unlikely(raw_buffer_is_heap_allocated)) {
 		raw_entry_buffer = memory_heap_allocation(raw_entry_size);
 	} else {
 		stack_alloc(&raw_entry_buffer, raw_entry_size);
@@ -95,7 +96,7 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 
 	// add to ringbuffer
 	add_to_ringbuffer(handler, raw_entry_buffer, raw_entry_size);
-	if (raw_buffer_is_heap_allocated) {
+	if (unlikely(raw_buffer_is_heap_allocated)) {
 		memory_heap_free(raw_entry_buffer);
 	}
 }
@@ -108,7 +109,7 @@ void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_handler_t *handler,
 										const char *const file, const uint32_t line,
 										const void *address, uint32_t size_in_bytes)
 {
-	if (false == _CLLTK_FILE_OFFSET_IS_STATIC(in_file_offset)) {
+	if (unlikely(false == _CLLTK_FILE_OFFSET_IS_STATIC(in_file_offset))) {
 		ERROR_LOG("invalid in_file_offset(%lu) at %s:%d for %s", in_file_offset, file, line,
 				  handler->definition.name);
 		return;
@@ -125,14 +126,14 @@ void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_handler_t *handler,
 	raw_entry_size += size_in_bytes + 4;
 
 	// create entry
-	if (raw_entry_size >= UINT16_MAX) {
+	if (unlikely(raw_entry_size >= UINT16_MAX)) {
 		ERROR_LOG("raw entry size (%ld) bigger than max size in %s:%d", raw_entry_size, file, line);
 		return;
 	}
 
 	uint8_t *raw_entry_buffer;
 	const bool raw_buffer_is_heap_allocated = (raw_entry_size > memory_get_page_size() / 4);
-	if (raw_buffer_is_heap_allocated) {
+	if (unlikely(raw_buffer_is_heap_allocated)) {
 		raw_entry_buffer = memory_heap_allocation(raw_entry_size);
 	} else {
 		stack_alloc(&raw_entry_buffer, raw_entry_size);
@@ -148,7 +149,7 @@ void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_handler_t *handler,
 	// add to ringbuffer
 	add_to_ringbuffer(handler, raw_entry_buffer, raw_entry_size);
 
-	if (raw_buffer_is_heap_allocated) {
+	if (unlikely(raw_buffer_is_heap_allocated)) {
 		memory_heap_free(raw_entry_buffer);
 	}
 }
@@ -188,7 +189,7 @@ void clltk_dynamic_tracepoint_execution(const char *name, const char *file, cons
 	raw_entry_size += (size_t)message_len;
 
 	// create entry
-	if (raw_entry_size >= UINT16_MAX) {
+	if (unlikely(raw_entry_size >= UINT16_MAX)) {
 		ERROR_LOG("raw entry size (%ld) bigger than max size in %s:%ld", raw_entry_size, file,
 				  line);
 		memory_heap_free(message);
@@ -197,7 +198,7 @@ void clltk_dynamic_tracepoint_execution(const char *name, const char *file, cons
 
 	uint8_t *raw_entry_buffer;
 	const bool raw_buffer_is_heap_allocated = (raw_entry_size > memory_get_page_size() / 4);
-	if (raw_buffer_is_heap_allocated) {
+	if (unlikely(raw_buffer_is_heap_allocated)) {
 		raw_entry_buffer = memory_heap_allocation(raw_entry_size);
 	} else {
 		stack_alloc(&raw_entry_buffer, raw_entry_size);
@@ -216,7 +217,7 @@ void clltk_dynamic_tracepoint_execution(const char *name, const char *file, cons
 	add_to_ringbuffer(&handler, raw_entry_buffer, raw_entry_size);
 	_clltk_tracebuffer_deinit(&handler);
 
-	if (raw_buffer_is_heap_allocated) {
+	if (unlikely(raw_buffer_is_heap_allocated)) {
 		memory_heap_free(raw_entry_buffer);
 	}
 	memory_heap_free(message);

@@ -55,7 +55,7 @@ __attribute__((constructor(101), used)) static void _clltk_constructor(void)
 	}
 }
 
-__attribute__((destructor(102), used)) static void _clltk_destructor(void)
+__attribute__((destructor(101), used)) static void _clltk_destructor(void)
 {
 	extern _clltk_tracebuffer_handler_t *const __start__clltk_tracebuffer_handler_ptr;
 	extern _clltk_tracebuffer_handler_t *const __stop__clltk_tracebuffer_handler_ptr;
