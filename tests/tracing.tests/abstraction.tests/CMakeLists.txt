@@ -12,6 +12,7 @@ file(GLOB_RECURSE Exe_Name_Sources
 
 add_executable(${Exe_Name}
     ${Exe_Name_Sources}
+    $<TARGET_OBJECTS:clltk_tracing_abstraction>
 )
 
 set_property(TARGET ${Exe_Name}

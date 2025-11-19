@@ -134,11 +134,17 @@ __attribute__((always_inline)) static inline constexpr auto _clltk_cast(T value)
 #define _CLLTK_STR_INTERNAL(...) #__VA_ARGS__
 #define _CLLTK_STR(...) _CLLTK_STR_INTERNAL(__VA_ARGS__)
 
-#if defined(__GNU__)
-#define _CLLTK_PRAGMA_DIAG(...) _Pragma(_CLLTK_STR(GCC diagnostic __VA_ARGS__))
-#elif defined(__clang__)
+#if defined(__clang__)
 #define _CLLTK_PRAGMA_DIAG(...) _Pragma(_CLLTK_STR(clang diagnostic __VA_ARGS__))
+#define _CLLTK_PRAGMA_DIAG_CLANG(...) _Pragma(_CLLTK_STR(clang diagnostic __VA_ARGS__))
+#define _CLLTK_PRAGMA_DIAG_GCC(...)
+#elif defined(__GNUC__)
+#define _CLLTK_PRAGMA_DIAG(...) _Pragma(_CLLTK_STR(GCC diagnostic __VA_ARGS__))
+#define _CLLTK_PRAGMA_DIAG_CLANG(...)
+#define _CLLTK_PRAGMA_DIAG_GCC(...) _Pragma(_CLLTK_STR(GCC diagnostic __VA_ARGS__))
 #else
 #define _CLLTK_PRAGMA_DIAG(...)
+#define _CLLTK_PRAGMA_DIAG_CLANG(...)
+#define _CLLTK_PRAGMA_DIAG_GCC(...)
 #endif
 #endif

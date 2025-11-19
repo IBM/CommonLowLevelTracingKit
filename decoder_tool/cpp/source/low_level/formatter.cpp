@@ -3,6 +3,7 @@
 #include "CommonLowLevelTracingKit/Decoder/Common.hpp"
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cctype>
 #include <cstring>
 #include <ffi.h>

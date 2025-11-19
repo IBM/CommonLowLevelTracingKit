@@ -77,6 +77,7 @@ add_subdirectory(source/abstraction)
 
 add_library(clltk_tracing_static STATIC
     ${CLLTK_TRACING_SOURCE}
+    $<TARGET_OBJECTS:clltk_tracing_abstraction>
 )
 
 target_include_directories(clltk_tracing_static
@@ -113,6 +114,7 @@ target_compile_options(clltk_tracing_static
 
 add_library(clltk_tracing_shared SHARED
     ${CLLTK_TRACING_SOURCE}
+    $<TARGET_OBJECTS:clltk_tracing_abstraction>
 )
 target_include_directories(clltk_tracing_shared
     PUBLIC
