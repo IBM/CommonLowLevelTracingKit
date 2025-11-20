@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 	int LOOPS = 1;
 	if (argc == 2) {
 		_CLLTK_PRAGMA_DIAG(push)
-		_CLLTK_PRAGMA_DIAG(ignored "-Wunsafe-buffer-usage")
+		_CLLTK_PRAGMA_DIAG_CLANG(ignored "-Wunsafe-buffer-usage")
 		char *a = argv[1];
 		_CLLTK_PRAGMA_DIAG(pop)
 		LOOPS = atoi(a);

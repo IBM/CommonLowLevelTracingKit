@@ -19,7 +19,10 @@ add_custom_command(
 )
 list(APPEND CPP_FILES ${CMAKE_CURRENT_BINARY_DIR}/format_cpp.tests.cpp)
 
-add_executable(decoder_tests ${CPP_FILES})
+add_executable(decoder_tests
+    ${CPP_FILES}
+    $<TARGET_OBJECTS:clltk_tracing_abstraction>
+)
 
 target_link_libraries(decoder_tests
     GTest::gtest_main

@@ -4,8 +4,6 @@
 #ifndef _CLLTK_ABSTRACTION_OPTIMIZATION_H
 #define _CLLTK_ABSTRACTION_OPTIMIZATION_H
 
-#include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

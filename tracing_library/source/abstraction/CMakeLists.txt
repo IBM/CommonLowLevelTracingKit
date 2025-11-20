@@ -5,8 +5,8 @@ target_include_directories(clltk_tracing_abstraction_interface
         include
 )
 
-if(UNIX)
-    add_library(clltk_tracing_abstraction STATIC
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_library(clltk_tracing_abstraction OBJECT
         linux_user_space/file.c
         linux_user_space/sync.c
         linux_user_space/info.c

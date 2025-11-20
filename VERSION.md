@@ -1,6 +1,9 @@
-1.2.46
+1.2.47
 
 # Change log
+## 1.2.47+
+- fix macros
+- add more cmake options
 ## 1.2.46
 - decoder in c++
 - improve the setup based on ASAN
