@@ -1,5 +1,5 @@
 #include "ringbuffer.hpp"
-#include "CommonLowLevelTracingKit/Decoder/Common.hpp"
+#include "CommonLowLevelTracingKit/decoder/Common.hpp"
 using namespace CommonLowLevelTracingKit::decoder::exception;
 using namespace std::string_literals;
 
@@ -35,7 +35,7 @@ Entry::Entry(const uint64_t entry_nr, const uint64_t body_start, const size_t bo
 
 std::variant<EntryPtr, std::string> Ringbuffer::getNextEntry() noexcept {
 	std::scoped_lock lock{m_this_lock};
-	const size_t max_attemptes = std::max(m_body_size, 10 * 1024UL);
+	const size_t max_attemptes = std::max<size_t>(m_body_size, 10 * 1024UL);
 	size_t retry_attempts = 0;
 	while (true) {
 		if ((++retry_attempts) > max_attemptes)
@@ -76,6 +76,8 @@ std::variant<EntryPtr, std::string> Ringbuffer::getNextEntry() noexcept {
 			// return valid entry
 			m_read.increment(Entry::header_size + entry_size + 1);
 			return entry;
+		} else {
+			m_read.increment(1);
 		}
 	}
 }

@@ -1,7 +1,7 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include <array>
 #include <atomic>
 #include <barrier>
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 		_CLLTK_PRAGMA_DIAG_CLANG(ignored "-Wunsafe-buffer-usage")
 		char *a = argv[1];
 		_CLLTK_PRAGMA_DIAG(pop)
-		LOOPS = atoi(a);
+		LOOPS = std::stoi(a);
 	}
 
 	printf("LOOPS %lu\n", (size_t)LOOPS);

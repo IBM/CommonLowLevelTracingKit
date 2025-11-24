@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "ringbuffer/ringbuffer.h"
 #include "unique_stack/unique_stack.h"
 

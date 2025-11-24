@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "definition.hpp"
 #include "file.hpp"
 #include "helper.hpp"

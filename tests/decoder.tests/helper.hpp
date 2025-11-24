@@ -7,7 +7,7 @@
 #include <string_view>
 #include <type_traits>
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <ostream>
@@ -108,7 +108,7 @@ constexpr std::string operator+(const std::string &lhs, std::string_view rhs)
 	result.append(rhs);
 	return result;
 }
-template <typename T> static constexpr const std::span<const T> span(const std::string_view &str)
+template <typename T> static constexpr const std::span<const T> span(const std::string_view str)
 {
 	const T *const data = std::bit_cast<const T *>(str.data());
 	const size_t size = str.size(); // without \0

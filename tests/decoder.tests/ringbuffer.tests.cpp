@@ -24,7 +24,7 @@
 #include <utility>
 #include <vector>
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "helper.hpp"
 #include "ringbuffer.hpp"
 #include "tracebufferfile.hpp"

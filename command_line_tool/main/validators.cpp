@@ -1,7 +1,7 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "CommonLowLevelTracingKit/interface.hpp"
+#include "commands/interface.hpp"
 #include <functional>
 #include <regex>
 #include <string>

@@ -3,7 +3,7 @@
 
 #include <linux/module.h>
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 
 // used in file.c
 char *tracing_path = "/tmp/";

@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 
 #if defined(__KERNEL__)
 #include <linux/types.h>

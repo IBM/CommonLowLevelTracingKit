@@ -9,7 +9,7 @@
 
 #define CLLTK_FORCE_C
 extern "C" {
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 }
 
 TEST(arguments_c, type)

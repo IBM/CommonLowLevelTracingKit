@@ -1,6 +1,6 @@
 #ifndef DECODER_TOOL_SOURCE_TRACEPOINT_INTERNAL_HEADER
 #define DECODER_TOOL_SOURCE_TRACEPOINT_INTERNAL_HEADER
-#include "CommonLowLevelTracingKit/Decoder/Tracepoint.hpp"
+#include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 #include "file.hpp"
 #include "inline.hpp"
 #include "ringbuffer.hpp"
@@ -12,7 +12,7 @@ concept PODType = std::is_standard_layout_v<T> && std::is_trivial_v<T>;
 
 template <PODType T, std::ranges::contiguous_range R>
 INLINE static constexpr T get(R r, size_t offset = 0) {
-	const uintptr_t base = reinterpret_cast<uintptr_t>(r.data());
+	const uintptr_t base = std::bit_cast<uintptr_t>(r.data());
 	const uintptr_t position = base + offset;
 	const T *const ptr = reinterpret_cast<T *>(position);
 	return *ptr;
@@ -34,7 +34,7 @@ namespace CommonLowLevelTracingKit::decoder {
 	class TracepointDynamic final : public TraceEntryHead {
 	  public:
 		~TracepointDynamic() = default;
-		TracepointDynamic(const std::string_view &tb_name, source::Ringbuffer::EntryPtr entry);
+		TracepointDynamic(const std::string_view tb_name, source::Ringbuffer::EntryPtr entry);
 
 		Type type() const noexcept override { return Type::Dynamic; }
 		const std::string_view file() const noexcept override { return m_file; }
@@ -59,23 +59,26 @@ namespace CommonLowLevelTracingKit::decoder {
 	class TracepointStatic final : public TraceEntryHead {
 	  public:
 		~TracepointStatic() = default;
-		TracepointStatic(const std::string_view &tb_name, source::Ringbuffer::EntryPtr &&entry,
+		TracepointStatic(const std::string_view tb_name, source::Ringbuffer::EntryPtr &&entry,
 						 const std::span<const uint8_t> &meta, const source::internal::FilePtr &&);
 
 		Type type() const noexcept override { return Type::Static; }
-		const std::string_view file() const noexcept override { return m_file; }
+		const std::string_view file() const noexcept override;
 		uint64_t line() const noexcept override { return m_line; }
 		const std::string_view msg() const override;
 
 	  private:
+		const std::string_view format() const noexcept;
+		const std::span<const uint8_t> m;
+
 		const source::Ringbuffer::EntryPtr e;
 		const source::internal::FilePtr m_keep_memory; // keep meta memory
 		const MetaType m_type;
 		const uint32_t m_line;
 		const uint8_t m_arg_count;
 		const std::span<const char> m_arg_types;
-		const std::string_view m_file;
-		const std::string_view m_format;
+		mutable std::string_view m_file;
+		mutable std::string_view m_format;
 		mutable std::string m_msg;
 	};
 

@@ -12,7 +12,7 @@ Test Teardown       clean up env
 test static tracing library
     Build Cmake Target clltk_tracing_static
     ${build_folder}=     Get Build Folder
-    ${static_lib}=       Set Variable    ${build_folder}/tracing_library/libclltk_tracing.a
+    ${static_lib}=       Set Variable    ${build_folder}/tracing_library/libclltk_tracing_static.a
     File Should Exist    path=${static_lib}    msg=static tracing library is missing
     ${output}=           Run Process  ar  -xv  --output\=${tmp_dir.name}  ${static_lib}
     Should Be Equal As Integers    ${output.rc}    0    msg=could not open static lib
@@ -37,7 +37,7 @@ test shared tracing library
 test static snapshot library
     Build Cmake Target clltk_snapshot_static
     ${build_folder}=     Get Build Folder
-    ${static_lib}=       Set Variable    ${build_folder}/snapshot_library/libclltk_snapshot.a
+    ${static_lib}=       Set Variable    ${build_folder}/snapshot_library/libclltk_snapshot_static.a
     File Should Exist    path=${static_lib}    msg=static snapshot library is missing
     ${output}=           Run Process  ar  -xv  --output\=${tmp_dir.name}  ${static_lib}
     Should Be Equal As Integers    ${output.rc}    0    msg=could not open static lib

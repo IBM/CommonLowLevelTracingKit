@@ -22,8 +22,8 @@ class snapshot_tests(unittest.TestCase):
         language = Langauge.CPP
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/tracing.h"
-            #include "CommonLowLevelTracingKit/snapshot.hpp"
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
+            #include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
             #include <iostream>
             #include <cassert>
             #include <cstddef>
@@ -70,8 +70,8 @@ class snapshot_tests(unittest.TestCase):
         language = Langauge.CPP
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/tracing.h"
-            #include "CommonLowLevelTracingKit/snapshot.hpp"
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
+            #include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
             #include <iostream>
             #include <cassert>
             #include <cstddef>
@@ -123,7 +123,7 @@ class snapshot_tests(unittest.TestCase):
         language = Langauge.CPP
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/snapshot.hpp"
+            #include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
             #include <iostream>
             #include <cassert>
             #include <cstddef>
@@ -171,8 +171,8 @@ class snapshot_tests(unittest.TestCase):
         language = Langauge.CPP
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/tracing.h"
-            #include "CommonLowLevelTracingKit/snapshot.hpp"
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
+            #include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
             #include <iostream>
             #include <cassert>
             #include <cstddef>
@@ -222,8 +222,8 @@ class snapshot_compressed_tests(unittest.TestCase):
         language = Langauge.CPP
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/tracing.h"
-            #include "CommonLowLevelTracingKit/snapshot.hpp"
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
+            #include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
             #include <iostream>
             #include <cassert>
             #include <cstddef>
@@ -272,8 +272,8 @@ class snapshot_compressed_tests(unittest.TestCase):
         language = Langauge.CPP
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/tracing.h"
-            #include "CommonLowLevelTracingKit/snapshot.hpp"
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
+            #include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
             #include <iostream>
             #include <cassert>
             #include <cstddef>
@@ -314,7 +314,7 @@ class snapshot_compressed_tests(unittest.TestCase):
         language = Langauge.CPP
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/snapshot.hpp"
+            #include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
             #include <iostream>
             #include <cassert>
             #include <cstddef>
@@ -351,8 +351,8 @@ class snapshot_compressed_tests(unittest.TestCase):
         language = Langauge.CPP
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/tracing.h"
-            #include "CommonLowLevelTracingKit/snapshot.hpp"
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
+            #include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
             #include <iostream>
             #include <cassert>
             #include <cstddef>

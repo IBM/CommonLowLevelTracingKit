@@ -26,7 +26,7 @@ class failing_build_tests(unittest.TestCase):
     def test_missing_buffer_size(self: unittest.TestCase):
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/tracing.h"
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
             CLLTK_TRACEBUFFER(BUFFER);
             int main(void){return 0;}
             '''
@@ -36,7 +36,7 @@ class failing_build_tests(unittest.TestCase):
     def test_tracebuffer_as_string(self: unittest.TestCase):
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/tracing.h"
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
             CLLTK_TRACEBUFFER("BUFFER", 4096);
             int main(void){return 0;}
             '''
@@ -46,7 +46,7 @@ class failing_build_tests(unittest.TestCase):
     def test_11args(self: unittest.TestCase):
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/tracing.h"
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
             CLLTK_TRACEBUFFER(BUFFER, 4096);
             int main(void)
             {
@@ -61,7 +61,7 @@ class failing_build_tests(unittest.TestCase):
     def test_args_count_mismatch(self: unittest.TestCase):
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/tracing.h"
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
             CLLTK_TRACEBUFFER(BUFFER, 4096);
             int main(void)
             {
@@ -76,7 +76,7 @@ class failing_build_tests(unittest.TestCase):
     def test_buffer_name_mismatch(self: unittest.TestCase):
         file_content = \
             '''
-            #include "CommonLowLevelTracingKit/tracing.h"
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
             CLLTK_TRACEBUFFER(BUFFER_, 4096);
             int main(void)
             {

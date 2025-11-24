@@ -55,6 +55,9 @@ target_compile_options(clltk_decoder_object PRIVATE
     -Wsign-conversion
     -Wmissing-declarations
     -Wwrite-strings
+    
+    # Suppress warning about deprecated <ciso646> header in Boost (C++20 compatibility)
+    -Wno-cpp
 )
 if (${CMAKE_C_COMPILER_ID} MATCHES "GNU")
     target_compile_options(clltk_decoder_object PRIVATE
@@ -70,37 +73,69 @@ set_target_properties(clltk_decoder_object PROPERTIES
     INTERPROCEDURAL_OPTIMIZATION_RELEASE ON
     INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO ON
 )
+set(PUBLIC_HEADERS 
+        include/CommonLowLevelTracingKit/decoder/Common.hpp
+        include/CommonLowLevelTracingKit/decoder/Tracebuffer.hpp
+        include/CommonLowLevelTracingKit/decoder/Tracepoint.hpp
+)
 
 add_library(clltk_decoder_static STATIC
     $<TARGET_OBJECTS:clltk_decoder_object>
 )
-target_include_directories(clltk_decoder_static
-    PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-target_link_libraries(clltk_decoder_static
-    PUBLIC
-    clltk_decoder_object
-)
-target_compile_features(clltk_decoder_static PUBLIC cxx_std_20)
-set_target_properties(clltk_decoder_static PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN ON
+set_target_properties(clltk_decoder_static
+    PROPERTIES
+        OUTPUT_NAME "clltk_decoder_static"
 )
 
 add_library(clltk_decoder_shared SHARED
     $<TARGET_OBJECTS:clltk_decoder_object>
 )
-target_include_directories(clltk_decoder_shared
-    PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+set_target_properties(clltk_decoder_shared
+    PROPERTIES
+        OUTPUT_NAME "clltk_decoder"
 )
-target_link_libraries(clltk_decoder_shared
-    PUBLIC
-    clltk_decoder_object
+
+foreach(LIB_NAME clltk_decoder_static clltk_decoder_shared)
+    target_include_directories(${LIB_NAME}
+        PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+    target_link_libraries(${LIB_NAME}
+        PRIVATE
+            clltk_decoder_object
+    )
+    target_compile_features(${LIB_NAME} PUBLIC cxx_std_20)
+    set_target_properties(${LIB_NAME}
+        PROPERTIES
+            VERSION ${CLLTK_VERSION_STRING}
+            SOVERSION ${CLLTK_VERSION_MAJOR}
+            LINKER_LANGUAGE CXX
+            CXX_VISIBILITY_PRESET hidden
+            CXX_STANDARD 20
+            CXX_EXTENSIONS OFF
+            CXX_STANDARD_REQUIRED ON
+            COMPILE_WARNING_AS_ERROR ON
+            VISIBILITY_INLINES_HIDDEN ON
+    )
+endforeach()
+
+set(PUBLIC_HEADERS 
+        include/CommonLowLevelTracingKit/decoder/Common.hpp
+        include/CommonLowLevelTracingKit/decoder/Tracebuffer.hpp
+        include/CommonLowLevelTracingKit/decoder/Tracepoint.hpp
 )
-target_compile_features(clltk_decoder_shared PUBLIC cxx_std_20)
-set_target_properties(clltk_decoder_shared PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN ON
+set_target_properties(
+    clltk_decoder_static
+    clltk_decoder_shared
+    PROPERTIES
+        PUBLIC_HEADER "${PUBLIC_HEADERS}"
+)
+install(TARGETS
+    clltk_decoder_static
+    clltk_decoder_shared
+    EXPORT CLLTKTracingTargets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT tracing
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT tracing
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT tracing
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/decoder/
 )

@@ -10,7 +10,7 @@ Test Teardown       clean up env
 *** Test Cases ***
 Check build, compile and decoder for c
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER, 4096)
     ...    int main(void)
     ...    {
@@ -24,7 +24,7 @@ Check build, compile and decoder for c
 
 Check build, compile and decoder for cpp
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER, 4096)
     ...    int main(void)
     ...    {

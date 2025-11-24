@@ -7,8 +7,8 @@
 #include <functional>
 #include <string>
 
-#include "CommonLowLevelTracingKit/Decoder/Tracebuffer.hpp"
-#include "CommonLowLevelTracingKit/interface.hpp"
+#include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
+#include "commands/interface.hpp"
 
 using namespace std::string_literals;
 

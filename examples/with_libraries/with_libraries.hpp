@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 
 CLLTK_TRACEBUFFER(with_libraries, 1024);
 

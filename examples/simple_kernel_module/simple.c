@@ -7,7 +7,7 @@
 #include <linux/string.h>
 #include <linux/types.h>
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "kthreadtest.h"
 #include "more.h"
 

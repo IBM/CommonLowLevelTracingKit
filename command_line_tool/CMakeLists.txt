@@ -22,14 +22,6 @@ foreach(COMMAND_FOLDER IN LISTS COMMAND_FOLDERS)
 endforeach()
 
 
-# Check that all commands are OBJECT or SHARED libraries
-foreach(command_target ${CLLTK_COMMAND_LINE_COMMANDS})
-  get_target_property(target_type ${command_target} TYPE)
-  if( "${command_target}" STREQUAL "OBJECT_LIBRARY" OR "${command_target}" STREQUAL "SHARED_LIBRARY")
-      message(FATAL_ERROR "To ensure that commands in the main function are detected at runtime, ${command_target} must be OBJECT or SHARED library, not ${target_type}.")
-  endif()
-endforeach()
-
 # create the clltk executable 
 add_executable(clltk-cmd
     main/main.cpp
@@ -37,10 +29,28 @@ add_executable(clltk-cmd
 )
 
 target_link_libraries(clltk-cmd
-    clltk-cmd-interface
-    clltk-version
-    ${CLLTK_COMMAND_LINE_COMMANDS}
+    PRIVATE
+        clltk-cmd-interface
+        clltk-version
 )
+
+# Check that all commands are OBJECT or SHARED libraries
+foreach(command_target ${CLLTK_COMMAND_LINE_COMMANDS})
+    get_target_property(target_type ${command_target} TYPE)
+    if( "${command_target}" STREQUAL "OBJECT_LIBRARY")
+        message(FATAL_ERROR "To ensure that commands in the main function are detected at runtime, ${command_target} must be OBJECT library, not ${target_type}.")
+    endif()
+    target_sources(clltk-cmd 
+        PRIVATE
+            $<TARGET_OBJECTS:${command_target}>
+    )
+
+    target_link_libraries(clltk-cmd
+        PRIVATE
+            ${command_target}
+    )
+endforeach()
+
 
 set_target_properties(clltk-cmd PROPERTIES 
     OUTPUT_NAME clltk
@@ -51,8 +61,11 @@ target_compile_options(clltk-cmd
     PRIVATE
         -Os
 )
-
-install(TARGETS clltk-cmd
-    DESTINATION ${CMAKE_INSTALL_BINDIR}
-    COMPONENT cmd
+install(TARGETS
+    clltk-cmd
+    ${CLLTK_COMMAND_LINE_COMMANDS}
+    EXPORT CLLTKTracingTargets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT cmd
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT cmd
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT cmd
 )

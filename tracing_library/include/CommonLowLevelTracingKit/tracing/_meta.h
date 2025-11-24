@@ -3,10 +3,10 @@
 
 #ifndef _CLLTK_META_H_
 #define _CLLTK_META_H_
-// IWYU pragma: private, include "CommonLowLevelTracingKit/tracing.h"
+// IWYU pragma: private, include "CommonLowLevelTracingKit/tracing/_tracing.h"
 
-#include "CommonLowLevelTracingKit/_arguments.h"
-#include "CommonLowLevelTracingKit/_macros.h"
+#include "CommonLowLevelTracingKit/tracing/_arguments.h"
+#include "CommonLowLevelTracingKit/tracing/_macros.h"
 
 #if defined(__KERNEL__)
 #include <linux/limits.h>

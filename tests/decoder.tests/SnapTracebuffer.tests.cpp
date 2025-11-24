@@ -8,10 +8,10 @@
 #include <string_view>
 #include <utility>
 
-#include "CommonLowLevelTracingKit/Decoder/Tracebuffer.hpp"
-#include "CommonLowLevelTracingKit/Decoder/Tracepoint.hpp"
-#include "CommonLowLevelTracingKit/snapshot.hpp"
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
+#include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
+#include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "helper.hpp"
 #include "gtest/gtest.h"
 #include <fstream>

@@ -3,9 +3,9 @@
 
 #ifndef _CLLTK_ARGUMENTS_H_
 #define _CLLTK_ARGUMENTS_H_
-// IWYU pragma: private, include "CommonLowLevelTracingKit/tracing.h"
+// IWYU pragma: private, include "CommonLowLevelTracingKit/tracing/tracing.h"
 
-#include "CommonLowLevelTracingKit/_macros.h"
+#include "CommonLowLevelTracingKit/tracing/_macros.h"
 
 #if defined(__KERNEL__)
 #include <linux/types.h>

@@ -15,7 +15,7 @@ detect build failes
 
 twice same buffer definition
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER, 4096)
     ...    CLLTK_TRACEBUFFER(BUFFER, 4096)
     ...    int main(void){}
@@ -24,7 +24,7 @@ twice same buffer definition
 
 missing buffer size
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER)
     ...    int main(void){}
     ${error}=    Set Variable    macro "CLLTK_TRACEBUFFER" requires 2 arguments, but only 1 given
@@ -33,7 +33,7 @@ missing buffer size
 
 tracebuffer name as a string
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER("BUFFER", 1024)
     ...    int main(void){}
     ${error}=    Set Variable    pasting "_clltk_" and ""BUFFER"" does not give a valid preprocessing token
@@ -42,14 +42,14 @@ tracebuffer name as a string
 
 missing buffer definition
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    int main(void){CLLTK_TRACEPOINT(BUFFER, "should be in tracebuffer for c");}
     source ${content} for C failes with    ‘_clltk_BUFFER’ undeclared
     source ${content} for CPP failes with    ‘_clltk_BUFFER’ was not declared in this scope
 
 11 arguments
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER, 1024)
     ...    int main(void){
     ...    CLLTK_TRACEPOINT(BUFFER,"0%u 1%u 2%u 3%u 4%u 5%u 6%u 7%u 8%u 9%u 10%u",
@@ -61,7 +61,7 @@ missing buffer definition
 
 20 arguments
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER, 1024)
     ...    int main(void){
     ...    CLLTK_TRACEPOINT(BUFFER,
@@ -77,7 +77,7 @@ missing buffer definition
 
 40 arguments
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER, 1024)
     ...    int main(void){
     ...    CLLTK_TRACEPOINT(BUFFER,
@@ -97,7 +97,7 @@ missing buffer definition
 
 more arguments than formats
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER, 1024)
     ...    int main(void){
     ...    CLLTK_TRACEPOINT(BUFFER,"0%u 1%u 2%u 3%u 4%u 5%u",
@@ -109,7 +109,7 @@ more arguments than formats
 
 more formats than arguments
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER, 1024)
     ...    int main(void){
     ...    CLLTK_TRACEPOINT(BUFFER,"0%u 1%u 2%u 3%u 4%u 5%u",
@@ -121,7 +121,7 @@ more formats than arguments
 
 tracepoint in none-static cpp inline function not possible due to gcc deficiencies
     ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing.h"
+    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER, 1024)
     ...    inline void foo(void){
     ...        CLLTK_TRACEPOINT(BUFFER, "from inline");

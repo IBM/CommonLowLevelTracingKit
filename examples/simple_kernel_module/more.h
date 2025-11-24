@@ -4,7 +4,7 @@
 #ifndef __HEADER__MORE__
 #define __HEADER__MORE__
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 
 CLLTK_TRACEBUFFER(BufferMoreH, 1024);
 

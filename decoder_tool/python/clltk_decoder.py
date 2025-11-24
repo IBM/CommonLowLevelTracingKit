@@ -826,7 +826,7 @@ if __name__ == "__main__":
         estimated_unpacked_size = 0
         for member in archive.getmembers():
             estimated_unpacked_size += member.size
-        if estimated_unpacked_size < 25*1024*1024:
+        if estimated_unpacked_size < 256*1024*1024:
             if sys.version_info.major == 3 and sys.version_info.minor >= 12:
                 archive.extractall(tmpdir.name, filter='data')
             else:

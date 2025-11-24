@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "kthreadtest.h"
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/kthread.h>

@@ -6,7 +6,7 @@
 #include <string_view>
 #include <utility>
 
-#include "CommonLowLevelTracingKit/Decoder/Tracepoint.hpp"
+#include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 #include "TracepointInternal.hpp"
 #include "file.hpp"
 #include "formatter.hpp"
@@ -29,7 +29,7 @@ TraceEntryHead::TraceEntryHead(std::string_view tb_name, uint64_t n, uint64_t t,
 	, m_pid(pid)
 	, m_tid(tid) {};
 
-TracepointDynamic::TracepointDynamic(const std::string_view &tb_name,
+TracepointDynamic::TracepointDynamic(const std::string_view tb_name,
 									 source::Ringbuffer::EntryPtr entry)
 	: TraceEntryHead(tb_name, entry->nr, get<uint64_t>(entry->body(), 14), entry->body())
 	, e(std::move(entry)) {
@@ -46,7 +46,7 @@ TracepointDynamic::TracepointDynamic(const std::string_view &tb_name,
 
 	const char *const line_start = current;
 	const size_t line_len = sizeof(size_t);
-	m_line = *reinterpret_cast<const size_t *>(line_start);
+	m_line = *std::bit_cast<const size_t *>(line_start);
 	current += line_len;
 	remaining -= line_len;
 
@@ -60,18 +60,39 @@ TracepointDynamic::TracepointDynamic(const std::string_view &tb_name,
 }
 
 using FilePtr = source::internal::FilePtr;
-TracepointStatic::TracepointStatic(const std::string_view &tb_name,
+TracepointStatic::TracepointStatic(const std::string_view tb_name,
 								   source::Ringbuffer::EntryPtr &&entry,
-								   const std::span<const uint8_t> &m, const FilePtr &&f)
+								   const std::span<const uint8_t> &arg_m, const FilePtr &&f)
 	: TraceEntryHead(tb_name, entry->nr, get<uint64_t>(entry->body(), 14), entry->body())
+	, m(arg_m)
 	, e(std::move(entry))
 	, m_keep_memory(f)
 	, m_type(toMetaType(get<uint8_t>(m, 5)))
 	, m_line(get<uint32_t>(m, 6))
-	, m_arg_count(get<uint8_t>(m, 10))
+	, m_arg_count(std::min((uint8_t)10, get<uint8_t>(m, 10)))
 	, m_arg_types((const char *)&m[11], m_arg_count)
-	, m_file((const char *)&m[12 + m_arg_count])
-	, m_format((const char *)&m[13 + m_arg_count + m_file.size()]) {}
+	, m_file()
+	, m_format() {}
+
+const std::string_view TracepointStatic::file() const noexcept {
+	if (m_file.empty()) {
+		const size_t offset = 12 + m_arg_count;
+		m_file = std::string_view{std::bit_cast<char *>(&m[std::min(m.size(), offset)])};
+	}
+	return m_file;
+}
+
+const std::string_view TracepointStatic::format() const noexcept {
+	if (m_format.empty()) {
+		const size_t offset = std::min(m.size(), (13 + m_arg_count + file().size()));
+		const size_t size = m.size() - offset;
+		if (size == 0)
+			m_format = "";
+		else
+			m_format = std::string_view{std::bit_cast<char *>(&m[offset])};
+	}
+	return m_format;
+}
 
 const std::string_view TracepointStatic::msg() const {
 	if (m_msg.empty()) {
@@ -79,9 +100,9 @@ const std::string_view TracepointStatic::msg() const {
 		const size_t arg_size = (e->size() > 22) ? (e->size() - 22) : 0;
 		std::span<const uint8_t> args_raw{arg_start, arg_size};
 		if (m_type == MetaType::printf) [[likely]] {
-			m_msg = source::formatter::printf(m_format, m_arg_types, args_raw);
+			m_msg = source::formatter::printf(format(), m_arg_types, args_raw);
 		} else if (m_type == MetaType::dump) {
-			m_msg = source::formatter::dump(m_format, m_arg_types, args_raw);
+			m_msg = source::formatter::dump(format(), m_arg_types, args_raw);
 		} else {
 			CLLTK_DECODER_THROW(
 				exception::InvalidMeta,

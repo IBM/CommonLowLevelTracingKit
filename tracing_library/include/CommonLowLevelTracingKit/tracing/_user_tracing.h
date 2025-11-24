@@ -3,20 +3,20 @@
 
 #ifndef _CLLTK__TRACING_H_
 #define _CLLTK__TRACING_H_
-// IWYU pragma: private, include "CommonLowLevelTracingKit/tracing.h"
+// IWYU pragma: private, include "CommonLowLevelTracingKit/tracing/tracing.h"
 
 #ifndef _CLLTK_TRACING_H_
-#error "CommonLowLevelTracingKit: always use "CommonLowLevelTracingKit/tracing.h" and not this file"
+#error "CommonLowLevelTracingKit: always use "CommonLowLevelTracingKit/tracing/tracing.h" and not this file"
 #endif
 
 #if defined(__KERNEL__)
 #error "use this header only in user space"
 #endif
 
-#include "CommonLowLevelTracingKit/_arguments.h"
-#include "CommonLowLevelTracingKit/_internal.h"
-#include "CommonLowLevelTracingKit/_macros.h"
-#include "CommonLowLevelTracingKit/_meta.h"
+#include "CommonLowLevelTracingKit/tracing/_arguments.h"
+#include "CommonLowLevelTracingKit/tracing/_internal.h"
+#include "CommonLowLevelTracingKit/tracing/_macros.h"
+#include "CommonLowLevelTracingKit/tracing/_meta.h"
 
 #include <stdbool.h>
 #include <stdint.h>

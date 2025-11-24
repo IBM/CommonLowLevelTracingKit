@@ -10,7 +10,7 @@ add_library(clltk-cmd-interface INTERFACE)
 
 target_include_directories(clltk-cmd-interface
     INTERFACE
-        ./include/
+        .
 )
 
 target_link_libraries(clltk-cmd-interface

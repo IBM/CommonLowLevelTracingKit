@@ -108,9 +108,9 @@ with open("args_cpp.tests.cpp", "w") as fh:
 #include <vector>
 #include "helper.hpp"
 
-#include "CommonLowLevelTracingKit/Decoder/Tracebuffer.hpp"
-#include "CommonLowLevelTracingKit/Decoder/Tracepoint.hpp"
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
+#include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "gtest/gtest.h"
 
 using namespace CommonLowLevelTracingKit::decoder;
