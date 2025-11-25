@@ -37,7 +37,7 @@ TEST_P(with_parameter, md5)
 		hash_string << "\\x" << std::hex << std::setw(2) << std::setfill('0')
 					<< (static_cast<unsigned int>(c) & 0xff);
 
-	ADD_FAILURE() << "hash shoud be: " << hash_string.str();
+	ADD_FAILURE() << "hash should be: " << hash_string.str();
 }
 
 type make(std::string data, const char *const hash)

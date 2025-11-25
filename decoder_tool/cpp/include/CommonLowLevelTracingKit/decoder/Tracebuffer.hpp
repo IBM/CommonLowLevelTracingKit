@@ -35,7 +35,7 @@ namespace CommonLowLevelTracingKit::decoder {
 		const std::filesystem::path m_path;
 	};
 
-	// Synchonous Tracebuffer
+	// Synchronous Tracebuffer
 	struct SyncTracebuffer;
 	using SyncTracebufferPtr = std::unique_ptr<SyncTracebuffer>;
 	struct EXPORT SyncTracebuffer : Tracebuffer {

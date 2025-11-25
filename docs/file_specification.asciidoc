@@ -62,7 +62,7 @@ The following table shows the structure of the ringbuffer head, with all offsets
 All write access to a tracebuffer is only permitted after obtaining the semaphore. The valid states of the semaphore are therefore 0 and 1. With 0 meaning some process or thread obtained write access. And 1 that now one is currently writing to the tracebuffer. +
 
 For adding a new traceentry, after obtaining write access, maybe some old entries are been dropped until enough space between next_free and last_valid is available to a the new traceentry. Both values are offset relative to the ringbuffer body location inside the file. And for each dropped entry, the dropped counter is incremented, up to a maximum of UINT64_MAX.
-If next_free gets bigger than body size, the wrapped counter is incremented, up to a maximum of UINT64_MAX. And next_free is wrapped back to the beginning of the ringbuffer body. The same is true for next_valid, but with out hte incrementation of any counter. +
+If next_free gets bigger than body size, the wrapped counter is incremented, up to a maximum of UINT64_MAX. And next_free is wrapped back to the beginning of the ringbuffer body. The same is true for next_valid, but with out the incrementation of any counter. +
 An ringbuffer is thereby empty if next_free == last_valid and full if next_free+1==last_valid. Will moving next_free or last_valid, next_free may never overtake last_valid. Instead last_valid must first be moved by dropping old entries and than next_free moved.
 
 The dropping of old entries may only occur on whole traceentires.
@@ -81,7 +81,7 @@ Each of the entries is constructed like the following table shows:
 |====
 All offsets are relative to the beginning of an entry. For the oldest entry the beginning is always the last_valid offset. If the combined offset or index for an access is equal or bigger than the ringbuffer body size than the offset/index needs to be wrapped to the beginning of the ringbuffer body. This could be done by calculate the module of index for ringbuffer body size.
 
-The magic is used to securely detect the start ot an ringbuffer entry while dropping old entries or, if a last_valid and next_free are damaged, to find all entries at decoding time.
+The magic is used to securely detect the start of an ringbuffer entry while dropping old entries or, if a last_valid and next_free are damaged, to find all entries at decoding time.
 
 The body size enables the extraction of a entry as a single entity.
 
@@ -142,7 +142,7 @@ The layout for the traceentry header is shown in the following table:
 >h| 22       >| flex  | body (second part of traceentry)
 |====
 
-The second part, the same as the traceentry header body, contains the user provided argument values and is therefor only present if any argument was provided.
+The second part, the same as the traceentry header body, contains the user provided argument values and is therefore only present if any argument was provided.
 If present, the layout of this part is defined by the argument information inside the metab information inside the file at offset `in_file_offset`.
 All argument values are stored, ordered by there placement inside the tracepoint call, without any gapes.
 To decode the argument values, first the argument type has to be retrieved from the argument type array inside the meta entry. Base on this type the value is access.

@@ -4,7 +4,7 @@ Library     build.py
 
 
 *** Keywords ***
-source ${content} for ${language} failes with
+source ${content} for ${language} fails with
     [Arguments]    ${expected_error}
 
     Write To main.gen.c    int main(){ return 0; }

@@ -23,7 +23,7 @@ struct __attribute__((packed, aligned(8))) unique_stack_header_t {
 	sync_mutex_t mutex;
 	uint8_t _reserved_for_future_use[40];
 	uint64_t body_size;
-	// body is not mmapped, therefor not defined here
+	// body is not mmapped, therefore not defined here
 };
 
 struct unique_stack_handler_t;
@@ -61,7 +61,7 @@ unique_stack_handler_t unique_stack_open(file_t *fh, uint64_t file_offset);
 void unique_stack_close(unique_stack_handler_t *handler);
 
 /**
- * check if stack is valid and therefor usable
+ * check if stack is valid and therefore usable
  */
 bool unique_stack_valid(const unique_stack_handler_t *handler);
 

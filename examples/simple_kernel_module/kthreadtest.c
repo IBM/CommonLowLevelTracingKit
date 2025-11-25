@@ -54,7 +54,7 @@ static void run_threads(void)
 	complete_all(&start_signal);
 	for (size_t i = 0; i < 2; i++) {
 		ssleep(1);
-		printk("sleeped for %lus\n", (i + 1));
+		printk("slept for %lus\n", (i + 1));
 	}
 
 	uint64_t total_tp_count = 0;

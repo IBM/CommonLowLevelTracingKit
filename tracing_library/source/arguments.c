@@ -85,7 +85,7 @@ uint32_t get_argument_sizes(const char *const format, uint32_t sizes_out[],
 			size += fix_arg_size;
 		}
 	} else {
-		// get sizes of strings, therefor access va_list
+		// get sizes of strings, therefore access va_list
 		va_list args_copy;
 		va_copy(args_copy, args);
 		for (size_t arg_index = 0; arg_index < types->count; arg_index++) {

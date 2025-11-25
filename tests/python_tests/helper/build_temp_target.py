@@ -13,7 +13,7 @@ import unittest
 import pandas as pd
 from enum import Enum
 
-class Langauge(Enum):
+class Language(Enum):
     C = 0
     CPP = 1
 
@@ -45,9 +45,9 @@ def _run(*args, env=os.environ):
     stdout = out.stdout.decode()
     return stdout
 
-def process(file_content, build_musst_fail=False, run_musst_fail=False, runs=1, language=Langauge.C, check_callback = None):
-    target = {Langauge.C:"main_c", Langauge.CPP :"main_cpp"}[language]
-    file = {Langauge.C:"main.gen.c", Langauge.CPP :"main.gen.cpp"}[language]
+def process(file_content, build_musst_fail=False, run_musst_fail=False, runs=1, language=Language.C, check_callback = None):
+    target = {Language.C:"main_c", Language.CPP :"main_cpp"}[language]
+    file = {Language.C:"main.gen.c", Language.CPP :"main.gen.cpp"}[language]
     
     tmp = tempfile.TemporaryDirectory()
     env ={str(key):value for key,value in  os.environ.items() if "CLLTK" not in str(key)}

@@ -171,7 +171,7 @@
                 <mxCell id="108" value="add meta section to stack in tracebuffer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" parent="103" vertex="1">
                     <mxGeometry x="20" y="260" width="120" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="107" value="return file offset&lt;br&gt;&amp;nbsp;of meta setion" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=none;" parent="103" vertex="1">
+                <mxCell id="107" value="return file offset&lt;br&gt;&amp;nbsp;of meta section" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=none;" parent="103" vertex="1">
                     <mxGeometry x="20" y="320" width="120" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="132" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="103" source="131" target="104" edge="1">
@@ -247,7 +247,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="140" value="called by c runtime&lt;br&gt;befor main" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="139" vertex="1" connectable="0">
+                <mxCell id="140" value="called by c runtime&lt;br&gt;before main" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="139" vertex="1" connectable="0">
                     <mxGeometry x="-0.641" y="-2" relative="1" as="geometry">
                         <mxPoint as="offset"/>
                     </mxGeometry>

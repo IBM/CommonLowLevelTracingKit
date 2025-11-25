@@ -7,7 +7,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import unittest
-from helper.build_temp_target import process, Langauge
+from helper.build_temp_target import process, Language
 import tempfile
 import os
 import tarfile
@@ -19,7 +19,7 @@ TRACEBUFFER_INFO_COUNT = 7
 class snapshot_tests(unittest.TestCase):
 
     def test_snapshot_with_info(self: unittest.TestCase):
-        language = Langauge.CPP
+        language = Language.CPP
         file_content = \
             '''
             #include "CommonLowLevelTracingKit/tracing/tracing.h"
@@ -67,7 +67,7 @@ class snapshot_tests(unittest.TestCase):
         pass
 
     def test_snapshot_without_info(self: unittest.TestCase):
-        language = Langauge.CPP
+        language = Language.CPP
         file_content = \
             '''
             #include "CommonLowLevelTracingKit/tracing/tracing.h"
@@ -120,7 +120,7 @@ class snapshot_tests(unittest.TestCase):
         pass
     
     def test_snapshot_without_anything(self: unittest.TestCase):
-        language = Langauge.CPP
+        language = Language.CPP
         file_content = \
             '''
             #include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
@@ -168,7 +168,7 @@ class snapshot_tests(unittest.TestCase):
         pass
     
     def test_snapshot_with_data_after(self: unittest.TestCase):
-        language = Langauge.CPP
+        language = Language.CPP
         file_content = \
             '''
             #include "CommonLowLevelTracingKit/tracing/tracing.h"
@@ -219,7 +219,7 @@ class snapshot_tests(unittest.TestCase):
 class snapshot_compressed_tests(unittest.TestCase):
 
     def test_snapshot_with_info(self: unittest.TestCase):
-        language = Langauge.CPP
+        language = Language.CPP
         file_content = \
             '''
             #include "CommonLowLevelTracingKit/tracing/tracing.h"
@@ -269,7 +269,7 @@ class snapshot_compressed_tests(unittest.TestCase):
         pass
 
     def test_snapshot_without_info(self: unittest.TestCase):
-        language = Langauge.CPP
+        language = Language.CPP
         file_content = \
             '''
             #include "CommonLowLevelTracingKit/tracing/tracing.h"
@@ -311,7 +311,7 @@ class snapshot_compressed_tests(unittest.TestCase):
         pass
     
     def test_snapshot_without_anything(self: unittest.TestCase):
-        language = Langauge.CPP
+        language = Language.CPP
         file_content = \
             '''
             #include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
@@ -348,7 +348,7 @@ class snapshot_compressed_tests(unittest.TestCase):
         pass
     
     def test_snapshot_with_data_after(self: unittest.TestCase):
-        language = Langauge.CPP
+        language = Language.CPP
         file_content = \
             '''
             #include "CommonLowLevelTracingKit/tracing/tracing.h"

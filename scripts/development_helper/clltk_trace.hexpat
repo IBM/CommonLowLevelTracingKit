@@ -3,8 +3,8 @@ import std.io;
 import std.hash;
 import std.sys;
 
-fn crc8(ref auto patter){
-    return std::hash::crc8(patter, 0, 0x7, 0, false, false);
+fn crc8(ref auto pattern){
+    return std::hash::crc8(pattern, 0, 0x7, 0, false, false);
 };
 
 struct MutexType {
@@ -38,7 +38,7 @@ struct DefinitionSectionType {
     u64 size;
     char name[size];
 };
-DefinitionSectionType Defnition @FileHead.defintion_offset;
+DefinitionSectionType Definition @FileHead.defintion_offset;
 
 enum MetaType : u8 {
     printf = 1,
@@ -120,7 +120,7 @@ struct RingbufferSectionType {
     const u64 expected_entry_count = (entries_count - dropped) [[export]];
     current = last_valid; 
     u64 end = (last_valid <= next_free) ? next_free : (next_free + body_size);
-    RingbufferEntry entires[while(current < end)] [[no_uniqe_address]];
+    RingbufferEntry entries[while(current < end)] [[no_uniqe_address]];
 };
 RingbufferSectionType Ringbuffer @FileHead.ringbuffer_offset;
 
@@ -139,6 +139,6 @@ struct StackSectionType{
     MutexType mutext;
     padding[40];  // future use
     u64 body_size;
-    StackSectionEntryType entires[while(!std::mem::eof())];
+    StackSectionEntryType entries[while(!std::mem::eof())];
 }[[fixed_size(120+body_size)]];
 StackSectionType Stack @FileHead.stack_offset;

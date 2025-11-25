@@ -72,7 +72,7 @@ printf_like_function(receiver, "%d", (long)1); // gcc warning [-Wformat]
 ----
 
 === Type safe access to variable arguments
-1. get argument count and array with argument-types as enums, trough link:https://stackoverflow.com/a/11920694[c-macro-magic], at compile-time. Use `_Generic` macro to map types to enum and use meta programing for c++.
+1. get argument count and array with argument-types as enums, through link:https://stackoverflow.com/a/11920694[c-macro-magic], at compile-time. Use `_Generic` macro to map types to enum and use meta programming for c++.
 2. use argument type array to access var_list with with valid type
 
 ---
@@ -80,7 +80,7 @@ printf_like_function(receiver, "%d", (long)1); // gcc warning [-Wformat]
 === Gathering meta data at compile-time
 To get all meta data for one tracebuffer, all relevant information are stored in to a custom elf-section. This is possible due to a  
 link:https://gcc.gnu.org/onlinedocs/gcc-3.2/gcc/Function-Attributes.html#:~:text=section%20(%22section%2Dname%22)[gcc section attribute].
-By defining all meta data strings and data structures as `static const` and appling the section attribute, gcc will gathering all meta data into the same section. 
+By defining all meta data strings and data structures as `static const` and applying the section attribute, gcc will gathering all meta data into the same section. 
 
 [source,C,linenums]
 ----
