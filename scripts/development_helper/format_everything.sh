@@ -9,7 +9,7 @@ format() {
   local -r file="$1"
   clang-format -style=file -i "$file"
   if [ $? -ne 0 ]; then
-    echo "formating failed for $file"
+    echo "formatting failed for $file"
     exit 1
   fi
 }

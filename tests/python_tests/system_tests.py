@@ -7,7 +7,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import unittest
-from helper.build_temp_target import process, Langauge
+from helper.build_temp_target import process, Language
 
 TRACEBUFFER_INFO_COUNT = 7
 
@@ -16,7 +16,7 @@ TRACEBUFFER_INFO_COUNT = 7
 class system_tests(unittest.TestCase):
 
     def test_random_constructor(self: unittest.TestCase):
-        for language in [Langauge.C, Langauge.CPP]:
+        for language in [Language.C, Language.CPP]:
             with self.subTest(language=language):
                 file_content = \
                     '''
@@ -40,7 +40,7 @@ class system_tests(unittest.TestCase):
                 pass
             
     def test_misuse_of_tracebuffer(self: unittest.TestCase):
-        for language in [Langauge.C, Langauge.CPP]:
+        for language in [Language.C, Language.CPP]:
             with self.subTest(language=language):
                 file_content = \
                     '''

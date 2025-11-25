@@ -95,7 +95,7 @@ void _clltk_init_tracing_for_this_module(const struct mod_kallsyms *const allsym
 {
 	tmp_elf_section_t **sectionstable = vector_create();
 
-	// search throuh all symbols to get all tracebuffers handlers and tracepoint meta data
+	// search through all symbols to get all tracebuffers handlers and tracepoint meta data
 	for (unsigned int i = 0; i < allsyms->num_symtab; i++) {
 		const Elf_Sym *const ksym = &allsyms->symtab[i];
 		const char *const name = &allsyms->strtab[ksym->st_name];

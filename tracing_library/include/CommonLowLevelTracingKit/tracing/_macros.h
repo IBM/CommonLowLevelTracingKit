@@ -74,7 +74,7 @@ __attribute__((always_inline)) static inline constexpr auto _clltk_cast(T value)
 	_CLLTK_NARGS_SEQ(__VA_OPT__(__VA_ARGS__, ) 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, \
 					 7, 6, 5, 4, 3, 2, 1, 0)
 
-/* This will let macros expand before concating them */
+/* This will let macros expand before concatenating them */
 #define _CLLTK_PRIMITIVE_CAT(x, y) x##y
 #define _CLLTK_CAT(x, y) _CLLTK_PRIMITIVE_CAT(x, y)
 

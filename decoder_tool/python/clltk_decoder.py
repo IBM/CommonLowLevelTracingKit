@@ -434,7 +434,7 @@ class StaticTraceentry:
 
         self.line = get_int(meta.body, self.metaentry_in_metablob + 6, 4)
 
-        # get argument informations
+        # get argument information
         self.argument_count = get_int(
             meta.body, self.metaentry_in_metablob + 10, 1)
         self.argument_type_array = get(meta.body, self.metaentry_in_metablob +
@@ -474,7 +474,7 @@ class StaticTraceentry:
 
             assert self.argument_count == len(formats), \
                 f"argument types are {self.arg_types} \n"\
-                    + f"but formates {formats} for type {self.type} and format \"{self.format}\""\
+                    + f"but formats {formats} for type {self.type} and format \"{self.format}\""\
                     + f" at {self.file}:{self.line}"
             
 
@@ -580,7 +580,7 @@ class StaticTraceentry:
             value = " ".join(f"{x:02X}" for x in value)
             offset += string_length
         else:
-            assert 0, "type unkown"
+            assert 0, "type unknown"
 
         return (offset, value)
 
@@ -666,7 +666,7 @@ class Tracebuffer:
                     continue
             
             if all(character.isspace() for character in entry.formatted):
-                logging.info("empty trace entry skiped")
+                logging.info("empty trace entry skipped")
             self.entries.append(entry)
         pass
 

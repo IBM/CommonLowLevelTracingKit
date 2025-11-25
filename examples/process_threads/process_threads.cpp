@@ -33,14 +33,14 @@ static int func(char const *msg)
 constexpr size_t t_n = 10;
 void run_threads(std::string str)
 {
-	std::array<std::thread, t_n> ths;
+	std::array<std::thread, t_n> threads;
 	std::array<std::string, t_n> strings;
 	for (size_t thread_counter = 0; thread_counter < t_n; thread_counter++) {
 		strings.at(thread_counter) = str + "_" + std::to_string(thread_counter);
-		ths.at(thread_counter) = std::thread(&func, strings.at(thread_counter).data());
+		threads.at(thread_counter) = std::thread(&func, strings.at(thread_counter).data());
 	}
 	func(str.data());
-	for (auto &th : ths)
+	for (auto &th : threads)
 		th.join();
 }
 

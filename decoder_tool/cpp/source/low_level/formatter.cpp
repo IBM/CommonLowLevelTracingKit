@@ -12,7 +12,7 @@
 
 #include "inline.hpp"
 
-namespace formater = CommonLowLevelTracingKit::decoder::source::formatter;
+namespace formatter = CommonLowLevelTracingKit::decoder::source::formatter;
 using namespace CommonLowLevelTracingKit::decoder::exception;
 using namespace std::string_literals;
 
@@ -39,7 +39,7 @@ CONST_INLINE static constexpr ffi_type *clltk_type_to_ffi_type(const char clltk_
 	case 's': return &ffi_type_pointer;
 	case 'p': return &ffi_type_pointer;
 	case InvalidStringArgType: return &ffi_type_pointer;
-	default: CLLTK_DECODER_THROW(FormattingFailed, "unkown type");
+	default: CLLTK_DECODER_THROW(FormattingFailed, "unknown type");
 	}
 }
 CONST_INLINE static constexpr size_t
@@ -71,13 +71,13 @@ clltk_arg_to_size(const char clltk_type, const uintptr_t clltk_arg, size_t remai
 	}
 	case 'p': return sizeof(void *);
 	case InvalidStringArgType: return sizeof(void *);
-	default: CLLTK_DECODER_THROW(FormattingFailed, "unkown type");
+	default: CLLTK_DECODER_THROW(FormattingFailed, "unknown type");
 	}
 }
 template <typename T, typename ProxyT = T>
 static INLINE const any get_native(uintptr_t p, size_t remaining) {
 	if (sizeof(T) > remaining) [[unlikely]]
-		CLLTK_DECODER_THROW(FormattingFailed, "out of range access for formater");
+		CLLTK_DECODER_THROW(FormattingFailed, "out of range access for formatter");
 	T value{};
 	memcpy(&value, std::bit_cast<void *>(p), sizeof(T));
 	static_assert(sizeof(ProxyT) == sizeof(void *));
@@ -105,7 +105,7 @@ INLINE static constexpr any clltk_arg_to_native(const char clltk_type, const uin
 		// the value in clltk_arg is a pointer to a now invalid/unusable memory address.
 		// replace it with a dummy arg string
 		return std::bit_cast<uint64_t>(&InvalidStringArg);
-	default: CLLTK_DECODER_THROW(FormattingFailed, "unkown type");
+	default: CLLTK_DECODER_THROW(FormattingFailed, "unknown type");
 	}
 }
 
@@ -120,7 +120,7 @@ clltk_args_to_native_args(const std::string_view format, const std::span<const c
 	for (size_t i = 0; i < clltk_types.size(); i++) {
 		const char type = clltk_types[i];
 		if (raw_arg_offset >= raw_clltk_args.size()) [[unlikely]]
-			CLLTK_DECODER_THROW(FormattingFailed, "out of range access for formater");
+			CLLTK_DECODER_THROW(FormattingFailed, "out of range access for formatter");
 		const uintptr_t current = std::bit_cast<uintptr_t>(&raw_clltk_args[raw_arg_offset]);
 		const size_t remaining = raw_clltk_args.size() - raw_arg_offset;
 		const any value = clltk_arg_to_native(type, current, remaining);
@@ -183,7 +183,7 @@ INLINE static auto fix_types_based_on_format(const std::string_view format,
 		}
 	}
 	if (arg_count != raw_types.size()) [[unlikely]]
-		CLLTK_DECODER_THROW(FormattingFailed, "invalid format secifier");
+		CLLTK_DECODER_THROW(FormattingFailed, "invalid format specifier");
 	return out;
 }
 
@@ -244,8 +244,8 @@ static INLINE std::string clean_up_str_view(const std::string_view str) {
 }
 
 // call snprintf with ffi
-std::string formater::printf(const std::string_view format, const std::span<const char> &types_raw,
-							 const std::span<const uint8_t> &args_raw) {
+std::string formatter::printf(const std::string_view format, const std::span<const char> &types_raw,
+							  const std::span<const uint8_t> &args_raw) {
 	if (format.empty()) return "";
 	if (*format.end() != '\0') CLLTK_DECODER_THROW(FormattingFailed, "missing format termination");
 	const auto fixed_typ_array = fix_types_based_on_format(format, types_raw);
@@ -325,8 +325,8 @@ std::string formater::printf(const std::string_view format, const std::span<cons
 	return msg;
 }
 
-std::string formater::dump(const std::string_view format, const std::span<const char> &types_raw,
-						   const std::span<const uint8_t> &args_raw) {
+std::string formatter::dump(const std::string_view format, const std::span<const char> &types_raw,
+							const std::span<const uint8_t> &args_raw) {
 	if (types_raw.size() != 1 || types_raw[0] != 'x')
 		CLLTK_DECODER_THROW(InvalidMeta, "wrong meta for drump tracepoint");
 	const size_t format_size = format.size();

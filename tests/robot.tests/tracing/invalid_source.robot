@@ -5,13 +5,13 @@ Suite Setup     configure cmake and build default
 
 
 *** Test Cases ***
-detect build failes
+detect build fails
     ${content}=    catenate    SEPARATOR=\n
     ...    \#error \"error\"
     ...    int main(void){return 0;}
     ${error}=    Set Variable    \#error "error"
-    source ${content} for C failes with    ${error}
-    source ${content} for CPP failes with    ${error}
+    source ${content} for C fails with    ${error}
+    source ${content} for CPP fails with    ${error}
 
 twice same buffer definition
     ${content}=    catenate    SEPARATOR=\n
@@ -19,8 +19,8 @@ twice same buffer definition
     ...    CLLTK_TRACEBUFFER(BUFFER, 4096)
     ...    CLLTK_TRACEBUFFER(BUFFER, 4096)
     ...    int main(void){}
-    source ${content} for C failes with    redefinition of
-    source ${content} for CPP failes with    redefinition of
+    source ${content} for C fails with    redefinition of
+    source ${content} for CPP fails with    redefinition of
 
 missing buffer size
     ${content}=    catenate    SEPARATOR=\n
@@ -28,8 +28,8 @@ missing buffer size
     ...    CLLTK_TRACEBUFFER(BUFFER)
     ...    int main(void){}
     ${error}=    Set Variable    requires 2 arguments, but only 1 given
-    source ${content} for C failes with    ${error}
-    source ${content} for CPP failes with    ${error}
+    source ${content} for C fails with    ${error}
+    source ${content} for CPP fails with    ${error}
 
 tracebuffer name as a string
     ${content}=    catenate    SEPARATOR=\n
@@ -37,15 +37,15 @@ tracebuffer name as a string
     ...    CLLTK_TRACEBUFFER("BUFFER", 1024)
     ...    int main(void){}
     ${error}=    Set Variable    pasting "_clltk_" and ""BUFFER"" does not give a valid preprocessing token
-    source ${content} for C failes with    ${error}
-    source ${content} for CPP failes with    ${error}
+    source ${content} for C fails with    ${error}
+    source ${content} for CPP fails with    ${error}
 
 missing buffer definition
     ${content}=    catenate    SEPARATOR=\n
     ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    int main(void){CLLTK_TRACEPOINT(BUFFER, "should be in tracebuffer for c");}
-    source ${content} for C failes with    ‘_clltk_BUFFER’ undeclared
-    source ${content} for CPP failes with    ‘_clltk_BUFFER’ was not declared in this scope
+    source ${content} for C fails with    ‘_clltk_BUFFER’ undeclared
+    source ${content} for CPP fails with    ‘_clltk_BUFFER’ was not declared in this scope
 
 11 arguments
     ${content}=    catenate    SEPARATOR=\n
@@ -56,8 +56,8 @@ missing buffer definition
     ...    0,1,2,3,4,5,6,7,8,9,10);
     ...    }
     ${error}=    Set Variable    only supporting up to 10 arguments
-    source ${content} for C failes with    ${error}
-    source ${content} for CPP failes with    ${error}
+    source ${content} for C fails with    ${error}
+    source ${content} for CPP fails with    ${error}
 
 20 arguments
     ${content}=    catenate    SEPARATOR=\n
@@ -72,8 +72,8 @@ missing buffer definition
     ...    );
     ...    }
     ${error}=    Set Variable    only supporting up to 10 arguments
-    source ${content} for C failes with    ${error}
-    source ${content} for CPP failes with    ${error}
+    source ${content} for C fails with    ${error}
+    source ${content} for CPP fails with    ${error}
 
 40 arguments
     ${content}=    catenate    SEPARATOR=\n
@@ -92,8 +92,8 @@ missing buffer definition
     ...    );
     ...    }
     ${error}=    Set Variable    only supporting up to 10 arguments
-    source ${content} for C failes with    ${error}
-    source ${content} for CPP failes with    ${error}
+    source ${content} for C fails with    ${error}
+    source ${content} for CPP fails with    ${error}
 
 more arguments than formats
     ${content}=    catenate    SEPARATOR=\n
@@ -104,8 +104,8 @@ more arguments than formats
     ...    0,1,2,3,4,5,6);
     ...    }
     ${error}=    Set Variable    -Werror=format-extra-args
-    source ${content} for C failes with    ${error}
-    source ${content} for CPP failes with    ${error}
+    source ${content} for C fails with    ${error}
+    source ${content} for CPP fails with    ${error}
 
 more formats than arguments
     ${content}=    catenate    SEPARATOR=\n
@@ -116,6 +116,6 @@ more formats than arguments
     ...    0,1,2,3,4);
     ...    }
     ${error}=    Set Variable    -Werror=format=
-    source ${content} for C failes with    ${error}
-    source ${content} for CPP failes with    ${error}
+    source ${content} for C fails with    ${error}
+    source ${content} for CPP fails with    ${error}
 

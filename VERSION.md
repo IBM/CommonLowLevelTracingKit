@@ -1,6 +1,8 @@
-1.2.48
+1.2.49
 
 # Change log
+## 1.2.49
+- fix typos
 ## 1.2.48
 refactor: reorganize include structure and improve project layout
 - Renamed project from CommoneLowLevelTracingKit to CommonLowLevelTracingKit (correcting typo).

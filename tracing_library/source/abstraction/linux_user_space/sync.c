@@ -82,7 +82,7 @@ syn_lock_object_t sync_memory_mutex_get(sync_mutex_t *const ptr)
 		// if no error occurred than return valid lock object
 		return CREATE_SYN_LOCK_OBJECT(ptr, true, "");
 	} else if (status == EOWNERDEAD) {
-		// dead owner therefor we recover the state
+		// dead owner therefore we recover the state
 		// we also got the lock
 		if (pthread_mutex_consistent(mutex) == 0) {
 			return CREATE_SYN_LOCK_OBJECT(ptr, true, "mutex recovered from dead owner");

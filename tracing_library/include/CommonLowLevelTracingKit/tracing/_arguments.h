@@ -228,7 +228,7 @@ static CONST_INLINE constexpr bool _CLLTK_TYPE_IS_FLEX_TEMP(void)
 #define _CLLTK_ARG_TYPES_ARE_FLEX(...) \
 	__VA_OPT__(_CLLTK_APPLY(_CLLTK_TYPE_IS_FLEX, _CLLTK_OR, __VA_ARGS__)) + 0
 
-// create struct with type informations
+// create struct with type information
 #define _CLLTK_CREATE_TYPES(...)                                   \
 	{                                                              \
 		/* .count = */ _CLLTK_NARGS(__VA_ARGS__),                  \

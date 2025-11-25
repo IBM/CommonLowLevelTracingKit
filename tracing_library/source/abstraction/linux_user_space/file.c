@@ -54,7 +54,7 @@ static const char *get_root_path(void)
 
 	static pthread_mutex_t lock;
 	if (pthread_mutex_lock(&lock) != 0)
-		ERROR_AND_EXIT("failed to aquire lock");
+		ERROR_AND_EXIT("failed to acquire lock");
 
 	root_path = getenv("CLLTK_TRACING_PATH");
 	if (root_path == NULL) {

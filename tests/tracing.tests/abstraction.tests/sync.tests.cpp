@@ -153,7 +153,7 @@ TEST(sync, memory_mutex_in_killed_process)
 		CaptureStderr();
 		{ // try to get locked mutex with dead owner, should be recovered
 			SYNC_MEMORY_LOCK(lock, mutex);
-			EXPECT_TRUE(lock.locked) << " could not get mutex afte owner died";
+			EXPECT_TRUE(lock.locked) << " could not get mutex after owner died";
 			EXPECT_EQ(lock.error_msg, "mutex recovered from dead owner"s);
 		}
 		const std::string output = GetCapturedStderr();
@@ -197,7 +197,7 @@ TEST(sync, memory_mutex_in_exit_process)
 		CaptureStderr();
 		{ // try to get locked mutex with dead owner, should be recovered
 			SYNC_MEMORY_LOCK(lock, mutex);
-			EXPECT_TRUE(lock.locked) << " could not get mutex afte owner died";
+			EXPECT_TRUE(lock.locked) << " could not get mutex after owner died";
 			EXPECT_EQ(lock.error_msg, "mutex recovered from dead owner"s);
 		}
 		const std::string output = GetCapturedStderr();
@@ -269,7 +269,7 @@ TEST(sync, memory_mutex_in_exit_process_during_recovery)
 	CaptureStderr();
 	{ // try to get locked mutex with dead owner, should be recovered
 		SYNC_MEMORY_LOCK(lock, mutex);
-		EXPECT_TRUE(lock.locked) << " could not get mutex afte owner died";
+		EXPECT_TRUE(lock.locked) << " could not get mutex after owner died";
 		EXPECT_EQ(lock.error_msg, "mutex recovered from dead owner"s);
 	}
 	const std::string output = GetCapturedStderr();
@@ -306,7 +306,7 @@ TEST(sync, signal_in_same_process_same_thread)
 	sync_memory_mutex_release(&lock);
 	EXPECT_FALSE(lock.locked);
 
-	// try agian to lock
+	// try again to lock
 	lock = sync_memory_mutex_get(&mutex);
 	EXPECT_TRUE(lock.locked);
 	sync_memory_mutex_release(&lock);

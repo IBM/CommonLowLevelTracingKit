@@ -7,7 +7,7 @@ ROOT_PATH=$(git rev-parse --show-toplevel)
 cd ${ROOT_PATH}
 
 kernel_latest_query_version () {
-    echo "=> querry linux kernel version" >&2
+    echo "=> query linux kernel version" >&2
     local version=$(curl https://www.kernel.org/ 2>/dev/null | grep -A 1 "latest_link" 2>/dev/null )
     version=${version##*.tar.xz\">}
     version=${version%</a>}
@@ -25,7 +25,7 @@ kernel_query_server_prefix () {
             prefix="https://kernel.org/pub/linux/kernel/v6.x/"
         ;;
         *)
-            echo "EE kernel version $version unsuported" >&2
+            echo "EE kernel version $version unsupported" >&2
             exit 1
         ;;
     esac
@@ -34,7 +34,7 @@ kernel_query_server_prefix () {
 
 kernel_latest_query_link () {
     version=$1
-    echo "=> querry linux kernel download link" >&2
+    echo "=> query linux kernel download link" >&2
     prefix=$(kernel_query_server_prefix $version)
     local download_link=$(curl -L $prefix 2>/dev/null | grep -A 1 "linux-$version.tar.xz")
     if [ -z "$download_link" ]; then

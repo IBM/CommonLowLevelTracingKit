@@ -116,11 +116,11 @@ std::string CommonLowLevelTracingKit::snapshot::VirtualFile::to_file_content(
 {
 	std::stringstream file_content_buffer;
 	file_content_buffer << "[";
-	bool frist = true;
+	bool first = true;
 	for (const auto &formatted : additional_tracepoints) {
-		if (!frist)
+		if (!first)
 			file_content_buffer << ",";
-		frist = false;
+		first = false;
 		file_content_buffer << "{\"timestamp\":" << ns << ",\"formatted\":\"" << formatted << "\"}";
 	}
 	file_content_buffer << "]";
