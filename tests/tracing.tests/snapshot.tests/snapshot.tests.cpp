@@ -1,7 +1,7 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "CommonLowLevelTracingKit/snapshot.hpp"
+#include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <chrono>
@@ -225,7 +225,12 @@ TEST_F(SnapshotTest, CompressedTwiceWithAdditionalTracepointDifferSize)
 	const auto firstSize = take_snapshot(func, {}, true);
 	EXPECT_TRUE(firstSize);
 	EXPECT_TRUE(firstSize.value());
-	const static std::vector<std::string> tracepoints{1024, {"some more tracepoints"}};
+	// Generate varied strings to ensure compression doesn't make them identical in size
+	// Use more entries to guarantee size difference even with compression and block alignment
+	std::vector<std::string> tracepoints;
+	for (int i = 0; i < 10000; i++) {
+		tracepoints.push_back("some more tracepoints " + std::to_string(i));
+	}
 	const auto secondSize = take_snapshot(func, tracepoints, true);
 	EXPECT_TRUE(secondSize);
 	EXPECT_TRUE(secondSize.value());

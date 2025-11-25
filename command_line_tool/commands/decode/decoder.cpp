@@ -7,8 +7,8 @@
 #include <functional>
 #include <string>
 
-#include "CommonLowLevelTracingKit/Decoder/Tracebuffer.hpp"
-#include "CommonLowLevelTracingKit/interface.hpp"
+#include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
+#include "commands/interface.hpp"
 
 using namespace std::string_literals;
 
@@ -128,11 +128,9 @@ static void add_decode_command(CLI::App &app)
 	});
 }
 
-static int init_function() noexcept
+static void init_function() noexcept
 {
 	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
 	add_decode_command(app);
-	return 0;
 }
-
-static const int dummy = init_function();
+COMMAND_INIT(init_function);

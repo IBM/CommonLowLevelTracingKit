@@ -17,7 +17,7 @@
 #include <stdint.h>
 #endif
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 
 #ifdef __cplusplus
 extern "C" {

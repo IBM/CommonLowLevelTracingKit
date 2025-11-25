@@ -3,7 +3,7 @@
 
 #include "more.h"
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 
 CLLTK_TRACEBUFFER(BufferMoreC, 1024);
 

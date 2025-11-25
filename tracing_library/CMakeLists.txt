@@ -74,84 +74,84 @@ set(CLLTK_TRACING_SOURCE
 
 add_subdirectory(source/abstraction)
 
-
 add_library(clltk_tracing_static STATIC
     ${CLLTK_TRACING_SOURCE}
     $<TARGET_OBJECTS:clltk_tracing_abstraction>
 )
-
-target_include_directories(clltk_tracing_static
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-    PRIVATE
-        source
-)
-
-target_link_libraries(clltk_tracing_static
-    PRIVATE
-        clltk_tracing_abstraction
-        clltk-version
-)
-
-set_target_properties(clltk_tracing_static
-    PROPERTIES
-        OUTPUT_NAME "clltk_tracing"
-        VERSION ${CLLTK_VERSION_STRING}
-        SOVERSION ${CLLTK_VERSION_MAJOR}
-        COMPILE_LANGUAGE C
-        C_STANDARD 11
-        C_EXTENSIONS ON
-        C_STANDARD_REQUIRED OFF
-        COMPILE_WARNING_AS_ERROR ON
-)
-
-target_compile_options(clltk_tracing_static
-    PUBLIC
-        ${clltk_public_compiler_flags}
-    PRIVATE
-        ${clltk_private_compiler_flags}
-)
-
 add_library(clltk_tracing_shared SHARED
     ${CLLTK_TRACING_SOURCE}
     $<TARGET_OBJECTS:clltk_tracing_abstraction>
 )
-target_include_directories(clltk_tracing_shared
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-    PRIVATE
-        source
-)
 
-target_link_libraries(clltk_tracing_shared
-    PRIVATE
-        clltk_tracing_abstraction
-        clltk-version
+foreach(LIB_NAME clltk_tracing_static clltk_tracing_shared)
+    target_include_directories(${LIB_NAME}
+        PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+        PRIVATE
+            source
+    )
+    target_link_libraries(${LIB_NAME}
+        PRIVATE
+            clltk_tracing_abstraction
+            clltk-version
+    )
+    set_target_properties(${LIB_NAME}
+        PROPERTIES
+            VERSION ${CLLTK_VERSION_STRING}
+            SOVERSION ${CLLTK_VERSION_MAJOR}
+            LINKER_LANGUAGE C
+            COMPILE_LANGUAGE C
+            C_STANDARD 11
+            C_EXTENSIONS ON
+            C_STANDARD_REQUIRED OFF
+            COMPILE_WARNING_AS_ERROR ON
+    )
+    target_compile_options(${LIB_NAME}
+        PUBLIC
+            ${clltk_public_compiler_flags}
+        PRIVATE
+            ${clltk_private_compiler_flags}
+    )
+
+    target_link_options(${LIB_NAME}
+        PRIVATE
+            -Wl,--gc-sections
+    )
+endforeach()
+
+set_target_properties(clltk_tracing_static
+    PROPERTIES
+        OUTPUT_NAME "clltk_tracing_static"
 )
 
 set_target_properties(clltk_tracing_shared
     PROPERTIES
         OUTPUT_NAME "clltk_tracing"
-        VERSION ${CLLTK_VERSION_STRING}
-        SOVERSION ${CLLTK_VERSION_MAJOR}
-        LINKER_LANGUAGE C
-        COMPILE_LANGUAGE C
-        C_STANDARD 11
-        C_EXTENSIONS ON
-        C_STANDARD_REQUIRED OFF
-        COMPILE_WARNING_AS_ERROR ON
 )
 
-target_compile_options(clltk_tracing_shared
-    PUBLIC
-        ${clltk_public_compiler_flags}
-    PRIVATE
-        ${clltk_private_compiler_flags}
+set(PUBLIC_HEADERS 
+    include/CommonLowLevelTracingKit/tracing/_internal.h
+    include/CommonLowLevelTracingKit/tracing/_macros.h
+    include/CommonLowLevelTracingKit/tracing/_arguments.h
+    include/CommonLowLevelTracingKit/tracing/_meta.h
+    include/CommonLowLevelTracingKit/tracing/_user_tracing.h
+    include/CommonLowLevelTracingKit/tracing/tracing.h
 )
 
-target_link_options(clltk_tracing_shared
-    PRIVATE
-        -Wl,--gc-sections
+set_target_properties(
+    clltk_tracing_static
+    clltk_tracing_shared
+    PROPERTIES 
+        PUBLIC_HEADER "${PUBLIC_HEADERS}"
+)
+install(TARGETS
+    clltk_tracing_static
+    clltk_tracing_shared
+    EXPORT CLLTKTracingTargets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT tracing
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT tracing
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT tracing
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/tracing/
 )
 
 # create alias target clltk_tracing based on set cache option
@@ -163,30 +163,3 @@ elseif(${CLLTK_TRACING_LIB_TYPE} STREQUAL "SHARED")
 else()
     message(FATAL_ERROR "invalid value \"${CLLTK_TRACING_LIB_TYPE}\" for \"CLLTK_TRACING_LIB_TYPE\", not \"STATIC\" or \"SHARED\"")
 endif()
-
-set(PULIC_HEADERS 
-    include/CommonLowLevelTracingKit/_internal.h
-    include/CommonLowLevelTracingKit/_macros.h
-    include/CommonLowLevelTracingKit/_arguments.h
-    include/CommonLowLevelTracingKit/_meta.h
-    include/CommonLowLevelTracingKit/_user_tracing.h
-    include/CommonLowLevelTracingKit/tracing.h
-)
-
-set_target_properties(clltk_tracing_static PROPERTIES 
-    PUBLIC_HEADER "${PULIC_HEADERS}"
-)
-install(TARGETS clltk_tracing_static
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    COMPONENT tracing
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit
-)
-
-set_target_properties(clltk_tracing_shared
-    PROPERTIES PUBLIC_HEADER "${PULIC_HEADERS}"
-)
-install(TARGETS clltk_tracing_shared
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    COMPONENT tracing
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit
-)

@@ -1,7 +1,7 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 
 char _clltk_arg_test_variable_cpp_char = 0;
 _CLLTK_STATIC_ASSERT(sizeof(_clltk_arg_test_variable_cpp_char) == 1,

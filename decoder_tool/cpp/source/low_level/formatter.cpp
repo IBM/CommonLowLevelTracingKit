@@ -1,6 +1,6 @@
 #include "formatter.hpp"
 
-#include "CommonLowLevelTracingKit/Decoder/Common.hpp"
+#include "CommonLowLevelTracingKit/decoder/Common.hpp"
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -100,28 +100,28 @@ INLINE static constexpr any clltk_arg_to_native(const char clltk_type, const uin
 			clltk_arg, remaining); // use double as a proxy type to get valid data from raw args
 	case 'd': return get_native<double>(clltk_arg, remaining);
 	case 'p': return get_native<uint64_t>(clltk_arg, remaining);
-	case 's': return reinterpret_cast<uint64_t>(clltk_arg + sizeof(uint32_t));
+	case 's': return std::bit_cast<uint64_t>(clltk_arg + sizeof(uint32_t));
 	case InvalidStringArgType:
 		// the value in clltk_arg is a pointer to a now invalid/unusable memory address.
 		// replace it with a dummy arg string
-		return reinterpret_cast<uint64_t>(&InvalidStringArg);
+		return std::bit_cast<uint64_t>(&InvalidStringArg);
 	default: CLLTK_DECODER_THROW(FormattingFailed, "unkown type");
 	}
 }
 
 INLINE static std::array<any, total_arg_count>
-clltk_args_to_native_args(const std::string_view &format, const std::span<const char> &clltk_types,
+clltk_args_to_native_args(const std::string_view format, const std::span<const char> &clltk_types,
 						  const std::span<const uint8_t> &raw_clltk_args) {
 	std::array<any, total_arg_count> args{};
-	args[0] = reinterpret_cast<uint64_t>(nullptr);
-	args[1] = reinterpret_cast<uint64_t>(0lu);
+	args[0] = std::bit_cast<uint64_t>(nullptr);
+	args[1] = std::bit_cast<uint64_t>(0lu);
 	args[2] = const_cast<char *>(format.data());
 	size_t raw_arg_offset = 0;
 	for (size_t i = 0; i < clltk_types.size(); i++) {
 		const char type = clltk_types[i];
-		const uintptr_t current = std::bit_cast<uintptr_t>(&raw_clltk_args[raw_arg_offset]);
 		if (raw_arg_offset >= raw_clltk_args.size()) [[unlikely]]
 			CLLTK_DECODER_THROW(FormattingFailed, "out of range access for formater");
+		const uintptr_t current = std::bit_cast<uintptr_t>(&raw_clltk_args[raw_arg_offset]);
 		const size_t remaining = raw_clltk_args.size() - raw_arg_offset;
 		const any value = clltk_arg_to_native(type, current, remaining);
 		args[fix_arg_count + i] = value;
@@ -136,7 +136,7 @@ clltk_args_to_native_args(const std::string_view &format, const std::span<const 
 
 // the macros for detection the arg type could not different between a char* as a pointer or as a
 // string to get the correct type we need to search for the format specifier.
-INLINE static auto fix_types_based_on_format(const std::string_view &format,
+INLINE static auto fix_types_based_on_format(const std::string_view format,
 											 const std::span<const char> &raw_types) {
 	// check if any last char for a format specifier
 	static constexpr auto is_final_char = [](const char c) {
@@ -235,7 +235,7 @@ static INLINE void clean_up_str(std::string &s) {
 	}
 }
 
-static INLINE std::string clean_up_str_view(const std::string_view &str) {
+static INLINE std::string clean_up_str_view(const std::string_view str) {
 	std::string msg{str};
 	clean_up_str(msg);
 	while (msg.size() && msg.back() == '\0') [[unlikely]]
@@ -244,7 +244,7 @@ static INLINE std::string clean_up_str_view(const std::string_view &str) {
 }
 
 // call snprintf with ffi
-std::string formater::printf(const std::string_view &format, const std::span<const char> &types_raw,
+std::string formater::printf(const std::string_view format, const std::span<const char> &types_raw,
 							 const std::span<const uint8_t> &args_raw) {
 	if (format.empty()) return "";
 	if (*format.end() != '\0') CLLTK_DECODER_THROW(FormattingFailed, "missing format termination");
@@ -325,12 +325,16 @@ std::string formater::printf(const std::string_view &format, const std::span<con
 	return msg;
 }
 
-std::string formater::dump(const std::string_view &format, const std::span<const char> &types_raw,
+std::string formater::dump(const std::string_view format, const std::span<const char> &types_raw,
 						   const std::span<const uint8_t> &args_raw) {
 	if (types_raw.size() != 1 || types_raw[0] != 'x')
 		CLLTK_DECODER_THROW(InvalidMeta, "wrong meta for drump tracepoint");
 	const size_t format_size = format.size();
-	const uint32_t dump_size = (*reinterpret_cast<const uint32_t *>(args_raw.data()));
+	if (args_raw.size() < sizeof(uint32_t))
+		CLLTK_DECODER_THROW(FormattingFailed, "args_raw too small for dump size");
+	const uint32_t dump_size = (*std::bit_cast<const uint32_t *>(args_raw.data()));
+	if (args_raw.size() < sizeof(uint32_t) + dump_size)
+		CLLTK_DECODER_THROW(FormattingFailed, "args_raw too small for dump body");
 	const std::span<const uint8_t> dump_body{&args_raw[sizeof(uint32_t)], dump_size};
 	static constexpr std::string_view dump_token{" =(dump)= "};
 	const size_t output_size = format_size + dump_token.size() //

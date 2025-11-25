@@ -24,7 +24,7 @@
 #include <utility>
 #include <vector>
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "helper.hpp"
 #include "ringbuffer.hpp"
 #include "tracebufferfile.hpp"
@@ -232,12 +232,14 @@ TEST_F(decoder_ringbuffer, write_read_parallel_overwhelmed)
 {
 	constexpr size_t n_threads = 100;
 	constexpr size_t n_tp_per_thread = 1000;
+
 	constexpr size_t n_tp_total = n_threads * n_tp_per_thread;
+	std::latch l{n_threads + 1};
+	std::atomic_size_t write_tp_index = 0;
 	const auto write_thread_func = [&]() {
-		for (uint64_t write_index = 0; write_index < n_tp_per_thread; write_index++) {
-			char buf[52] = {};
-			sprintf(buf, "START:%lu", write_index++);
-			CLLTK_TRACEPOINT(TB, "%s", buf);
+		l.arrive_and_wait();
+		for (size_t i = 0; i < n_tp_per_thread; i++) {
+			CLLTK_TRACEPOINT(TB, "%llu %lu %llu", 0ULL, ++write_tp_index, 0ULL);
 			std::this_thread::sleep_for(microseconds(1));
 		}
 	};
@@ -250,15 +252,18 @@ TEST_F(decoder_ringbuffer, write_read_parallel_overwhelmed)
 	Ringbuffer &rb = tb.getRingbuffer();
 	std::vector<uint64_t> known;
 	known.reserve(n_tp_total);
+	l.arrive_and_wait();
 
-	auto lastMsg = steady_clock::now();
-	while ((steady_clock::now() - lastMsg) < milliseconds(100)) {
+	auto end_time = steady_clock::now() + seconds(10);
+	while ((steady_clock::now() < end_time)) {
 		auto rc = rb.getNextEntry();
 		if (rc.index() != 0) continue;
 		auto e = std::move(get<0>(rc));
 		if (e == nullptr) continue;
-		lastMsg = steady_clock::now();
 		known.push_back(e->nr);
+		if (e->size() <= 5 * 8) continue;
+		const uint64_t tp_index = *reinterpret_cast<const uint64_t *>(&e->body()[3 * 8 + 6]);
+		if (tp_index == n_tp_total) { end_time = steady_clock::now() + milliseconds(100); };
 	}
 	std::for_each(threads.begin(), threads.end(), [](std::thread &t) { t.join(); });
 	EXPECT_FALSE(get<0>(rb.getNextEntry())) << "there should be no new tracepoints";

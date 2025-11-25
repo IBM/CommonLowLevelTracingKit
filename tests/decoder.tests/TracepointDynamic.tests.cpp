@@ -8,9 +8,9 @@
 #include <stddef.h>
 #include <string>
 
-#include "CommonLowLevelTracingKit/Decoder/Tracebuffer.hpp"
-#include "CommonLowLevelTracingKit/Decoder/Tracepoint.hpp"
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
+#include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "helper.hpp"
 #include "gtest/gtest.h"
 

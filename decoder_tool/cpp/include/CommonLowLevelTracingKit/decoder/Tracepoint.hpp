@@ -32,7 +32,7 @@ namespace CommonLowLevelTracingKit::decoder {
 		[[nodiscard]] std::string date_and_time_str() const noexcept;
 
 	  protected:
-		Tracepoint(const std::string_view &tb, uint64_t n, uint64_t t) noexcept
+		Tracepoint(const std::string_view tb, uint64_t n, uint64_t t) noexcept
 			: tracebuffer(tb)
 			, nr(n)
 			, timestamp_ns(t) {};

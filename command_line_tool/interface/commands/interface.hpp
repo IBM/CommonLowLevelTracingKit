@@ -8,10 +8,17 @@
 #include "CLI/Config.hpp"	  // IWYU pragma: export
 #include "CLI/Formatter.hpp"  // IWYU pragma: export
 #include "CLI/Validators.hpp" // IWYU pragma: export
-#include <CLI/Error.hpp>	  // IWYU pragma: export
-#include <CLI/Option.hpp>	  // IWYU pragma: export
+#if __has_include("CLI/ExtraValidators.hpp")
+#include "CLI/ExtraValidators.hpp" // IWYU pragma: export
+#endif
+#include <CLI/Error.hpp>  // IWYU pragma: export
+#include <CLI/Option.hpp> // IWYU pragma: export
 
 #include <mutex>
+
+typedef void (*init_fn)(void);
+#define COMMAND_INIT(func) \
+	__attribute__((retain, used, section("clltk_cmdinit"))) static init_fn _init_##func##_ptr = func
 
 namespace CommonLowLevelTracingKit::cmd::interface
 {

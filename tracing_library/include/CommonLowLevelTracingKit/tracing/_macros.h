@@ -3,7 +3,7 @@
 
 #ifndef _CLLTK_MACROS_H_
 #define _CLLTK_MACROS_H_
-// IWYU pragma: private, include "CommonLowLevelTracingKit/tracing.h"
+// IWYU pragma: private, include "CommonLowLevelTracingKit/tracing/tracing.h"
 
 #if defined(__GNUC__)
 #define INLINE __attribute__((hot, always_inline, artificial, flatten)) inline

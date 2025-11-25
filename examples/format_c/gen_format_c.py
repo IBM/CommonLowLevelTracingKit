@@ -84,7 +84,7 @@ def get_tracepoints() -> str:
 
 with open("format_c.gen.c", "w") as fh:
     fh.write(f'''
-# include "CommonLowLevelTracingKit/tracing.h"
+# include "CommonLowLevelTracingKit/tracing/tracing.h"
 # include <stdio.h>
 # include <stdlib.h>
 

@@ -19,8 +19,8 @@ clean:
 	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
 
 header_install:
-	install -d $(INSTALL_HDR_PATH)/CommonLowLevelTracingKit/
-	install -Dm 0655 ../../tracing_library/include/CommonLowLevelTracingKit/* $(INSTALL_HDR_PATH)/CommonLowLevelTracingKit/
+	install -d $(INSTALL_HDR_PATH)/CommonLowLevelTracingKit/tracing/
+	install -Dm 0655 ../../tracing_library/include/CommonLowLevelTracingKit/tracing/* $(INSTALL_HDR_PATH)/CommonLowLevelTracingKit/tracing/
 
 compile_commands.json:
 	$(MAKE) -C $(KERNEL_SRC) M=$(M) CC=clang compile_commands.json

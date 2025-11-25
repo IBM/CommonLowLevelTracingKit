@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-#include "CommonLowLevelTracingKit/Decoder/Common.hpp"
+#include "CommonLowLevelTracingKit/decoder/Common.hpp"
 #include "formatter.hpp"
 #include "helper.hpp"
 #include "gmock/gmock.h"

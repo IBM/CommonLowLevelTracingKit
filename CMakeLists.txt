@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
-project(CommoneLowLevelTracingKit LANGUAGES C CXX)
+project(CommonLowLevelTracingKit LANGUAGES C CXX)
 
 include(cmake/Toolchain.cmake)
 include(cmake/ToolchainVersionCheck.cmake)
@@ -16,10 +16,10 @@ include(cmake/ASAN.cmake)
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     # We're in the root, define additional targets for developers.
     message(STATUS "clltk is standalone")
-    option(STANDALONE_PROJECT "" "ON")
+    option(STANDALONE_PROJECT "Build as standalone project" ON)
 else()
     message(STATUS "clltk is imported")
-    option(STANDALONE_PROJECT "" "OFF")
+    option(STANDALONE_PROJECT "Build as standalone project" OFF)
 endif()
 
 set(CLLTK_TRACING_LIB_TYPE "STATIC" CACHE STRING "make target clltk_tracing alias for clltk_tracing_shared with \"SHARED\" or clltk_tracing_static with \"STATIC\"")
@@ -47,7 +47,7 @@ if(CLLTK_COMMAND_LINE_TOOL)
 endif()
 
 option(CLLTK_PYTHON_DECODER "select python decoder for packaging" ON)
-option(CLLTK_CPP_DECODER "select python decoder for packaging" ON)
+option(CLLTK_CPP_DECODER "select cpp decoder for packaging" ON)
 add_subdirectory(./decoder_tool)
 
 option(CLLTK_KERNEL_TRACING "select kernel tracing module for build" ${STANDALONE_PROJECT})

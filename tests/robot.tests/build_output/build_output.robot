@@ -12,7 +12,7 @@ Test Teardown       clean up env
 test static tracing library
     Build Cmake Target clltk_tracing_static
     ${build_folder}=     Get Build Folder
-    ${static_lib}=       Set Variable    ${build_folder}/tracing_library/libclltk_tracing.a
+    ${static_lib}=       Set Variable    ${build_folder}/tracing_library/libclltk_tracing_static.a
     File Should Exist    path=${static_lib}    msg=static tracing library is missing
     ${output}=           Run Process  ar  -xv  --output\=${tmp_dir.name}  ${static_lib}
     Should Be Equal As Integers    ${output.rc}    0    msg=could not open static lib
@@ -31,13 +31,13 @@ test shared tracing library
     ${build_folder}=     Get Build Folder
     ${shared_lib}=       Set Variable    ${build_folder}/tracing_library/libclltk_tracing.so
     File Should Exist    path=${shared_lib}    msg=shared tracing library is missing
-    ${output}=           Run Process    grep  --text  -o  --  -fPIC  ${shared_lib}    shell=true
-    Should Be Equal As Integers    ${output.rc}    0    msg=missing -fPIC in shared tracing library (${output.stderr})
+    ${output}=           Run Process    readelf -d  ${shared_lib}    shell=true
+    Should Not Contain    ${output.stdout}    TEXTREL    msg=${shared_lib} is not PIC (contains TEXTREL)
 
 test static snapshot library
     Build Cmake Target clltk_snapshot_static
     ${build_folder}=     Get Build Folder
-    ${static_lib}=       Set Variable    ${build_folder}/snapshot_library/libclltk_snapshot.a
+    ${static_lib}=       Set Variable    ${build_folder}/snapshot_library/libclltk_snapshot_static.a
     File Should Exist    path=${static_lib}    msg=static snapshot library is missing
     ${output}=           Run Process  ar  -xv  --output\=${tmp_dir.name}  ${static_lib}
     Should Be Equal As Integers    ${output.rc}    0    msg=could not open static lib
@@ -56,5 +56,5 @@ test shared snapshot library
     ${build_folder}=     Get Build Folder
     ${shared_lib}=       Set Variable    ${build_folder}/snapshot_library/libclltk_snapshot.so
     File Should Exist    path=${shared_lib}    msg=shared snapshot library is missing
-    ${output}=           Run Process    grep  --text  -o  --  -fPIC  ${shared_lib}    shell=true
-    Should Be Equal As Integers    ${output.rc}    0    msg=missing -fPIC in shared snapshot library (${output.stderr})
+    ${output}=           Run Process    readelf -d  ${shared_lib}    shell=true
+    Should Not Contain    ${output.stdout}    TEXTREL    msg=${shared_lib} is not PIC (contains TEXTREL)

@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 # Copyright (c) 2024, International Business Machines
 # SPDX-License-Identifier: BSD-2-Clause-Patent
-
 set -euo pipefail
+
+# Trap Ctrl+C and kill all background jobs
+cleanup() {
+    echo -e "\nInterrupted. Killing background jobs..."
+    jobs -p | xargs -r kill 2>/dev/null
+    exit 130
+}
+trap cleanup SIGINT SIGTERM
 
 # Ensure required tools exist
 command -v jq > /dev/null || { echo "Error: jq is not installed."; exit 1; }
@@ -27,12 +34,10 @@ while IFS= read -r file; do
     if [[ "$file" == *"/build/"* ]]; then
         continue
     fi
-
     file="$(realpath --relative-to="$ROOT_PATH" $file)"
     if [[ -n "$FILTER" && "$file" != *"$FILTER"* ]]; then
         continue
     fi
-
     static_analyse "$file" &
 done < <(jq -r '.[].file' build/compile_commands.json)
 

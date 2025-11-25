@@ -20,7 +20,7 @@ class valid_build_tests(unittest.TestCase):
             with self.subTest(language=language):
                 file_content = \
                     '''
-                    #include "CommonLowLevelTracingKit/tracing.h"
+                    #include "CommonLowLevelTracingKit/tracing/tracing.h"
                     CLLTK_TRACEBUFFER(BUFFER, 4096);
                     int main(void)
                     {
@@ -40,7 +40,7 @@ class valid_build_tests(unittest.TestCase):
             with self.subTest(language=language):
                 file_content = \
                     '''
-                    #include "CommonLowLevelTracingKit/tracing.h"
+                    #include "CommonLowLevelTracingKit/tracing/tracing.h"
                     CLLTK_TRACEBUFFER(BUFFER, 4096);
                     int main(void)
                     {
@@ -58,7 +58,7 @@ class valid_build_tests(unittest.TestCase):
             with self.subTest(language=language):
                 file_content = \
                     '''
-                    #include "CommonLowLevelTracingKit/tracing.h"
+                    #include "CommonLowLevelTracingKit/tracing/tracing.h"
                     CLLTK_TRACEBUFFER(BUFFER, 64);
                     int main(void)
                     {
@@ -76,7 +76,7 @@ class valid_build_tests(unittest.TestCase):
             with self.subTest(language=language):
                 file_content = \
                     '''
-                    #include "CommonLowLevelTracingKit/tracing.h"
+                    #include "CommonLowLevelTracingKit/tracing/tracing.h"
                     CLLTK_TRACEBUFFER(BUFFER, 64);
                     int main(void)
                     {

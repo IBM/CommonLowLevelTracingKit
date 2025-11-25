@@ -1,8 +1,8 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "CommonLowLevelTracingKit/snapshot.hpp"
-#include "CommonLowLevelTracingKit/interface.hpp"
+#include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
+#include "commands/interface.hpp"
 #include <iostream>
 #include <optional>
 #include <stdexcept>
@@ -52,7 +52,7 @@ static void add_snapshot_command(CLI::App &app)
 	static CommonLowLevelTracingKit::snapshot::verbose_function_t verbose{};
 	command->add_flag_callback("--verbose,-v", [&]() { verbose = verbose_func; });
 
-	static std::string output_file_name{"traces.snapshot_library"};
+	static std::string output_file_name{"snapshot.clltk"};
 	command->add_option("--output,-f", output_file_name, "")->capture_default_str();
 
 	static std::vector<std::string> tracepoints;
@@ -65,11 +65,9 @@ static void add_snapshot_command(CLI::App &app)
 		[&]() { take_snapshot(output_file_name, tracepoints, compress, bucket_size, verbose); });
 }
 
-static int init_function() noexcept
+static void init_function() noexcept
 {
 	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
 	add_snapshot_command(app);
-	return 0;
 }
-
-static const int dummy = init_function();
+COMMAND_INIT(init_function);

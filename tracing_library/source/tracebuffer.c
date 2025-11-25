@@ -1,7 +1,7 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "CommonLowLevelTracingKit/version.gen.h"
 
 #include "ringbuffer/ringbuffer.h"
@@ -46,7 +46,8 @@ __attribute__((always_inline)) static inline size_t round_up(size_t value, size_
 }
 #endif
 
-_clltk_tracebuffer_t **tracebufferes = NULL;
+static _clltk_tracebuffer_t **tracebufferes = NULL;
+static _Atomic bool system_closed = false; // if true, tracing system is closed
 
 static bool tracebuffer_handler_matcher(const _clltk_tracebuffer_t *const *const vector_entry,
 										const char *const name)
@@ -212,9 +213,11 @@ _clltk_file_offset_t _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_ha
 	}
 }
 
-void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
+bool _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 {
 	SYNC_GLOBAL_LOCK(global_lock);
+	if (system_closed)
+		return false;
 	if (tracebufferes == NULL) {
 		tracebufferes = vector_create();
 		if (tracebufferes == NULL) {
@@ -227,10 +230,11 @@ void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 			tracebuffer_open(buffer->definition.name, buffer->definition.size);
 		if (buffer->runtime.tracebuffer == NULL) {
 			ERROR_LOG("could not open tracebuffer");
-			return;
+			return false;
 		}
 	}
 	buffer->runtime.tracebuffer->used++;
+	return true;
 }
 
 void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
@@ -268,6 +272,12 @@ void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
 		vector_free(&tracebufferes);
 		tracebufferes = NULL;
 	}
+}
+
+void _clltk_terminate(void)
+{
+	SYNC_GLOBAL_LOCK(global_lock);
+	system_closed = true;
 }
 
 _clltk_file_offset_t _clltk_tracebuffer_add_to_stack(_clltk_tracebuffer_handler_t *handler,
@@ -312,6 +322,8 @@ void add_to_ringbuffer(_clltk_tracebuffer_handler_t *handler, const void *const 
 void clltk_dynamic_tracebuffer_creation(const char *buffer_name, size_t size)
 {
 	_clltk_tracebuffer_handler_t buffer = {{buffer_name, size}, {NULL, NULL}, {NULL, 0}};
-	_clltk_tracebuffer_init(&buffer);
+	if (!_clltk_tracebuffer_init(&buffer)) {
+		return;
+	}
 	_clltk_tracebuffer_deinit(&buffer);
 }

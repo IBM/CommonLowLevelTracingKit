@@ -88,7 +88,7 @@ size_t internal::File::grow() const {
 	if (mprotect((void *)m_base, new_file_size, PROT_READ) == -1) {
 		throw std::runtime_error("Error mapping file: "s + strerror(errno));
 	}
-	if (madvise((void *)m_base, new_file_size, MADV_SEQUENTIAL) == -1) {}
+	if (madvise((void *)m_base, new_file_size, MADV_SEQUENTIAL | MAP_POPULATE) == -1) {}
 	m_size = new_file_size;
 	return m_size;
 }

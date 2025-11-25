@@ -3,7 +3,7 @@
 
 #ifndef _CLLTK_INTERNAL_H_
 #define _CLLTK_INTERNAL_H_
-// IWYU pragma: private, include "CommonLowLevelTracingKit/tracing.h"
+// IWYU pragma: private, include "CommonLowLevelTracingKit/tracing/tracing.h"
 
 #if defined(__KERNEL__)
 #include <linux/types.h>
@@ -12,7 +12,7 @@
 #include <stdint.h>
 #endif
 
-#include "CommonLowLevelTracingKit/_arguments.h"
+#include "CommonLowLevelTracingKit/tracing/_arguments.h"
 
 #ifdef CLLTK_FOR_CPP
 extern "C" {
@@ -43,10 +43,11 @@ struct _clltk_tracebuffer_handler_t {
 	} runtime;
 };
 
-void _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
+bool _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 	__attribute__((used, visibility("default")));
 void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
 	__attribute__((used, visibility("default")));
+void _clltk_terminate(void) __attribute__((used, visibility("default")));
 
 _clltk_file_offset_t _clltk_tracebuffer_add_to_stack(_clltk_tracebuffer_handler_t *buffer,
 													 const void *new_entry, uint32_t new_entry_size)

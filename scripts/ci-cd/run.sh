@@ -35,8 +35,19 @@ else
 fi
 echo
 
+echo "userspace config start"
+cmake --preset unittests --fresh
+build_status=$?
+if [ $build_status -eq 0 ]; then
+    echo "userspace config success"
+else
+    echo "userspace config failed"
+    exit 1
+fi
+echo
+
 echo "userspace build start"
-scripts/userspace/build.sh
+cmake --build --preset unittests --clean-first
 build_status=$?
 if [ $build_status -eq 0 ]; then
     echo "userspace build success"

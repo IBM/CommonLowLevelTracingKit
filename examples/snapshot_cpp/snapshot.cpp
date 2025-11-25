@@ -1,7 +1,7 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "CommonLowLevelTracingKit/snapshot.hpp"
+#include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
 #include <fstream> // IWYU pragma: keep
 #include <iostream>
 #include <stdlib.h>

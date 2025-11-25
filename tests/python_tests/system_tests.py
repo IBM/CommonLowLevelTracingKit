@@ -20,7 +20,7 @@ class system_tests(unittest.TestCase):
             with self.subTest(language=language):
                 file_content = \
                     '''
-                    #include "CommonLowLevelTracingKit/tracing.h"
+                    #include "CommonLowLevelTracingKit/tracing/tracing.h"
                     CLLTK_TRACEBUFFER(BUFFER, 4096);
                     
                     __attribute__((constructor))
@@ -44,7 +44,7 @@ class system_tests(unittest.TestCase):
             with self.subTest(language=language):
                 file_content = \
                     '''
-                    #include "CommonLowLevelTracingKit/tracing.h"
+                    #include "CommonLowLevelTracingKit/tracing/tracing.h"
                     static _clltk_tracebuffer_handler_t _clltk_BUFFER = {};
                     
                     int main(void)

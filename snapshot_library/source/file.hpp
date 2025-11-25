@@ -4,6 +4,7 @@
 #ifndef _CLLTK_SNAPSHOT_FILE_HEADER_HPP_
 #define _CLLTK_SNAPSHOT_FILE_HEADER_HPP_
 
+#include <bit>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -19,8 +20,8 @@ namespace CommonLowLevelTracingKit::snapshot
 struct File {
 	template <typename Type> const Type *at(off_t offset) const
 	{
-		const intptr_t base = reinterpret_cast<intptr_t>(content);
-		return reinterpret_cast<const Type *>(base + offset);
+		const intptr_t base = std::bit_cast<intptr_t>(content);
+		return std::bit_cast<const Type *>(base + offset);
 	}
 
 	std::string to_string(void) const;

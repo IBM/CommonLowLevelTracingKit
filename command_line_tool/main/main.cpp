@@ -1,8 +1,8 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "CommonLowLevelTracingKit/interface.hpp"
 #include "CommonLowLevelTracingKit/version.gen.h"
+#include "commands/interface.hpp"
 #include <cstdlib>
 #include <functional>
 #include <iostream>
@@ -61,8 +61,18 @@ CommonLowLevelTracingKit::cmd::interface::acquireMainApp(void)
 	return {*mainApp, std::unique_lock{mainAppLock}};
 }
 
+void call_all_init_functions(void)
+{
+	extern init_fn __start_clltk_cmdinit;
+	extern init_fn __stop_clltk_cmdinit;
+	for (init_fn *p = &__start_clltk_cmdinit; p < &__stop_clltk_cmdinit; p++) {
+		(*p)();
+	}
+}
+
 int main(int argc, const char **argv)
 {
+	call_all_init_functions();
 	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
 	if (argc == 1) {
 		std::cout << app.help() << std::endl;

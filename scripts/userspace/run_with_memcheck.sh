@@ -33,7 +33,8 @@ fi
 
 if [ -n "$FOUND_FILE" ]; then
     cd $OLD_CWD
-    valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --track-origins=yes -s -- $FOUND_FILE $EXE_ARGS
+    valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --track-origins=yes --errors-for-leak-kinds=all --error-exitcode=1 -s -- $FOUND_FILE $EXE_ARGS
+    exit $?
 else
     echo "File '$EXE_NAME' not found in $BUILD_DIR"
     exit 1

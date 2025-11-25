@@ -5,7 +5,7 @@
 #include <string>
 #include <tuple>
 
-#include "CommonLowLevelTracingKit/Decoder/Tracepoint.hpp"
+#include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 #include "definition.hpp"
 #include "file.hpp"
 #include "inline.hpp"

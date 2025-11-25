@@ -7,8 +7,8 @@
 #include <stdio.h>
 #include <string>
 
-#include "CommonLowLevelTracingKit/Decoder/Tracebuffer.hpp"
-#include "CommonLowLevelTracingKit/tracing.h"
+#include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "TracepointInternal.hpp"
 #include "helper.hpp"
 #include "tracebufferfile.hpp"

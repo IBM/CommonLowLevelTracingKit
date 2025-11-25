@@ -6,9 +6,9 @@
 
 // Choose implementation based on environment
 #if defined(__KERNEL__)
-#include "CommonLowLevelTracingKit/_kernel_tracing.h"
+#include "CommonLowLevelTracingKit/tracing/_kernel_tracing.h"
 #else
-#include "CommonLowLevelTracingKit/_user_tracing.h"
+#include "CommonLowLevelTracingKit/tracing/_user_tracing.h"
 #endif
 
 #define CLLTK_MAX_NAME_SIZE 255

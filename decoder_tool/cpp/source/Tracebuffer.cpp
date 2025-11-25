@@ -1,4 +1,4 @@
-#include "CommonLowLevelTracingKit/Decoder/Tracebuffer.hpp"
+#include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
 
 #include <array>
 #include <boost/sort/block_indirect_sort/block_indirect_sort.hpp>
@@ -10,8 +10,8 @@
 #include <stdint.h>
 #include <utility>
 
-#include "CommonLowLevelTracingKit/Decoder/Common.hpp"
-#include "CommonLowLevelTracingKit/Decoder/Tracepoint.hpp"
+#include "CommonLowLevelTracingKit/decoder/Common.hpp"
+#include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 #include "TracepointInternal.hpp"
 #include "archive.hpp"
 #include "definition.hpp"
@@ -86,7 +86,7 @@ TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) noexcept 
 				name(), "invalid file offset: value is less than minimum valid offset (0xFF)");
 		} else {
 			if (fileoffset > m_file_size) m_file_size = m_file.grow();
-			if (fileoffset > m_file_size)
+			if ((fileoffset + sizeof(uint32_t)) > m_file_size)
 				return ErrorTracepoint::make(name(), "file offset bigger than file");
 			if (m_file.get<char>(fileoffset) != '{')
 				return ErrorTracepoint::make(
@@ -94,6 +94,9 @@ TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) noexcept 
 								": expected '{', found '" +
 								std::string(1, m_file.get<char>(fileoffset)) + "'");
 			const uint32_t meta_size = m_file.get<uint32_t>(fileoffset + 1);
+			if (meta_size == 0) return ErrorTracepoint::make(name(), "invalid meta size (0)");
+			if ((fileoffset + meta_size) > m_file_size)
+				return ErrorTracepoint::make(name(), "meta entry bigger than file end");
 			const std::span<const uint8_t> meta{&m_file.getReference<const uint8_t>(fileoffset),
 												meta_size};
 			auto tp = std::make_unique<TracepointStatic>(name(), std::move(e), meta,
