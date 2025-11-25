@@ -70,10 +70,10 @@ class complex_c(unittest):
         data: pd.DataFrame = self.decoded
         DESTRUCTOR = data[data.tracebuffer == "DESTRUCTOR"]
         formatted = DESTRUCTOR['formatted'].tolist()
-        self.assertIn("destructor101", formatted)
+        self.assertNotIn("destructor101", formatted)
         self.assertIn("destructor102", formatted)
         self.assertIn("destructor103", formatted)
-        self.assertEqual(3 + TRACEBUFFER_INFO_COUNT, len(DESTRUCTOR))
+        self.assertEqual(2 + TRACEBUFFER_INFO_COUNT, len(DESTRUCTOR))
         pass 
     pass
 
@@ -121,12 +121,12 @@ class complex_cpp(unittest):
         data: pd.DataFrame = self.decoded
         DESTRUCTOR = data[data.tracebuffer == "DESTRUCTOR_CPP"]
         formatted = DESTRUCTOR['formatted'].tolist()
-        self.assertIn("void destructor101()", formatted)
+        self.assertNotIn("void destructor101()", formatted)
         self.assertIn("void destructor102()", formatted)
         self.assertIn("void destructor103()", formatted)
         self.assertIn("TestClass::TestClass()", formatted)
         self.assertIn("TestClass::~TestClass()", formatted)
-        self.assertEqual(5 + TRACEBUFFER_INFO_COUNT, len(DESTRUCTOR))
+        self.assertEqual(4 + TRACEBUFFER_INFO_COUNT, len(DESTRUCTOR))
         pass 
     pass
     

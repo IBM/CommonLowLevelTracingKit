@@ -47,7 +47,9 @@ __attribute__((constructor(101), used)) static void _clltk_constructor(void)
 		if (meta_size <= 0) {
 			continue;
 		}
-		_clltk_tracebuffer_init(handler);
+		if (!_clltk_tracebuffer_init(handler)) {
+			continue;
+		}
 		if (handler->runtime.file_offset == _clltk_file_offset_unset) {
 			handler->runtime.file_offset =
 				_clltk_tracebuffer_add_to_stack(handler, handler->meta.start, meta_size);
@@ -57,6 +59,7 @@ __attribute__((constructor(101), used)) static void _clltk_constructor(void)
 
 __attribute__((destructor(101), used)) static void _clltk_destructor(void)
 {
+	_clltk_terminate();
 	extern _clltk_tracebuffer_handler_t *const __start__clltk_tracebuffer_handler_ptr;
 	extern _clltk_tracebuffer_handler_t *const __stop__clltk_tracebuffer_handler_ptr;
 	for (_clltk_tracebuffer_handler_t *const *handler_ptr = &__start__clltk_tracebuffer_handler_ptr;
@@ -115,7 +118,9 @@ _CLLTK_EXTERN_C_END
 		/* ------- runtime time stuff ------- */                                                  \
                                                                                                   \
 		if ((_tb->runtime.tracebuffer == NULL)) {                                                 \
-			_clltk_tracebuffer_init(_tb);                                                         \
+			if (!_clltk_tracebuffer_init(_tb)) {                                                  \
+				break;                                                                            \
+			}                                                                                     \
 		}                                                                                         \
                                                                                                   \
 		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                     \
@@ -141,7 +146,9 @@ _CLLTK_EXTERN_C_END
 		/* ------- runtime time stuff ------- */                                                  \
                                                                                                   \
 		if ((_tb->runtime.tracebuffer == NULL)) {                                                 \
-			_clltk_tracebuffer_init(_tb);                                                         \
+			if (!_clltk_tracebuffer_init(_tb)) {                                                  \
+				break;                                                                            \
+			}                                                                                     \
 		}                                                                                         \
                                                                                                   \
 		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                     \

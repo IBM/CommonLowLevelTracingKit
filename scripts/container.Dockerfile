@@ -1,4 +1,4 @@
-FROM quay.io/fedora/fedora-minimal:41 as ci
+FROM quay.io/fedora/fedora-minimal:43 as ci
 RUN echo "build base-layers"
 
 USER root
@@ -42,7 +42,7 @@ RUN dnf -y install \
     libffi-devel \
     libarchive-devel \
     boost-devel \
-    java-17-openjdk-devel
+    java-21-openjdk-devel
 
 # clang-format specific version may need to be installed via LLVM repo or built from source.
 # Assuming clang-tools-extra provides clang-format; adjust if specific version is needed.

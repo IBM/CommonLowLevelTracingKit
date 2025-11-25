@@ -27,7 +27,7 @@ missing buffer size
     ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
     ...    CLLTK_TRACEBUFFER(BUFFER)
     ...    int main(void){}
-    ${error}=    Set Variable    macro "CLLTK_TRACEBUFFER" requires 2 arguments, but only 1 given
+    ${error}=    Set Variable    requires 2 arguments, but only 1 given
     source ${content} for C failes with    ${error}
     source ${content} for CPP failes with    ${error}
 
@@ -119,16 +119,3 @@ more formats than arguments
     source ${content} for C failes with    ${error}
     source ${content} for CPP failes with    ${error}
 
-tracepoint in none-static cpp inline function not possible due to gcc deficiencies
-    ${content}=    catenate    SEPARATOR=\n
-    ...    \#include "CommonLowLevelTracingKit/tracing/tracing.h"
-    ...    CLLTK_TRACEBUFFER(BUFFER, 1024)
-    ...    inline void foo(void){
-    ...        CLLTK_TRACEPOINT(BUFFER, "from inline");
-    ...    }
-    ...    int main(void){
-    ...        foo();
-    ...        CLLTK_TRACEPOINT(BUFFER, "from main");
-    ...    }
-    ${error}=    Set Variable   error: ‘_meta’ causes a section type conflict with 
-    source ${content} for CPP failes with    ${error}

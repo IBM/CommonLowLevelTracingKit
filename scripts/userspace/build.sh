@@ -23,6 +23,5 @@ fi
 
 TARGETS=$(echo "$*" | grep -oP "((--target|-t)(\s+\S+)+)")
 
-cmake -S ${ROOT_PATH} -B $BUILD_DIR
 cmake --build $BUILD_DIR $TARGETS -- -j$(nproc)
 

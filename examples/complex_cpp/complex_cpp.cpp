@@ -180,6 +180,7 @@ void typedef_example(void)
 CLLTK_TRACEBUFFER(INLINE_FUNCTIONS_CPP, 4096);
 inline void inline_func(void)
 {
+	CLLTK_TRACEPOINT(INLINE_FUNCTIONS_CPP, "CLLTK_TRACEPOINT in %s", __PRETTY_FUNCTION__);
 	CLLTK_DYN_TRACEPOINT("INLINE_FUNCTIONS_CPP", "CLLTK_DYN_TRACEPOINT in %s", __PRETTY_FUNCTION__);
 	clltk_dynamic_tracepoint_execution(
 		"INLINE_FUNCTIONS_CPP", __FILE__, __LINE__, 0, 0,
@@ -187,13 +188,28 @@ inline void inline_func(void)
 }
 static inline void static_inline_func(void)
 {
-	CLLTK_TRACEPOINT(INLINE_FUNCTIONS_CPP, "CLLTK_DYN_TRACEPOINT in %s", __PRETTY_FUNCTION__);
+	CLLTK_TRACEPOINT(INLINE_FUNCTIONS_CPP, "CLLTK_TRACEPOINT in %s", __PRETTY_FUNCTION__);
 	clltk_dynamic_tracepoint_execution(
 		"INLINE_FUNCTIONS_CPP", __FILE__, __LINE__, 0, 0,
 		"CommonLowLevelTracingKit_dynamic_tracepoint_execution in %s", __PRETTY_FUNCTION__);
 }
+struct InlineTest {
+	void foo(void)
+	{
+		CLLTK_TRACEPOINT(INLINE_FUNCTIONS_CPP, "CLLTK_TRACEPOINT in %s", __PRETTY_FUNCTION__);
+	}
+
+	static void bar(void)
+	{
+		CLLTK_TRACEPOINT(INLINE_FUNCTIONS_CPP, "CLLTK_TRACEPOINT in %s", __PRETTY_FUNCTION__);
+	}
+};
 void inline_functions(void)
 {
+	CLLTK_TRACEPOINT(INLINE_FUNCTIONS_CPP, "CLLTK_TRACEPOINT in %s", __PRETTY_FUNCTION__);
+	auto a = InlineTest{};
+	a.foo();
+	a.bar();
 	inline_func();
 	static_inline_func();
 }

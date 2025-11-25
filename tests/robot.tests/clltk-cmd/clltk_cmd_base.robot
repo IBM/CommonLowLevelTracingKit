@@ -11,15 +11,15 @@ Test Teardown       clean up env
 clltk-cmd without args
     ${output}=    CLLTK
     Should Be Equal As Integers    ${output.rc}    0
-    Should Start With    ${output.stdout}    Usage: clltk [OPTIONS] [SUBCOMMAND]
+    Should Contain    ${output.stdout}    clltk [OPTIONS] [SUBCOMMAND]
 
 clltk-cmd with help
     ${output}=    CLLTK    --help
     Should Be Equal As Integers    ${output.rc}    0
-    Should Start With    ${output.stdout}    Usage: clltk [OPTIONS] [SUBCOMMAND]
+    Should Contain    ${output.stdout}    clltk [OPTIONS] [SUBCOMMAND]
     ${output}=    CLLTK    -h
     Should Be Equal As Integers    ${output.rc}    0
-    Should Start With    ${output.stdout}    Usage: clltk [OPTIONS] [SUBCOMMAND]
+    Should Contain    ${output.stdout}    clltk [OPTIONS] [SUBCOMMAND]
 
 clltk-cmd version
     ${output}=    CLLTK    --version
