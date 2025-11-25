@@ -15,8 +15,8 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
                 "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-                "CMAKE_CXX_FLAGS_DEBUG": "-Og",
-                "CMAKE_C_FLAGS_DEBUG": "-Og",
+                "CMAKE_CXX_FLAGS_DEBUG": " -Og -g ",
+                "CMAKE_C_FLAGS_DEBUG": " -Og -g ",
                 "STANDALONE_PROJECT": "ON"
             }
         },
