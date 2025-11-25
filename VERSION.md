@@ -10,6 +10,7 @@ refactor: reorganize include structure and improve project layout
 - Restructured decoder_tool and snapshot_library to use consistent directory layout and public headers.
 - Fixed include paths in all examples, tests, and kernel module code to reflect new structure.
 - Removed redundant CMake logic and improved target properties.
+- Enable optimization
 ## 1.2.47
 - fix macros
 - add more cmake options

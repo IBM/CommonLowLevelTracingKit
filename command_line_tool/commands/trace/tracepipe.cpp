@@ -122,11 +122,9 @@ class Command
 	}
 };
 
-static int init_function() noexcept
+static void init_function() noexcept
 {
 	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
 	Command::AddCommand(app);
-	return 0;
 }
-
-static const int dummy = init_function();
+COMMAND_INIT(init_function);

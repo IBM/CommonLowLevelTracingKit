@@ -51,7 +51,7 @@ internal::File::File(const std::filesystem::path &a_path)
 	m_fd = open(a_path.c_str(), O_RDONLY);
 	if (m_fd == -1) { throw std::runtime_error("Error opening file: "s + strerror(errno)); }
 
-	m_base = (uintptr_t)mmap(nullptr, s_max_file_size, PROT_NONE, MAP_SHARED | MAP_POPULATE, m_fd, 0);
+	m_base = (uintptr_t)mmap(nullptr, s_max_file_size, PROT_NONE, MAP_SHARED, m_fd, 0);
 	if (m_base == (uintptr_t)MAP_FAILED) {
 		throw std::runtime_error("Error mapping file: "s + strerror(errno));
 	}

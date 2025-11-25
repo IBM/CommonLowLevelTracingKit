@@ -4,6 +4,7 @@
 #ifndef _CLLTK_SNAPSHOT_FILE_HEADER_HPP_
 #define _CLLTK_SNAPSHOT_FILE_HEADER_HPP_
 
+#include <bit>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -12,7 +13,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <vector>
-#include <bit>
 
 namespace CommonLowLevelTracingKit::snapshot
 {

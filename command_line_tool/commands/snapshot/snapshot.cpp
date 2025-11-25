@@ -65,11 +65,9 @@ static void add_snapshot_command(CLI::App &app)
 		[&]() { take_snapshot(output_file_name, tracepoints, compress, bucket_size, verbose); });
 }
 
-static int init_function() noexcept
+static void init_function() noexcept
 {
 	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
 	add_snapshot_command(app);
-	return 0;
 }
-
-static const int dummy = init_function();
+COMMAND_INIT(init_function);

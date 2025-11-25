@@ -69,11 +69,9 @@ static void add_create_tracepoint_command(CLI::App &app)
 	});
 }
 
-static int init_function() noexcept
+static void init_function() noexcept
 {
 	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
 	add_create_tracepoint_command(app);
-	return 0;
 }
-
-static const int dummy = init_function();
+COMMAND_INIT(init_function);
