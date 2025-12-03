@@ -64,9 +64,13 @@ static void add_decode_command(CLI::App &app)
 		->type_name("PATH");
 
 	static std::string output_path = "output.txt";
-	command->add_option("-o,--output", output_path, "Output file path")
-		->capture_default_str()
-		->type_name("FILE");
+	static auto output_option = command->add_option("-o,--output", output_path, "Output file path")
+	->capture_default_str()
+	->type_name("FILE");
+	
+	static bool use_stdout = false;
+	command->add_flag("--stdout", use_stdout, "Output to stdout instead of file")
+		->excludes(output_option);
 
 	static std::string tracebuffer_filter_str = "^.*$";
 	command
@@ -80,8 +84,8 @@ static void add_decode_command(CLI::App &app)
 	command->add_flag("--unsorted", [&](size_t) { sorted = false; }, "do not sort timestamps");
 
 	command->callback([&]() {
-		FILE *out = std::fopen(output_path.c_str(), "w+");
-		if (!out) {
+		FILE *out = use_stdout ? stdout : std::fopen(output_path.c_str(), "w+");
+		if (!use_stdout && !out) {
 			std::perror("fopen");
 			return 1;
 		}
@@ -123,7 +127,8 @@ static void add_decode_command(CLI::App &app)
 			}
 		}
 
-		std::fclose(out);
+		if (!use_stdout)
+			std::fclose(out);
 		return 0;
 	});
 }
