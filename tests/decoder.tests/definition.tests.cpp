@@ -5,6 +5,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -25,8 +26,11 @@ class DecoderDefinitionTest : public ::testing::Test
 
 	void SetUp() override
 	{
-		static int file_index = 0;
-		m_file_name = "_definition_test_" + std::to_string(file_index++) + ".bin";
+		// Use random number to avoid collisions when tests run in parallel processes
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<uint64_t> dist(0, UINT64_MAX);
+		m_file_name = "_definition_test_" + std::to_string(dist(gen)) + ".bin";
 		if (std::filesystem::exists(m_file_name)) { std::filesystem::remove(m_file_name); }
 		m_buffer.resize(1024, 0);
 	}
@@ -164,15 +168,29 @@ TEST_F(DecoderDefinitionTest, crc_valid_all_source_types)
 	definition_source_type_t types[] = {DEFINITION_SOURCE_UNKNOWN, DEFINITION_SOURCE_USERSPACE,
 										DEFINITION_SOURCE_KERNEL, DEFINITION_SOURCE_TTY};
 
+	int index = 0;
 	for (auto source_type : types) {
+		// Use unique file name for each iteration to avoid file locking issues
+		std::string iter_file = "_crc_test_" + std::to_string(index++) + ".bin";
+
 		memset(m_buffer.data(), 0, m_buffer.size());
 		size_t size = createV2Definition("crc_test", source_type);
-		auto file = writeAndOpen(size);
 
+		// Write to unique file
+		{
+			std::ofstream outFile(iter_file, std::ios::binary | std::ios::trunc);
+			outFile.write(reinterpret_cast<const char *>(m_buffer.data()),
+						  static_cast<std::streamsize>(size));
+		}
+
+		FilePart file(iter_file);
 		Definition def(file.get<FilePart>(0));
 
 		EXPECT_TRUE(def.isCrcValid())
 			<< "CRC should be valid for source_type=" << static_cast<int>(source_type);
+
+		// Clean up
+		std::filesystem::remove(iter_file);
 	}
 }
 

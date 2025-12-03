@@ -14,21 +14,7 @@
 
 namespace CommonLowLevelTracingKit::decoder {
 
-	/**
-	 * @brief Source type for trace origin identification
-	 *
-	 * Encoding uses 2 bits:
-	 *   00 = Unknown (legacy files or determined by extension)
-	 *   01 = Userspace
-	 *   10 = Kernel
-	 *   11 = TTY (kernel trace where buffer name is "TTY")
-	 */
-	enum class SourceType : uint8_t {
-		Unknown = 0x00,
-		Userspace = 0x01,
-		Kernel = 0x02,
-		TTY = 0x03,
-	};
+	// SourceType is defined in Tracepoint.hpp
 
 	struct Tracebuffer;
 	using TracepointFilterFunc = std::function<bool(const Tracepoint &)>;

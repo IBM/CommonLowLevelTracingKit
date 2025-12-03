@@ -39,11 +39,29 @@ static SourceType toPublicSourceType(DefinitionSourceType internal) {
 	return SourceType::Unknown;
 }
 
+// Determine source type from definition (V2) or file extension (V1 fallback)
+static SourceType determineSourceType(const fs::path &path, const Definition &def) {
+	SourceType src = toPublicSourceType(def.sourceType());
+	if (src == SourceType::Unknown) {
+		// V1 fallback: use file extension
+		if (path.extension() == ".clltk_ktrace") {
+			// Check if it's TTY by name
+			if (def.name() == "TTY") {
+				src = SourceType::TTY;
+			} else {
+				src = SourceType::Kernel;
+			}
+		} else if (path.extension() == ".clltk_trace") {
+			src = SourceType::Userspace;
+		}
+	}
+	return src;
+}
+
 class SyncTbInternal : public SyncTracebuffer {
   public:
 	SyncTbInternal(const fs::path &path)
-		: SyncTracebuffer(path,
-						  toPublicSourceType(TracebufferFile(path).getDefinition().sourceType()))
+		: SyncTracebuffer(path, determineSourceType(path, TracebufferFile(path).getDefinition()))
 		, m_tracebuffer_file(path)
 		, m_file(m_tracebuffer_file.getFilePart())
 		, m_file_size(m_file.getFileSize()) {
@@ -91,7 +109,7 @@ TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) noexcept 
 
 		const uint64_t fileoffset = get<uint64_t>(e->body()) & ((1ULL << 48) - 1);
 		if (fileoffset == 0x01) {
-			auto tp = std::make_unique<TracepointDynamic>(name(), std::move(e));
+			auto tp = std::make_unique<TracepointDynamic>(name(), std::move(e), m_source_type);
 			if (!filter || filter(*tp)) return tp;
 		} else if (fileoffset < 0xFF) {
 			return ErrorTracepoint::make(
@@ -112,7 +130,7 @@ TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) noexcept 
 			const std::span<const uint8_t> meta{&m_file.getReference<const uint8_t>(fileoffset),
 												meta_size};
 			auto tp = std::make_unique<TracepointStatic>(name(), std::move(e), meta,
-														 m_file.getFileInternal());
+														 m_file.getFileInternal(), m_source_type);
 			if (!filter || filter(*tp)) return tp;
 		}
 	}

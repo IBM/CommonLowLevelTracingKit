@@ -44,9 +44,16 @@ void print_tracepoint(FILE *f, int tb_name_size, const Tracepoint &p)
 {
 	const char *const tb = p.tracebuffer.data();
 	const int tb_size = p.tracebuffer.size();
-	fprintf(f, " %s | %s | %-*.*s | %5d | %5d | %s | %s | %ld\n", p.timestamp_str().c_str(),
-			p.date_and_time_str().c_str(), tb_name_size, tb_size, tb, p.pid(), p.tid(),
-			p.msg().data(), p.file().data(), p.line());
+	// Add '*' prefix for kernel traces in the tracebuffer name column
+	if (p.is_kernel()) {
+		fprintf(f, " %s | %s | *%-*.*s | %5d | %5d | %s | %s | %ld\n", p.timestamp_str().c_str(),
+				p.date_and_time_str().c_str(), tb_name_size - 1, tb_size, tb, p.pid(), p.tid(),
+				p.msg().data(), p.file().data(), p.line());
+	} else {
+		fprintf(f, " %s | %s | %-*.*s | %5d | %5d | %s | %s | %ld\n", p.timestamp_str().c_str(),
+				p.date_and_time_str().c_str(), tb_name_size, tb_size, tb, p.pid(), p.tid(),
+				p.msg().data(), p.file().data(), p.line());
+	}
 }
 void print_header(FILE *f, int tb_name_size)
 {

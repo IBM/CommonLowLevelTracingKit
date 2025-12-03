@@ -18,20 +18,20 @@ using ToString = CommonLowLevelTracingKit::decoder::source::low_level::ToString;
 using namespace std::string_literals;
 
 TraceEntryHead::TraceEntryHead(std::string_view tb_name, uint64_t n, uint64_t t,
-							   const std::span<const uint8_t> &body)
-	: Tracepoint(tb_name, n, t)
+							   const std::span<const uint8_t> &body, SourceType src)
+	: Tracepoint(tb_name, n, t, src)
 	, m_pid(get<uint32_t>(body, 6))
 	, m_tid(get<uint32_t>(body, 10)) {}
 
 TraceEntryHead::TraceEntryHead(std::string_view tb_name, uint64_t n, uint64_t t, uint32_t pid,
-							   uint32_t tid)
-	: Tracepoint(tb_name, n, t)
+							   uint32_t tid, SourceType src)
+	: Tracepoint(tb_name, n, t, src)
 	, m_pid(pid)
 	, m_tid(tid) {};
 
 TracepointDynamic::TracepointDynamic(const std::string_view tb_name,
-									 source::Ringbuffer::EntryPtr entry)
-	: TraceEntryHead(tb_name, entry->nr, get<uint64_t>(entry->body(), 14), entry->body())
+									 source::Ringbuffer::EntryPtr entry, SourceType src)
+	: TraceEntryHead(tb_name, entry->nr, get<uint64_t>(entry->body(), 14), entry->body(), src)
 	, e(std::move(entry)) {
 	const size_t size = e->body().size();
 	const char *const begin = reinterpret_cast<const char *>(e->body().begin().base());
@@ -62,8 +62,9 @@ TracepointDynamic::TracepointDynamic(const std::string_view tb_name,
 using FilePtr = source::internal::FilePtr;
 TracepointStatic::TracepointStatic(const std::string_view tb_name,
 								   source::Ringbuffer::EntryPtr &&entry,
-								   const std::span<const uint8_t> &arg_m, const FilePtr &&f)
-	: TraceEntryHead(tb_name, entry->nr, get<uint64_t>(entry->body(), 14), entry->body())
+								   const std::span<const uint8_t> &arg_m, const FilePtr &&f,
+								   SourceType src)
+	: TraceEntryHead(tb_name, entry->nr, get<uint64_t>(entry->body(), 14), entry->body(), src)
 	, m(arg_m)
 	, e(std::move(entry))
 	, m_keep_memory(f)
