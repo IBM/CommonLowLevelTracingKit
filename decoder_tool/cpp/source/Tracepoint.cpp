@@ -34,6 +34,13 @@ TracepointDynamic::TracepointDynamic(const std::string_view tb_name,
 	: TraceEntryHead(tb_name, entry->nr, get<uint64_t>(entry->body(), 14), entry->body(), src)
 	, e(std::move(entry)) {
 	const size_t size = e->body().size();
+	if (size < 22) {
+		// Malformed entry - not enough data for header
+		m_file = {};
+		m_line = 0;
+		m_msg = {};
+		return;
+	}
 	const char *const begin = reinterpret_cast<const char *>(e->body().begin().base());
 	const char *current = begin + 22;
 	size_t remaining = size - 22;
@@ -41,11 +48,21 @@ TracepointDynamic::TracepointDynamic(const std::string_view tb_name,
 	const char *const file_start = current;
 	const size_t file_len = strnlen(file_start, remaining);
 	m_file = std::string_view{file_start, file_len};
+	if (remaining < file_len + 1) {
+		m_line = 0;
+		m_msg = {};
+		return;
+	}
 	current += file_len + 1;
 	remaining -= file_len + 1;
 
-	const char *const line_start = current;
 	const size_t line_len = sizeof(size_t);
+	if (remaining < line_len) {
+		m_line = 0;
+		m_msg = {};
+		return;
+	}
+	const char *const line_start = current;
 	m_line = *std::bit_cast<const size_t *>(line_start);
 	current += line_len;
 	remaining -= line_len;
@@ -53,10 +70,6 @@ TracepointDynamic::TracepointDynamic(const std::string_view tb_name,
 	const char *const msg_start = current;
 	const size_t msg_len = strnlen(current, remaining);
 	m_msg = std::string_view{msg_start, msg_len};
-	current += msg_len + 1;
-	remaining -= msg_len + 1;
-	(void)remaining;
-	(void)current;
 }
 
 using FilePtr = source::internal::FilePtr;
@@ -78,7 +91,11 @@ TracepointStatic::TracepointStatic(const std::string_view tb_name,
 const std::string_view TracepointStatic::file() const noexcept {
 	if (m_file.empty()) {
 		const size_t offset = 12 + m_arg_count;
-		m_file = std::string_view{std::bit_cast<char *>(&m[std::min(m.size(), offset)])};
+		if (offset >= m.size()) {
+			m_file = "";
+		} else {
+			m_file = std::string_view{std::bit_cast<char *>(&m[offset])};
+		}
 	}
 	return m_file;
 }
