@@ -28,10 +28,22 @@ using namespace CommonLowLevelTracingKit::decoder;
 using namespace CommonLowLevelTracingKit::decoder::exception;
 using namespace source;
 
+// Convert internal DefinitionSourceType to public SourceType
+static SourceType toPublicSourceType(DefinitionSourceType internal) {
+	switch (internal) {
+	case DefinitionSourceType::Unknown: return SourceType::Unknown;
+	case DefinitionSourceType::Userspace: return SourceType::Userspace;
+	case DefinitionSourceType::Kernel: return SourceType::Kernel;
+	case DefinitionSourceType::TTY: return SourceType::TTY;
+	}
+	return SourceType::Unknown;
+}
+
 class SyncTbInternal : public SyncTracebuffer {
   public:
 	SyncTbInternal(const fs::path &path)
-		: SyncTracebuffer(path)
+		: SyncTracebuffer(path,
+						  toPublicSourceType(TracebufferFile(path).getDefinition().sourceType()))
 		, m_tracebuffer_file(path)
 		, m_file(m_tracebuffer_file.getFilePart())
 		, m_file_size(m_file.getFileSize()) {
@@ -135,8 +147,8 @@ bool SnapTracebuffer::is_formattable(const fs::path &path) {
 }
 
 SnapTracebuffer::SnapTracebuffer(const std::filesystem::path &path, TracepointCollection &&tps,
-								 std::string &&name, size_t size) noexcept
-	: Tracebuffer(path)
+								 std::string &&name, size_t size, SourceType source_type) noexcept
+	: Tracebuffer(path, source_type)
 	, tracepoints(std::move(tps))
 	, m_name(std::move(name))
 	, m_size(size) {}
@@ -147,6 +159,7 @@ SnapTracebufferPtr SnapTracebuffer::make(const fs::path &path,
 	if (!sync_tb) return {};
 	std::string name{sync_tb->name()};
 	auto size = sync_tb->size();
+	auto source_type = sync_tb->sourceType();
 	TracepointCollection tps{};
 	const uint64_t top_nr = sync_tb->current_top_entries_nr();
 
@@ -160,7 +173,8 @@ SnapTracebufferPtr SnapTracebuffer::make(const fs::path &path,
 		return a->timestamp_ns < b->timestamp_ns;
 	};
 	boost::sort::block_indirect_sort(tps.begin(), tps.end(), cmp);
-	SnapTracebufferPtr tb{new SnapTracebuffer(path, std::move(tps), std::move(name), size)};
+	SnapTracebufferPtr tb{
+		new SnapTracebuffer(path, std::move(tps), std::move(name), size, source_type)};
 	return tb;
 }
 static INLINE void add(SnapTracebufferCollection &out, SnapTracebufferCollection &&in) {

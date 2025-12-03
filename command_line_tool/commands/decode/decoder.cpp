@@ -21,6 +21,7 @@ using namespace CommonLowLevelTracingKit::cmd::interface;
 namespace decode = CommonLowLevelTracingKit::cmd::decode;
 using Tracebuffer = CommonLowLevelTracingKit::decoder::Tracebuffer;
 using SnapTracebuffer = CommonLowLevelTracingKit::decoder::SnapTracebuffer;
+using SourceType = CommonLowLevelTracingKit::decoder::SourceType;
 using Tracepoint = CommonLowLevelTracingKit::decoder::Tracepoint;
 using TracepointPtr = CommonLowLevelTracingKit::decoder::TracepointPtr;
 using TracepointCollection = CommonLowLevelTracingKit::decoder::TracepointCollection;
@@ -89,6 +90,15 @@ static void add_decode_command(CLI::App &app)
 	command->add_flag("--sorted", sorted, "sort all tracepoints by timestamp");
 	command->add_flag("--unsorted", [&](size_t) { sorted = false; }, "do not sort timestamps");
 
+	// Source filter (tracebuffer level)
+	static std::string source_filter_str = "all";
+	command
+		->add_option("--source", source_filter_str,
+					 "Filter by source: all, userspace, kernel, tty (kernel TTY traces only)")
+		->capture_default_str()
+		->check(CLI::IsMember({"all", "userspace", "kernel", "tty"}, CLI::ignore_case))
+		->type_name("SOURCE");
+
 	// Tracepoint filters
 	static std::vector<uint32_t> filter_pids;
 	static std::vector<uint32_t> filter_tids;
@@ -125,11 +135,50 @@ static void add_decode_command(CLI::App &app)
 
 		// Build tracebuffer filter
 		const boost::regex tracebuffer_filter_regex{tracebuffer_filter_str};
+
+		// Parse source filter
+		enum class SourceFilter { All, Userspace, Kernel, TTY };
+		SourceFilter source_filter = SourceFilter::All;
+		{
+			std::string src_lower = source_filter_str;
+			std::transform(src_lower.begin(), src_lower.end(), src_lower.begin(), ::tolower);
+			if (src_lower == "userspace")
+				source_filter = SourceFilter::Userspace;
+			else if (src_lower == "kernel")
+				source_filter = SourceFilter::Kernel;
+			else if (src_lower == "tty")
+				source_filter = SourceFilter::TTY;
+		}
+
 		const auto tbFilter = [&](const Tracebuffer &tb) {
+			// Check tracebuffer name regex
 			const bool tracebuffer_used =
 				boost::regex_match(tb.name().data(), tracebuffer_filter_regex);
 			if (!tracebuffer_used)
 				return false;
+
+			// Check source type filter
+			if (source_filter != SourceFilter::All) {
+				switch (source_filter) {
+				case SourceFilter::Userspace:
+					if (!tb.is_user_space())
+						return false;
+					break;
+				case SourceFilter::Kernel:
+					// Kernel includes all kernel traces (including TTY)
+					if (!tb.is_kernel_space())
+						return false;
+					break;
+				case SourceFilter::TTY:
+					// TTY is a special case of kernel trace
+					if (!tb.is_tty())
+						return false;
+					break;
+				default:
+					break;
+				}
+			}
+
 			return true;
 		};
 

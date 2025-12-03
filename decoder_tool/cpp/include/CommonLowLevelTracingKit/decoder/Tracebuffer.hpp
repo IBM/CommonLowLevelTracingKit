@@ -13,6 +13,23 @@
 #include "Tracepoint.hpp"
 
 namespace CommonLowLevelTracingKit::decoder {
+
+	/**
+	 * @brief Source type for trace origin identification
+	 *
+	 * Encoding uses 2 bits:
+	 *   00 = Unknown (legacy files or determined by extension)
+	 *   01 = Userspace
+	 *   10 = Kernel
+	 *   11 = TTY (kernel trace where buffer name is "TTY")
+	 */
+	enum class SourceType : uint8_t {
+		Unknown = 0x00,
+		Userspace = 0x01,
+		Kernel = 0x02,
+		TTY = 0x03,
+	};
+
 	struct Tracebuffer;
 	using TracepointFilterFunc = std::function<bool(const Tracepoint &)>;
 	using TracebufferFilterFunc = std::function<bool(const Tracebuffer &)>;
@@ -23,16 +40,52 @@ namespace CommonLowLevelTracingKit::decoder {
 		virtual const std::string_view name() const noexcept = 0;
 		virtual size_t size() const noexcept = 0;
 		virtual const std::filesystem::path &path() const noexcept { return m_path; };
+
+		/**
+		 * @brief Get source type from definition section (V2) or infer from extension (V1)
+		 */
+		virtual SourceType sourceType() const noexcept { return m_source_type; }
+
+		/**
+		 * @brief Check if trace is from userspace (for backwards compatibility)
+		 */
 		virtual bool is_user_space() const noexcept {
-			return m_path.extension() == std::string(".clltk_trace");
+			if (m_source_type == SourceType::Unknown) {
+				// Fall back to extension-based detection for V1 files
+				return m_path.extension() == std::string(".clltk_trace");
+			}
+			return m_source_type == SourceType::Userspace;
+		};
+
+		/**
+		 * @brief Check if trace is from kernel space
+		 */
+		virtual bool is_kernel_space() const noexcept {
+			if (m_source_type == SourceType::Unknown) {
+				// Fall back to extension-based detection for V1 files
+				return m_path.extension() == std::string(".clltk_ktrace");
+			}
+			return m_source_type == SourceType::Kernel || m_source_type == SourceType::TTY;
+		};
+
+		/**
+		 * @brief Check if trace is TTY (kernel trace with TTY buffer name)
+		 */
+		virtual bool is_tty() const noexcept {
+			if (m_source_type == SourceType::TTY) { return true; }
+			// Also check by name for V1 files or if source_type wasn't set correctly
+			return name() == "TTY" && is_kernel_space();
 		};
 
 		static bool is_tracebuffer(const std::filesystem::path &);
 
 	  protected:
-		Tracebuffer(const std::filesystem::path &path) noexcept
-			: m_path(path) {};
+		Tracebuffer(const std::filesystem::path &path,
+					SourceType source_type = SourceType::Unknown) noexcept
+			: m_path(path)
+			, m_source_type(source_type) {};
 		const std::filesystem::path m_path;
+		const SourceType m_source_type;
 	};
 
 	// Synchronous Tracebuffer
@@ -47,8 +100,9 @@ namespace CommonLowLevelTracingKit::decoder {
 		next(const TracepointFilterFunc & = TracepointFilterFunc{}) noexcept = 0;
 
 	  protected:
-		SyncTracebuffer(const std::filesystem::path &path) noexcept
-			: Tracebuffer(path) {};
+		SyncTracebuffer(const std::filesystem::path &path,
+						SourceType source_type = SourceType::Unknown) noexcept
+			: Tracebuffer(path, source_type) {};
 	};
 
 	struct SnapTracebuffer;
@@ -78,7 +132,7 @@ namespace CommonLowLevelTracingKit::decoder {
 
 	  protected:
 		SnapTracebuffer(const std::filesystem::path &, TracepointCollection &&, std::string &&,
-						size_t) noexcept;
+						size_t, SourceType source_type = SourceType::Unknown) noexcept;
 		const std::string m_name;
 		const uint64_t m_size;
 	};

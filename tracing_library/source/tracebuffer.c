@@ -4,6 +4,7 @@
 #include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "CommonLowLevelTracingKit/version.gen.h"
 
+#include "definition/definition.h"
 #include "ringbuffer/ringbuffer.h"
 #include "tracebuffer.h"
 
@@ -63,7 +64,7 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 
 	const size_t file_header_size = sizeof(file_head);
 	file_head.definition_section_offset = file_header_size;
-	const size_t definition_section_size = sizeof(uint64_t) + name_length;
+	const size_t definition_section_size = definition_calculate_size(name_length);
 
 	file_head.ringbuffer_section_offset =
 		round_up(file_head.definition_section_offset + definition_section_size, 8);
@@ -86,11 +87,17 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 	// write header
 	file_pwrite(temp_file, &file_head, sizeof(file_head), 0);
 
-	// write definition
-	file_pwrite(temp_file, &name_length, sizeof(name_length),
-				file_head.definition_section_offset); // definition body size
-	file_pwrite(temp_file, name, name_length,
-				file_head.definition_section_offset + sizeof(name_length)); // definition body
+	// write definition section (with CRC protection)
+	void *const definition_ptr =
+		(void *)((uint64_t)file_mmap_ptr(temp_file) + file_head.definition_section_offset);
+#if defined(__KERNEL__)
+	const definition_source_type_t source_type = DEFINITION_SOURCE_KERNEL;
+#else
+	const definition_source_type_t source_type = DEFINITION_SOURCE_USERSPACE;
+#endif
+	if (!definition_init(definition_ptr, name, name_length, source_type)) {
+		ERROR_AND_EXIT("failed to init definition section");
+	}
 
 	void *const ringbuffer_ptr =
 		(void *)((uint64_t)file_mmap_ptr(temp_file) + file_head.ringbuffer_section_offset);
