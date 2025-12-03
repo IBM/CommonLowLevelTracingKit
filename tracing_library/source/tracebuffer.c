@@ -169,6 +169,14 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 		ERROR_AND_EXIT("found incompatible file version (%" PRIu64 ") in %s", file_head.version,
 					   name);
 	}
+	{
+		const uint8_t calculated_crc =
+			crc8_continue(0, (const uint8_t *)&file_head, sizeof(file_head) - 1);
+		if (file_head.crc != calculated_crc) {
+			ERROR_AND_EXIT("file header CRC mismatch in %s (expected 0x%02x, got 0x%02x)", name,
+						   calculated_crc, file_head.crc);
+		}
+	}
 
 	void *const ringbuffer_ptr = (void *)((uint64_t)file_mmap_ptr(tracebuffer_handler->file) +
 										  file_head.ringbuffer_section_offset);
@@ -185,7 +193,7 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 	}
 	unique_stack_header_t *const stack_header =
 		(void *)((uint64_t)file_mmap_ptr(tracebuffer_handler->file) +
-				 file_head.ringbuffer_section_offset);
+				 file_head.stack_section_offset);
 	tracebuffer_handler->stack_mutex = &stack_header->mutex;
 
 	vector_add(&tracebufferes, tracebuffer_handler);

@@ -51,6 +51,11 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 		return;
 	}
 
+	if (unlikely(types->count > 10)) {
+		ERROR_LOG("to much arguments (%d) in clltk tracepoint", types->count);
+		return;
+	}
+
 	traceentry_head_t traceentry_head = {
 		.in_file_offset = in_file_offset & ((1ull << 48) - 1),
 		.pid = info_get_process_id(),
@@ -63,17 +68,13 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 	va_list args;
 	va_start(args, format);
 
-	if (unlikely(types->count > 10)) {
-		ERROR_LOG("to much arguments (%d) in clltk tracepoint", types->count);
-		return;
-	}
-
 	uint32_t arg_sizes[10] = {0};
 	raw_entry_size += get_argument_sizes(format, arg_sizes, types, args);
 
 	// create entry
 	if (unlikely(raw_entry_size >= UINT16_MAX)) {
 		ERROR_LOG("raw entry size (%ld) bigger than max size in %s:%d", raw_entry_size, file, line);
+		va_end(args);
 		return;
 	}
 

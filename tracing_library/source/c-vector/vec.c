@@ -46,7 +46,7 @@ vector vector_create(void)
 
 void _vector_free(vector *vec)
 {
-	if (vec) {
+	if (vec && *vec) {
 		memory_heap_free(vector_get_data(*vec));
 		*vec = NULL;
 	}

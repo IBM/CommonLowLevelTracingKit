@@ -52,7 +52,7 @@ static const char *get_root_path(void)
 	if (root_path)
 		return root_path;
 
-	static pthread_mutex_t lock;
+	static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 	if (pthread_mutex_lock(&lock) != 0)
 		ERROR_AND_EXIT("failed to acquire lock");
 
@@ -137,7 +137,7 @@ file_t *file_try_get(const char *name)
 	}
 
 	file->file_descriptor = open(file->path, O_RDWR | O_SYNC, ALL_READ_AND_WRITE);
-	if (file->file_descriptor <= 0) {
+	if (file->file_descriptor < 0) {
 		free(file->path);
 		free(file->name);
 		free(file);
@@ -337,6 +337,10 @@ void file_reset(void)
 {
 	const char *const root = get_root_path();
 	DIR *directory = opendir(root);
+	if (directory == NULL) {
+		ERROR_LOG("failed to open directory %s: %s", root, strerror(errno));
+		return;
+	}
 	struct dirent *iterator = NULL;
 
 	// loop over all files in path
