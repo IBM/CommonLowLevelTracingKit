@@ -49,7 +49,6 @@ RUN dnf -y install \
 RUN update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format 100
 
 RUN pip3 install \
-    robotframework \
     numpy \
     pandas
 

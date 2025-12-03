@@ -55,8 +55,7 @@
 				"donjayamanne.python-environment-manager",
 				"KevinRose.vsc-python-indent",
 				"betwo.vscode-linux-binary-preview",
-				"asciidoctor.asciidoctor-vscode",
-				"robocorp.robotframework-lsp"
+				"asciidoctor.asciidoctor-vscode"
 			]
 		}
 	}
