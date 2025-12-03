@@ -12,6 +12,11 @@
 #include "Common.hpp"
 #include "Tracepoint.hpp"
 
+namespace CommonLowLevelTracingKit::decoder::source {
+	// Forward declaration for pool type - actual definition in pool.hpp
+	class TracepointPool;
+} // namespace CommonLowLevelTracingKit::decoder::source
+
 namespace CommonLowLevelTracingKit::decoder {
 
 	// SourceType is defined in Tracepoint.hpp
@@ -82,8 +87,22 @@ namespace CommonLowLevelTracingKit::decoder {
 		~SyncTracebuffer() noexcept override = default;
 		[[nodiscard]] virtual uint64_t pending() noexcept = 0;
 		virtual uint64_t current_top_entries_nr() const noexcept = 0;
+
+		/**
+		 * @brief Get next tracepoint using heap allocation
+		 */
 		[[nodiscard]] virtual TracepointPtr
 		next(const TracepointFilterFunc & = TracepointFilterFunc{}) noexcept = 0;
+
+		/**
+		 * @brief Get next tracepoint using pool allocation
+		 *
+		 * Allocates from the provided pool for better performance in live streaming.
+		 * Falls back to heap allocation if pool is exhausted.
+		 */
+		[[nodiscard]] virtual TracepointPtr
+		next_pooled(source::TracepointPool &pool,
+					const TracepointFilterFunc & = TracepointFilterFunc{}) noexcept = 0;
 
 	  protected:
 		SyncTracebuffer(const std::filesystem::path &path,

@@ -19,7 +19,30 @@ namespace CommonLowLevelTracingKit::decoder {
 	};
 
 	struct Tracepoint;
-	using TracepointPtr = std::unique_ptr<Tracepoint>;
+
+	/**
+	 * @brief Deleter for Tracepoint that supports both heap and pool allocation
+	 *
+	 * When pool is nullptr, uses delete (heap allocation).
+	 * When pool is set, returns memory to the pool.
+	 * The deallocator is a type-erased function to avoid exposing pool types in public header.
+	 */
+	struct EXPORT TracepointDeleter {
+		using DeallocFunc = void (*)(void *pool, void *ptr);
+
+		constexpr TracepointDeleter() noexcept = default;
+		constexpr TracepointDeleter(void *pool, DeallocFunc dealloc) noexcept
+			: m_pool(pool)
+			, m_dealloc(dealloc) {}
+
+		void operator()(Tracepoint *ptr) const noexcept;
+
+	  private:
+		void *m_pool{nullptr};
+		DeallocFunc m_dealloc{nullptr};
+	};
+
+	using TracepointPtr = std::unique_ptr<Tracepoint, TracepointDeleter>;
 	using TracepointCollection = std::vector<TracepointPtr>;
 	struct EXPORT Tracepoint {
 		enum class Type {

@@ -3,7 +3,9 @@
 #include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 #include "file.hpp"
 #include "inline.hpp"
+#include "pool.hpp"
 #include "ringbuffer.hpp"
+#include <new>
 #include <ranges>
 #include <type_traits>
 
@@ -19,6 +21,48 @@ INLINE static constexpr T get(R r, size_t offset = 0) {
 }
 
 namespace CommonLowLevelTracingKit::decoder {
+
+	/**
+	 * @brief Create a heap-allocated TracepointPtr (uses default deleter behavior)
+	 */
+	template <typename T, typename... Args>
+	[[nodiscard]] INLINE TracepointPtr make_tracepoint(Args &&...args) {
+		T *raw = new T(std::forward<Args>(args)...);
+		return TracepointPtr(raw, TracepointDeleter{});
+	}
+
+	/**
+	 * @brief Deallocator function for tracepoint pool (used by TracepointDeleter)
+	 */
+	inline void tracepoint_pool_deallocate(void *pool, void *ptr) noexcept {
+		static_cast<source::TracepointPool *>(pool)->deallocate(ptr);
+	}
+
+	/**
+	 * @brief Create a pool-allocated TracepointPtr
+	 *
+	 * Allocates from the given pool. If pool allocation fails, falls back to heap.
+	 */
+	template <typename T, typename... Args>
+	[[nodiscard]] INLINE TracepointPtr make_pooled_tracepoint(source::TracepointPool &pool,
+															  Args &&...args) {
+		static_assert(sizeof(T) <= source::TRACEPOINT_SLOT_SIZE,
+					  "Tracepoint type too large for pool");
+
+		void *mem = pool.allocate();
+		if (mem != nullptr) {
+			try {
+				T *obj = new (mem) T(std::forward<Args>(args)...);
+				return TracepointPtr(obj, TracepointDeleter{&pool, tracepoint_pool_deallocate});
+			} catch (...) {
+				pool.deallocate(mem);
+				throw;
+			}
+		}
+
+		// Fallback to heap allocation
+		return make_tracepoint<T>(std::forward<Args>(args)...);
+	}
 
 	struct TraceEntryHead : public Tracepoint {
 		const uint32_t m_pid;
@@ -107,9 +151,9 @@ namespace CommonLowLevelTracingKit::decoder {
 		const std::string_view msg() const override { return m_msg; }
 
 		template <class... Args>
-		static INLINE constexpr auto make(const std::string_view tb_name, Args &&...args) {
-			return std::make_unique<VirtualTracepoint>(std::string{tb_name.data(), tb_name.size()},
-													   std::forward<Args>(args)...);
+		static INLINE auto make(const std::string_view tb_name, Args &&...args) {
+			return make_tracepoint<VirtualTracepoint>(std::string{tb_name.data(), tb_name.size()},
+													  std::forward<Args>(args)...);
 		}
 
 	  protected:

@@ -71,8 +71,9 @@ class SyncTbInternal : public SyncTracebuffer {
 	const std::string_view name() const noexcept override;
 	size_t size() const noexcept override;
 
-	TracepointPtr next() noexcept;
 	TracepointPtr next(const TracepointFilterFunc &filter) noexcept override;
+	TracepointPtr next_pooled(TracepointPool &pool,
+							  const TracepointFilterFunc &filter) noexcept override;
 	uint64_t pending() noexcept override;
 	uint64_t current_top_entries_nr() const noexcept override;
 
@@ -80,7 +81,6 @@ class SyncTbInternal : public SyncTracebuffer {
 	TracebufferFile m_tracebuffer_file;
 	const FilePart m_file;
 	size_t m_file_size;
-	const TracepointFilterFunc m_filter;
 };
 SyncTracebufferPtr SyncTracebuffer::make(const fs::path &path) {
 	if (is_tracebuffer(path)) try {
@@ -109,7 +109,7 @@ TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) noexcept 
 
 		const uint64_t fileoffset = get<uint64_t>(e->body()) & ((1ULL << 48) - 1);
 		if (fileoffset == 0x01) {
-			auto tp = std::make_unique<TracepointDynamic>(name(), std::move(e), m_source_type);
+			auto tp = make_tracepoint<TracepointDynamic>(name(), std::move(e), m_source_type);
 			if (!filter || filter(*tp)) return tp;
 		} else if (fileoffset < 0xFF) {
 			return ErrorTracepoint::make(
@@ -129,8 +129,47 @@ TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) noexcept 
 				return ErrorTracepoint::make(name(), "meta entry bigger than file end");
 			const std::span<const uint8_t> meta{&m_file.getReference<const uint8_t>(fileoffset),
 												meta_size};
-			auto tp = std::make_unique<TracepointStatic>(name(), std::move(e), meta,
-														 m_file.getFileInternal(), m_source_type);
+			auto tp = make_tracepoint<TracepointStatic>(name(), std::move(e), meta,
+														m_file.getFileInternal(), m_source_type);
+			if (!filter || filter(*tp)) return tp;
+		}
+	}
+}
+
+TracepointPtr SyncTbInternal::next_pooled(TracepointPool &pool,
+										  const TracepointFilterFunc &filter) noexcept {
+	while (true) {
+		auto ringbuffer_entry = m_tracebuffer_file.getRingbuffer().getNextEntry();
+		if (auto s = std::get_if<std::string>(&ringbuffer_entry))
+			return ErrorTracepoint::make(name(), *s);
+		auto &e = std::get<Ringbuffer::EntryPtr>(ringbuffer_entry);
+		if (e == nullptr) return {};
+
+		const uint64_t fileoffset = get<uint64_t>(e->body()) & ((1ULL << 48) - 1);
+		if (fileoffset == 0x01) {
+			auto tp = make_pooled_tracepoint<TracepointDynamic>(pool, name(), std::move(e),
+																m_source_type);
+			if (!filter || filter(*tp)) return tp;
+		} else if (fileoffset < 0xFF) {
+			return ErrorTracepoint::make(
+				name(), "invalid file offset: value is less than minimum valid offset (0xFF)");
+		} else {
+			if (fileoffset > m_file_size) m_file_size = m_file.grow();
+			if ((fileoffset + sizeof(uint32_t)) > m_file_size)
+				return ErrorTracepoint::make(name(), "file offset bigger than file");
+			if (m_file.get<char>(fileoffset) != '{')
+				return ErrorTracepoint::make(
+					name(), "invalid meta magic at offset " + std::to_string(fileoffset) +
+								": expected '{', found '" +
+								std::string(1, m_file.get<char>(fileoffset)) + "'");
+			const uint32_t meta_size = m_file.get<uint32_t>(fileoffset + 1);
+			if (meta_size == 0) return ErrorTracepoint::make(name(), "invalid meta size (0)");
+			if ((fileoffset + meta_size) > m_file_size)
+				return ErrorTracepoint::make(name(), "meta entry bigger than file end");
+			const std::span<const uint8_t> meta{&m_file.getReference<const uint8_t>(fileoffset),
+												meta_size};
+			auto tp = make_pooled_tracepoint<TracepointStatic>(
+				pool, name(), std::move(e), meta, m_file.getFileInternal(), m_source_type);
 			if (!filter || filter(*tp)) return tp;
 		}
 	}

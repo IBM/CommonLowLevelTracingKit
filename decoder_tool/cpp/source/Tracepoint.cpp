@@ -17,6 +17,20 @@ using namespace CommonLowLevelTracingKit::decoder;
 using ToString = CommonLowLevelTracingKit::decoder::source::low_level::ToString;
 using namespace std::string_literals;
 
+void TracepointDeleter::operator()(Tracepoint *ptr) const noexcept {
+	if (ptr == nullptr) return;
+
+	ptr->~Tracepoint(); // Call destructor
+
+	if (m_pool != nullptr && m_dealloc != nullptr) {
+		// Return to pool
+		m_dealloc(m_pool, ptr);
+	} else {
+		// Heap allocation - use operator delete
+		::operator delete(ptr);
+	}
+}
+
 TraceEntryHead::TraceEntryHead(std::string_view tb_name, uint64_t n, uint64_t t,
 							   const std::span<const uint8_t> &body, SourceType src)
 	: Tracepoint(tb_name, n, t, src)
