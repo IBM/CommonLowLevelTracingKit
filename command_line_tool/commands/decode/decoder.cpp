@@ -4,13 +4,16 @@
 #include <boost/heap/fibonacci_heap.hpp>
 #include <boost/heap/priority_queue.hpp>
 #include <boost/regex.hpp>
+#include <chrono>
 #include <functional>
+#include <iostream>
 #include <string>
 #include <vector>
 
 #include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
 #include "commands/interface.hpp"
 #include "filter.hpp"
+#include "timespec.hpp"
 
 using namespace std::string_literals;
 
@@ -93,8 +96,8 @@ static void add_decode_command(CLI::App &app)
 	static std::string filter_msg_regex;
 	static std::string filter_file;
 	static std::string filter_file_regex;
-	static uint64_t filter_time_min = 0;
-	static uint64_t filter_time_max = UINT64_MAX;
+	static std::string filter_time_min_str;
+	static std::string filter_time_max_str;
 
 	command->add_option("--pid", filter_pids, "Filter by process ID(s)")->type_name("PID");
 	command->add_option("--tid", filter_tids, "Filter by thread ID(s)")->type_name("TID");
@@ -104,10 +107,14 @@ static void add_decode_command(CLI::App &app)
 	command->add_option("--file", filter_file, "Filter by file path substring")->type_name("TEXT");
 	command->add_option("--file-regex", filter_file_regex, "Filter by file path regex")
 		->type_name("REGEX");
-	command->add_option("--time-min", filter_time_min, "Minimum timestamp in nanoseconds")
-		->type_name("NS");
-	command->add_option("--time-max", filter_time_max, "Maximum timestamp in nanoseconds")
-		->type_name("NS");
+	command
+		->add_option("--time-min", filter_time_min_str,
+					 "Minimum time: float seconds, datetime, now[-offset], min[+offset], -offset")
+		->type_name("TIME");
+	command
+		->add_option("--time-max", filter_time_max_str,
+					 "Maximum time: float seconds, datetime, now[-offset], max[-offset], -offset")
+		->type_name("TIME");
 
 	command->callback([&]() {
 		FILE *out = use_stdout ? stdout : std::fopen(output_path.c_str(), "w+");
@@ -126,10 +133,34 @@ static void add_decode_command(CLI::App &app)
 			return true;
 		};
 
-		// Build tracepoint filter
+		// Parse time specifications
+		decode::TimeSpec time_min_spec, time_max_spec;
+		time_max_spec.anchor = decode::TimeSpec::Anchor::Absolute;
+		time_max_spec.absolute_ns = UINT64_MAX;
+
+		if (!filter_time_min_str.empty()) {
+			try {
+				time_min_spec = decode::TimeSpec::parse(filter_time_min_str);
+			} catch (const std::invalid_argument &e) {
+				std::cerr << "Invalid --time-min: " << e.what() << std::endl;
+				return 1;
+			}
+		}
+		if (!filter_time_max_str.empty()) {
+			try {
+				time_max_spec = decode::TimeSpec::parse(filter_time_max_str);
+			} catch (const std::invalid_argument &e) {
+				std::cerr << "Invalid --time-max: " << e.what() << std::endl;
+				return 1;
+			}
+		}
+
+		// Check if we need trace bounds to resolve time specs
+		bool needs_trace_bounds =
+			time_min_spec.needs_trace_bounds() || time_max_spec.needs_trace_bounds();
+
+		// Build tracepoint filter (without time initially if we need bounds)
 		decode::TracepointFilter tpFilter;
-		tpFilter.time_min = filter_time_min;
-		tpFilter.time_max = filter_time_max;
 		tpFilter.pids.insert(filter_pids.begin(), filter_pids.end());
 		tpFilter.tids.insert(filter_tids.begin(), filter_tids.end());
 		if (!filter_msg_regex.empty())
@@ -140,14 +171,29 @@ static void add_decode_command(CLI::App &app)
 			tpFilter.set_file_filter(filter_file_regex, true);
 		else if (!filter_file.empty())
 			tpFilter.set_file_filter(filter_file, false);
-		tpFilter.configure();
 
-		// Collect tracebuffers with optional tracepoint filter
-		auto tbs =
-			tpFilter.has_any_filter
-				? SnapTracebuffer::collect(input_path, tbFilter,
-										   [&](const Tracepoint &tp) { return tpFilter(tp); })
-				: SnapTracebuffer::collect(input_path, tbFilter);
+		// Collect tracebuffers (without time filter for now)
+		auto tbs = SnapTracebuffer::collect(input_path, tbFilter);
+
+		// Find trace time bounds
+		uint64_t trace_min_ns = UINT64_MAX;
+		uint64_t trace_max_ns = 0;
+		for (const auto &tb : tbs) {
+			for (const auto &tp : tb->tracepoints) {
+				trace_min_ns = std::min(trace_min_ns, tp->timestamp_ns);
+				trace_max_ns = std::max(trace_max_ns, tp->timestamp_ns);
+			}
+		}
+
+		// Get current time
+		auto now = std::chrono::system_clock::now();
+		uint64_t now_ns = static_cast<uint64_t>(
+			std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count());
+
+		// Resolve time specifications
+		tpFilter.time_min = time_min_spec.resolve(now_ns, trace_min_ns, trace_max_ns);
+		tpFilter.time_max = time_max_spec.resolve(now_ns, trace_min_ns, trace_max_ns);
+		tpFilter.configure();
 
 		size_t tb_name_size = 0;
 		for (const auto &tb : tbs)
@@ -162,8 +208,10 @@ static void add_decode_command(CLI::App &app)
 				comp};
 			for (const auto &tb : tbs) {
 				TracepointCollection &tb_tps = tb->tracepoints;
-				for (auto &tp : tb_tps)
-					tps.emplace(std::move(tp));
+				for (auto &tp : tb_tps) {
+					if (tpFilter(*tp))
+						tps.emplace(std::move(tp));
+				}
 			}
 			while (!tps.empty()) {
 				const auto tp = tps.top().get();
@@ -172,8 +220,10 @@ static void add_decode_command(CLI::App &app)
 			}
 		} else {
 			for (const auto &tb : tbs) {
-				for (const auto &tp : tb->tracepoints)
-					print_tracepoint(out, tb_name_size, *tp);
+				for (const auto &tp : tb->tracepoints) {
+					if (tpFilter(*tp))
+						print_tracepoint(out, tb_name_size, *tp);
+				}
 			}
 		}
 
