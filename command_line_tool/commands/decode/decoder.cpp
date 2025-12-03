@@ -6,13 +6,16 @@
 #include <boost/regex.hpp>
 #include <functional>
 #include <string>
+#include <vector>
 
 #include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
 #include "commands/interface.hpp"
+#include "filter.hpp"
 
 using namespace std::string_literals;
 
 using namespace CommonLowLevelTracingKit::cmd::interface;
+namespace decode = CommonLowLevelTracingKit::cmd::decode;
 using Tracebuffer = CommonLowLevelTracingKit::decoder::Tracebuffer;
 using SnapTracebuffer = CommonLowLevelTracingKit::decoder::SnapTracebuffer;
 using Tracepoint = CommonLowLevelTracingKit::decoder::Tracepoint;
@@ -65,9 +68,9 @@ static void add_decode_command(CLI::App &app)
 
 	static std::string output_path = "output.txt";
 	static auto output_option = command->add_option("-o,--output", output_path, "Output file path")
-	->capture_default_str()
-	->type_name("FILE");
-	
+									->capture_default_str()
+									->type_name("FILE");
+
 	static bool use_stdout = false;
 	command->add_flag("--stdout", use_stdout, "Output to stdout instead of file")
 		->excludes(output_option);
@@ -83,12 +86,37 @@ static void add_decode_command(CLI::App &app)
 	command->add_flag("--sorted", sorted, "sort all tracepoints by timestamp");
 	command->add_flag("--unsorted", [&](size_t) { sorted = false; }, "do not sort timestamps");
 
+	// Tracepoint filters
+	static std::vector<uint32_t> filter_pids;
+	static std::vector<uint32_t> filter_tids;
+	static std::string filter_msg;
+	static std::string filter_msg_regex;
+	static std::string filter_file;
+	static std::string filter_file_regex;
+	static uint64_t filter_time_min = 0;
+	static uint64_t filter_time_max = UINT64_MAX;
+
+	command->add_option("--pid", filter_pids, "Filter by process ID(s)")->type_name("PID");
+	command->add_option("--tid", filter_tids, "Filter by thread ID(s)")->type_name("TID");
+	command->add_option("--msg", filter_msg, "Filter by message substring")->type_name("TEXT");
+	command->add_option("--msg-regex", filter_msg_regex, "Filter by message regex")
+		->type_name("REGEX");
+	command->add_option("--file", filter_file, "Filter by file path substring")->type_name("TEXT");
+	command->add_option("--file-regex", filter_file_regex, "Filter by file path regex")
+		->type_name("REGEX");
+	command->add_option("--time-min", filter_time_min, "Minimum timestamp in nanoseconds")
+		->type_name("NS");
+	command->add_option("--time-max", filter_time_max, "Maximum timestamp in nanoseconds")
+		->type_name("NS");
+
 	command->callback([&]() {
 		FILE *out = use_stdout ? stdout : std::fopen(output_path.c_str(), "w+");
 		if (!use_stdout && !out) {
 			std::perror("fopen");
 			return 1;
 		}
+
+		// Build tracebuffer filter
 		const boost::regex tracebuffer_filter_regex{tracebuffer_filter_str};
 		const auto tbFilter = [&](const Tracebuffer &tb) {
 			const bool tracebuffer_used =
@@ -97,7 +125,29 @@ static void add_decode_command(CLI::App &app)
 				return false;
 			return true;
 		};
-		auto tbs = SnapTracebuffer::collect(input_path, tbFilter);
+
+		// Build tracepoint filter
+		decode::TracepointFilter tpFilter;
+		tpFilter.time_min = filter_time_min;
+		tpFilter.time_max = filter_time_max;
+		tpFilter.pids.insert(filter_pids.begin(), filter_pids.end());
+		tpFilter.tids.insert(filter_tids.begin(), filter_tids.end());
+		if (!filter_msg_regex.empty())
+			tpFilter.set_msg_filter(filter_msg_regex, true);
+		else if (!filter_msg.empty())
+			tpFilter.set_msg_filter(filter_msg, false);
+		if (!filter_file_regex.empty())
+			tpFilter.set_file_filter(filter_file_regex, true);
+		else if (!filter_file.empty())
+			tpFilter.set_file_filter(filter_file, false);
+		tpFilter.configure();
+
+		// Collect tracebuffers with optional tracepoint filter
+		auto tbs =
+			tpFilter.has_any_filter
+				? SnapTracebuffer::collect(input_path, tbFilter,
+										   [&](const Tracepoint &tp) { return tpFilter(tp); })
+				: SnapTracebuffer::collect(input_path, tbFilter);
 
 		size_t tb_name_size = 0;
 		for (const auto &tb : tbs)
