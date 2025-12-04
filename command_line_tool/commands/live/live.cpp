@@ -388,6 +388,10 @@ static void add_live_command(CLI::App &app)
 {
 	CLI::App *const command =
 		app.add_subcommand("live", "Live streaming decoder for real-time trace monitoring");
+	command->description(
+		"Monitor tracebuffers in real-time and output tracepoints as they arrive.\n"
+		"Uses a reader thread to poll tracebuffers and an output thread for ordered display.\n"
+		"Supports graceful shutdown via Ctrl+C (SIGINT/SIGTERM). Press twice to force exit.");
 
 	// Use static variables for CLI option storage, but reset defaults in callback
 	static std::string input_path{};
@@ -405,36 +409,42 @@ static void add_live_command(CLI::App &app)
 
 	command
 		->add_option("input", input_path,
-					 "Path to tracebuffer file or directory containing tracebuffers")
+					 "Path to tracebuffer file or directory containing tracebuffers to monitor")
 		->envname("CLLTK_TRACING_PATH")
 		->required()
 		->type_name("PATH");
 
 	command
 		->add_option("-t,--tracebuffer-filter", tracebuffer_filter_str,
-					 "Tracebuffer name filter as ECMAScript regex")
+					 "Filter tracebuffers by name using ECMAScript regex")
 		->default_val(default_filter)
 		->type_name("REGEX");
 
 	command
 		->add_option("-b,--buffer-size", buffer_size,
-					 "Maximum number of tracepoints to buffer (0 = unlimited)")
+					 "Maximum tracepoints to buffer in memory.\n"
+					 "Older tracepoints are dropped when limit is reached.\n"
+					 "Set to 0 for unlimited (may consume large memory)")
 		->default_val(default_buffer_size)
 		->type_name("SIZE");
 
 	command
 		->add_option("-d,--order-delay", order_delay_ms,
-					 "Delay in milliseconds for timestamp ordering (higher = better ordering)")
+					 "Delay window in milliseconds for timestamp ordering.\n"
+					 "Higher values improve ordering accuracy but increase latency.\n"
+					 "Tracepoints are held until this delay passes to allow reordering")
 		->default_val(default_order_delay_ms)
 		->type_name("MS");
 
 	command
 		->add_option("-p,--poll-interval", poll_interval_ms,
-					 "Poll interval in milliseconds when no tracepoints pending")
+					 "Poll interval in milliseconds when no tracepoints are pending.\n"
+					 "Lower values reduce latency but increase CPU usage")
 		->default_val(default_poll_interval_ms)
 		->type_name("MS");
 
-	command->add_flag("-s,--summary", show_summary, "Show statistics summary on exit");
+	command->add_flag("-s,--summary", show_summary,
+					  "Show statistics summary on exit (read/output/dropped counts, buffer usage)");
 
 	command->callback([&]() {
 		// Reset global signal state (for multiple runs in same process)

@@ -63,45 +63,58 @@ void print_header(FILE *f, int tb_name_size)
 
 static void add_decode_command(CLI::App &app)
 {
-	CLI::App *const command = app.add_subcommand("de", "format one or multiple traces");
+	CLI::App *const command = app.add_subcommand("de", "Decode and format trace files");
 	command->alias("decode");
+	command->description(
+		"Decode and format one or multiple trace files into human-readable output.\n"
+		"Supports single tracebuffer files, archives (.clltk snapshots), or directories.\n"
+		"Use for post-mortem analysis of collected trace data.");
 
 	static std::string input_path{};
 
 	command
-		->add_option(
-			"input", input_path,
-			"path to format, could be a file (one trace or multiple as a archive) or directory")
+		->add_option("input", input_path,
+					 "Path to trace data: single tracebuffer file, .clltk archive, or directory")
 		->envname("CLLTK_TRACING_PATH")
 		->check(Formattable{})
 		->required()
 		->type_name("PATH");
 
 	static std::string output_path = "output.txt";
-	static auto output_option = command->add_option("-o,--output", output_path, "Output file path")
-									->capture_default_str()
-									->type_name("FILE");
+	static auto output_option =
+		command->add_option("-o,--output", output_path, "Output file path for decoded traces")
+			->capture_default_str()
+			->type_name("FILE");
 
 	static bool use_stdout = false;
-	command->add_flag("--stdout", use_stdout, "Output to stdout instead of file")
+	command
+		->add_flag("--stdout", use_stdout,
+				   "Output to stdout instead of file (mutually exclusive with -o)")
 		->excludes(output_option);
 
 	static std::string tracebuffer_filter_str = "^.*$";
 	command
 		->add_option("-t,--tracebuffer-filter", tracebuffer_filter_str,
-					 "tracebuffer filter as ECMAScript regex")
+					 "Filter tracebuffers by name using ECMAScript regex")
 		->capture_default_str()
 		->type_name("REGEX");
 
 	static bool sorted = true;
-	command->add_flag("--sorted", sorted, "sort all tracepoints by timestamp");
-	command->add_flag("--unsorted", [&](size_t) { sorted = false; }, "do not sort timestamps");
+	command->add_flag("--sorted", sorted,
+					  "Sort all tracepoints globally by timestamp (default: true)");
+	command->add_flag(
+		"--unsorted", [&](size_t) { sorted = false; },
+		"Disable sorting; output in per-buffer order (faster for large traces)");
 
 	// Source filter (tracebuffer level)
 	static std::string source_filter_str = "all";
 	command
 		->add_option("--source", source_filter_str,
-					 "Filter by source: all, userspace, kernel, tty (kernel TTY traces only)")
+					 "Filter by trace source type:\n"
+					 "  all       - include all traces\n"
+					 "  userspace - userspace traces only\n"
+					 "  kernel    - kernel traces (includes TTY)\n"
+					 "  tty       - kernel TTY traces only")
 		->capture_default_str()
 		->check(CLI::IsMember({"all", "userspace", "kernel", "tty"}, CLI::ignore_case))
 		->type_name("SOURCE");
@@ -116,21 +129,41 @@ static void add_decode_command(CLI::App &app)
 	static std::string filter_time_min_str;
 	static std::string filter_time_max_str;
 
-	command->add_option("--pid", filter_pids, "Filter by process ID(s)")->type_name("PID");
-	command->add_option("--tid", filter_tids, "Filter by thread ID(s)")->type_name("TID");
-	command->add_option("--msg", filter_msg, "Filter by message substring")->type_name("TEXT");
-	command->add_option("--msg-regex", filter_msg_regex, "Filter by message regex")
+	command
+		->add_option("--pid", filter_pids,
+					 "Filter by process ID(s). Can be specified multiple times")
+		->type_name("PID");
+	command
+		->add_option("--tid", filter_tids,
+					 "Filter by thread ID(s). Can be specified multiple times")
+		->type_name("TID");
+	command->add_option("--msg", filter_msg, "Filter tracepoints containing this message substring")
+		->type_name("TEXT");
+	command
+		->add_option("--msg-regex", filter_msg_regex,
+					 "Filter tracepoints by message using ECMAScript regex")
 		->type_name("REGEX");
-	command->add_option("--file", filter_file, "Filter by file path substring")->type_name("TEXT");
-	command->add_option("--file-regex", filter_file_regex, "Filter by file path regex")
+	command
+		->add_option("--file", filter_file,
+					 "Filter tracepoints from files containing this path substring")
+		->type_name("TEXT");
+	command
+		->add_option("--file-regex", filter_file_regex,
+					 "Filter tracepoints by source file path using ECMAScript regex")
 		->type_name("REGEX");
 	command
 		->add_option("--time-min", filter_time_min_str,
-					 "Minimum time: float seconds, datetime, now[-offset], min[+offset], -offset")
+					 "Minimum time filter. Formats:\n"
+					 "  1234567890.5    - Unix timestamp (seconds)\n"
+					 "  2025-11-25T21:46:29 - ISO 8601 datetime\n"
+					 "  now, now-1m     - relative to current time\n"
+					 "  min, min+1h     - relative to trace start\n"
+					 "  -30s            - relative to trace end\n"
+					 "Duration suffixes: ns, us, ms, s, m, h")
 		->type_name("TIME");
 	command
 		->add_option("--time-max", filter_time_max_str,
-					 "Maximum time: float seconds, datetime, now[-offset], max[-offset], -offset")
+					 "Maximum time filter (same formats as --time-min)")
 		->type_name("TIME");
 
 	command->callback([&]() {

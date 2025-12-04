@@ -48,29 +48,44 @@ class Command
 	{
 		auto cmd = std::make_shared<Command>();
 
-		// trace command
-		static const std::string description =
-			"Pipe tracepoints from stdin, file or file-like to tracebuffer.";
-		cmd->sub = parent.add_subcommand("tracepipe", description);
+		cmd->sub = parent.add_subcommand("tracepipe", "Pipe tracepoints from stdin or file");
+		cmd->sub->description(
+			"Read lines from stdin or a file and write each as a tracepoint to a tracebuffer.\n"
+			"Supports plain text (one line = one tracepoint) or JSON format.\n"
+			"Useful for bulk trace injection from logs, scripts, or piped program output.\n\n"
+			"JSON format: {\"message\": \"required\", \"pid\": 0, \"tid\": 0, \"file\": \"\", "
+			"\"line\": 0}\n"
+			"Only 'message' is required; other fields default to 0 or empty string.");
 
-		cmd->sub->add_option("tracebuffer-name,--tracebuffer-name", cmd->tracebuffer_name, "")
+		cmd->sub
+			->add_option("tracebuffer-name,--tracebuffer-name", cmd->tracebuffer_name,
+						 "Target tracebuffer name.\n"
+						 "The tracebuffer will be created if it does not exist")
 			->check(validator::TracebufferName{})
-			->required();
+			->required()
+			->type_name("NAME");
 
 		cmd->sub
 			->add_option("tracebuffer-size,--tracebuffer-size", cmd->tracebuffer_size,
-						 "The size of the ringbuffer in this tracebuffer in bytes. (one tracepoint "
-						 "entry, without any arguments will be ~ 32bytes)")
+						 "Ring buffer size in bytes if creating a new tracebuffer.\n"
+						 "One basic tracepoint is approximately 32 bytes.\n"
+						 "Supports size suffixes: K, M, G (e.g., 512K, 1M)")
 			->capture_default_str()
-			->transform(CLI::AsSizeValue{false});
+			->transform(CLI::AsSizeValue{false})
+			->type_name("SIZE");
 
 		cmd->sub
-			->add_flag(
-				"--json", cmd->try_json,
-				"Expect input as json object per line with keys: pid, tid, message, file, line")
+			->add_flag("--json", cmd->try_json,
+					   "Expect JSON input (one JSON object per line).\n"
+					   "Keys: pid, tid, message (required), file, line.\n"
+					   "If JSON parsing fails, falls back to plain text mode")
 			->capture_default_str();
 
-		cmd->sub->add_option("input_file", cmd->input_file, "")->check(CLI::ExistingFile);
+		cmd->sub
+			->add_option("input_file", cmd->input_file,
+						 "Input file path. Reads from stdin if not specified")
+			->check(CLI::ExistingFile)
+			->type_name("FILE");
 
 		cmd->sub->callback(std::bind(&Command::run, std::move(cmd)));
 	}
