@@ -1,6 +1,21 @@
-1.2.49
+1.2.50
 
 # Change log
+## 1.2.50
+- add live streaming decoder subcommand with ordered output buffer
+- add lock-free memory pool for tracepoint allocation
+- add advanced time filtering (min/max/now anchors, duration suffixes)
+- add filter options: --pid, --tid, --msg, --file with regex support
+- add --stdout option to decoder
+- add kernel trace indicator (*) to decoder output
+- add user vs kernel space handling in definition format
+- fix multiple bugs in decoder and tracing libraries
+- fix python decoder to handle definition V2 format
+- fix critical bugs: python self reference and pointer arithmetic portability
+- refactor: replace robot framework tests with python unittest
+- refactor: move cmd implementations to .cpp files and add unit tests
+- add extensive unit tests for cmd components (filter, timespec, ordered_buffer)
+- add extreme stress tests for live decoder
 ## 1.2.49
 - fix typos
 ## 1.2.48
