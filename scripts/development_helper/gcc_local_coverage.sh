@@ -23,7 +23,12 @@ rm -rf build/coverage
 mkdir -p build/coverage/{gcovr,lcov}
 gcovr --root $ROOT_PATH \
     --exclude ".*/?build/.*" \
-    --exclude ".*/?command_line_tool/.*" \
+    --exclude ".*/?command_line_tool/main/.*" \
+    --exclude ".*/?command_line_tool/interface/.*" \
+    --exclude ".*/?command_line_tool/commands/trace/.*" \
+    --exclude ".*/?command_line_tool/commands/snapshot/.*" \
+    --exclude ".*/?command_line_tool/commands/decode/decoder.cpp" \
+    --exclude ".*/?command_line_tool/commands/live/live.cpp" \
     --exclude ".*/?examples/.*" \
     --exclude ".*/?tests/.*" \
     --exclude-lines-by-pattern ".*extern.*" \
@@ -33,7 +38,6 @@ gcovr --root $ROOT_PATH \
     --exclude-unreachable-branches \
     --exclude-throw-branches \
     --merge-mode-functions=separate \
-    --merge-mode-conditions=fold \
     --html --html-details -o build/coverage/gcovr/coverage.html \
     --lcov build/coverage/lcov/coverage_raw.info \
 
