@@ -41,9 +41,26 @@ static void add_create_tracebuffer_command(CLI::App &app)
 	command->callback([]() { clltk_dynamic_tracebuffer_creation(tracebuffer.c_str(), size); });
 }
 
+static void add_clear_tracebuffer_command(CLI::App &app)
+{
+	const std::string description{
+		"Clear all entries from a tracebuffer.\n"
+		"The tracebuffer file is kept, only the ringbuffer content is discarded."};
+
+	CLI::App *const command = app.add_subcommand("clear", description);
+
+	static std::string tracebuffer{};
+	command->add_option("name,--name,-n", tracebuffer, "Name of the tracebuffer to clear.")
+		->check(validator::TracebufferName{})
+		->required();
+
+	command->callback([]() { clltk_dynamic_tracebuffer_clear(tracebuffer.c_str()); });
+}
+
 static void init_function() noexcept
 {
 	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
 	add_create_tracebuffer_command(app);
+	add_clear_tracebuffer_command(app);
 }
 COMMAND_INIT(init_function);

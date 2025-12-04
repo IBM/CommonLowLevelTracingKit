@@ -251,5 +251,103 @@ class TestClltkTracePoints(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
 
+class TestClltkClear(unittest.TestCase):
+    """Clear subcommand tests."""
+
+    def setUp(self):
+        """Create temporary directory and set environment."""
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.old_env = os.environ.get('CLLTK_TRACING_PATH')
+        os.environ['CLLTK_TRACING_PATH'] = self.tmp_dir.name
+
+    def tearDown(self):
+        """Clean up temporary directory and restore environment."""
+        if self.old_env:
+            os.environ['CLLTK_TRACING_PATH'] = self.old_env
+        else:
+            os.environ.pop('CLLTK_TRACING_PATH', None)
+        self.tmp_dir.cleanup()
+
+    def _list_trace_files(self, path: str = None) -> list:
+        """List .clltk_trace files in the given path."""
+        if path is None:
+            path = self.tmp_dir.name
+        trace_path = pathlib.Path(path)
+        return list(trace_path.glob("*.clltk_trace"))
+
+    def test_subcommand_clear_exists(self):
+        """Test that clear subcommand exists and shows help."""
+        result = clltk("clear", "--help")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("Clear all entries", result.stdout)
+
+    def test_clear_requires_name(self):
+        """Test that clear requires a tracebuffer name."""
+        result = clltk("clear", check=False)
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_clear_existing_tracebuffer(self):
+        """Test clearing an existing tracebuffer."""
+        # Create tracebuffer
+        result = clltk("tracebuffer", "--name", "TestBuffer", "--size", "1KB")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        # Add a tracepoint
+        result = clltk("tracepoint", "TestBuffer", "--message", "test message")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        # Clear the tracebuffer
+        result = clltk("clear", "--name", "TestBuffer")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        # Verify tracebuffer file still exists
+        files = self._list_trace_files()
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0].name, "TestBuffer.clltk_trace")
+
+    def test_clear_with_short_option(self):
+        """Test clear with -n short option."""
+        # Create tracebuffer
+        result = clltk("tracebuffer", "-n", "ShortOptBuffer", "-s", "1KB")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        # Clear with short option
+        result = clltk("clear", "-n", "ShortOptBuffer")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+    def test_clear_with_positional_name(self):
+        """Test clear with positional name argument."""
+        # Create tracebuffer
+        result = clltk("tracebuffer", "PosBuffer", "--size", "1KB")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        # Clear with positional name
+        result = clltk("clear", "PosBuffer")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+    def test_clear_nonexistent_tracebuffer(self):
+        """Test clearing a tracebuffer that doesn't exist."""
+        # This should not fail - clltk_dynamic_tracebuffer_clear returns silently
+        # if the tracebuffer doesn't exist (matches existing pattern)
+        result = clltk("clear", "--name", "NonExistentBuffer", check=False)
+        # The command doesn't fail, it just does nothing if buffer doesn't exist
+        # This matches the behavior of the creation function
+
+    def test_clear_invalid_name(self):
+        """Test that invalid tracebuffer names are rejected."""
+        invalid_names = [
+            " Buffer",   # leading space
+            "_Buffer",   # leading underscore
+            "8uffer",    # leading digit
+        ]
+        for name in invalid_names:
+            with self.subTest(name=name):
+                result = clltk("clear", "--name", name, check=False)
+                self.assertNotEqual(
+                    result.returncode, 0,
+                    msg=f"clearing tracebuffer with invalid name '{name}' should fail"
+                )
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -123,7 +123,8 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 	return file_file;
 }
 
-static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t size)
+static _clltk_tracebuffer_t *tracebuffer_open_internal(const char *const name, size_t size,
+													   bool create_if_not_exists)
 {
 	if ((name == NULL)) {
 		return NULL;
@@ -135,6 +136,17 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 	if (match.found)
 		return tracebufferes[match.position];
 
+	const size_t name_length = strnlen_s(name, CLLTK_MAX_NAME_SIZE);
+
+	// try to get existing tracebuffer file
+	file_t *fh = file_try_get(name);
+	if (fh == NULL) {
+		if (!create_if_not_exists) {
+			return NULL; // Don't create, just return NULL
+		}
+		fh = create_tracebuffer_file(name, name_length, size);
+	}
+
 	// create tracebuffer handler
 	_clltk_tracebuffer_t *const tracebuffer_handler =
 		memory_heap_allocation(sizeof(*tracebuffer_handler));
@@ -142,18 +154,11 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 		ERROR_AND_EXIT("failed to allocate space for tracebuffer_handler for %s", name);
 	}
 	memset(tracebuffer_handler, 0, sizeof(*tracebuffer_handler));
-	const size_t name_length = strnlen_s(name, CLLTK_MAX_NAME_SIZE);
 	tracebuffer_handler->name = memory_heap_allocation(name_length + 1);
 	if (tracebuffer_handler->name == NULL) {
 		ERROR_AND_EXIT("failed to allocate space for name for %s", name);
 	}
 	memcpy(tracebuffer_handler->name, name, name_length);
-
-	// try to get existing tracebuffer file
-	file_t *fh = file_try_get(name);
-	if (fh == NULL) {
-		fh = create_tracebuffer_file(name, name_length, size);
-	}
 
 	// now tracebuffer file must exist
 	tracebuffer_handler->file = fh;
@@ -199,6 +204,11 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 	vector_add(&tracebufferes, tracebuffer_handler);
 
 	return tracebuffer_handler;
+}
+
+static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t size)
+{
+	return tracebuffer_open_internal(name, size, true);
 }
 
 _clltk_file_offset_t _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_handler_t *buffer,
@@ -341,4 +351,50 @@ void clltk_dynamic_tracebuffer_creation(const char *buffer_name, size_t size)
 		return;
 	}
 	_clltk_tracebuffer_deinit(&buffer);
+}
+
+void clltk_dynamic_tracebuffer_clear(const char *buffer_name)
+{
+	SYNC_GLOBAL_LOCK(global_lock);
+	if (system_closed)
+		return;
+	if (tracebufferes == NULL) {
+		tracebufferes = vector_create();
+		if (tracebufferes == NULL) {
+			ERROR_AND_EXIT("could not create vector for tracebuffers");
+		}
+	}
+
+	// Open existing tracebuffer without creating a new one
+	_clltk_tracebuffer_t *const tb = tracebuffer_open_internal(buffer_name, 0, false);
+	if (tb == NULL) {
+		return; // Tracebuffer doesn't exist, nothing to clear
+	}
+	tb->used++;
+
+	// Clear the ringbuffer
+	{
+		SYNC_MEMORY_LOCK(lock, tb->ringbuffer_mutex);
+		if (lock.locked) {
+			ringbuffer_clear(tb->ringbuffer);
+		}
+	}
+
+	// Decrease usage counter
+	tb->used--;
+	if (tb->used == 0) {
+		// Clean up the tracebuffer handler
+		const vector_entry_match_t match =
+			vector_find(tracebufferes, tracebuffer_handler_matcher, buffer_name);
+		if (match.found) {
+			memory_heap_free(tb->name);
+			file_drop(&tb->file);
+			memory_heap_free(tb);
+			vector_remove(tracebufferes, match.position);
+		}
+		if (vector_size(tracebufferes) == 0) {
+			vector_free(&tracebufferes);
+			tracebufferes = NULL;
+		}
+	}
 }
