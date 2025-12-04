@@ -1,3 +1,6 @@
+// Copyright (c) 2024, International Business Machines
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+
 #ifndef DECODER_TOOL_SOURCE_POOL_HEADER
 #define DECODER_TOOL_SOURCE_POOL_HEADER
 

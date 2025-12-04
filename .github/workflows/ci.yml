@@ -1,0 +1,34 @@
+name: CI Pipeline
+run-name: CI by ${{ github.actor }}
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+env:
+  CI: true
+  CONTAINER_TARGET: ci
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build CI-Container
+        run: ./scripts/container.sh echo "container ready"
+
+      - name: Run CI in CI-Container
+        env:
+          CLLTK_CI_VERSION_STEP_REQUIRED: ${{ github.event_name == 'pull_request' }}
+        run: ./scripts/container.sh ./scripts/ci-cd/run.sh
+
+      - name: Run rpms workflow in CI-Container
+        run: ./scripts/container.sh cmake --workflow --preset rpms
+
+      - name: Run package_source in CI-Container
+        run: ./scripts/container.sh cmake --build --preset rpm --target package_source

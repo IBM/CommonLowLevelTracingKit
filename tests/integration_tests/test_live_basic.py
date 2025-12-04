@@ -29,13 +29,17 @@ class TestLiveCommandBasic(unittest.TestCase):
         """Test that live --help shows usage information."""
         result = clltk("live", "--help")
         self.assertEqual(result.returncode, 0)
-        self.assertIn("Live streaming decoder", result.stdout)
+        self.assertIn("Monitor tracebuffers in real-time", result.stdout)
         self.assertIn("--buffer-size", result.stdout)
         self.assertIn("--order-delay", result.stdout)
 
     def test_live_without_args_fails(self):
         """Test that live without required args fails."""
-        result = clltk("live", check=False)
+        import os
+        # Ensure CLLTK_TRACING_PATH is not set, otherwise live will use it
+        env = os.environ.copy()
+        env.pop('CLLTK_TRACING_PATH', None)
+        result = clltk("live", check=False, env=env)
         self.assertNotEqual(result.returncode, 0)
 
 
