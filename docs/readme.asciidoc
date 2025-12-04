@@ -11,7 +11,7 @@ A blazingly fast and memory efficient tracing frontend.
 To explain the idea behind `clltk` it is best to break down a small example:
 [source,C,linenums]
 ----
-CLLTK_DEFINE_TRACEBUFFER(MyFirstTracebuffer, 1024);
+CLLTK_TRACEBUFFER(MyFirstTracebuffer, 1024);
 
 int main()
 {
@@ -27,7 +27,7 @@ int main()
 === Tracebuffer creation
 `clltk` 's main concept are *Tracebuffers*, in which tracing data is stored. This allows tight control over memory consumption of the traces:
 
-`CLLTK_DEFINE_TRACEBUFFER(MyFirstTracebuffer, 1024);`
+`CLLTK_TRACEBUFFER(MyFirstTracebuffer, 1024);`
 
 Creates a new *Tracebuffer* with a size of at least 1024 bytes. This Tracebuffer will automatically be constructed at program start before entering `main()`.
 
@@ -60,7 +60,7 @@ When you use this macro, three things happen:
 NOTE: By splitting the work into those three stages, `clltk` is able to reduce memory consumption of Tracebuffer space and increase runtime performance, at the cost of slightly higher program startup time.
 
 == Simple dataflow overview 
-image::./docs/images/clltk_simple_overview.png[]
+image::./images/clltk_simple_overview.png[]
 
 == Storage Backends
 *CLLTK* takes care of effectively encoding Tracepoint data. Where and how those Tracepoints, as well as metadata is stored is the job of the *Storage Backend*. +
@@ -69,7 +69,7 @@ For example, data could be stored either lossless or lossy (in Ringbuffers), in 
 Typically a Backend also supports exporting trace data into a serialized format and reading this format back.
 
 === Storage Backend Interface
-The interface a Storage Backend needs to fulfill is documented link:./documentation/storage_backend.asciidoc[here]
+The interface a Storage Backend needs to fulfill is documented link:./storage_backend.asciidoc[here]
 
 === How to couple CLLTK with a Backend
 The backend is selected by simply linking against a library, which exports the functions described in the backend interface.
@@ -79,7 +79,7 @@ The backend is selected by simply linking against a library, which exports the f
 
 
 == Trace Entry Data Format
-The data format in which traces are serialized is described in detail in the link:./documentation/technical_documentation.asciidoc[CLLTK Technical] documentation.
+The data format in which traces are serialized is described in detail in the link:./technical_documentation.asciidoc[CLLTK Technical] documentation.
 
 *CLLTK* ships with a decoder, which can decode trace entries. A decoded entry will look like this:
 
@@ -91,10 +91,9 @@ NOTE: *CLLTK* does not describe how tracebuffers are stored. The decoder relies 
 
 == The `CLLTK_TRACEPOINT` Macro Syntax
 ----
-CLLTK_TRACEPOINT(_BUFFER_, _LEVEL_, _FORMAT_, ...)
+CLLTK_TRACEPOINT(_BUFFER_, _FORMAT_, ...)
 ----
 _BUFFER_:: Named Identifier of an already defined CLLTK_TRACEBUFFER
-_LEVEL_:: one of `clltk_tracelevel_Error`, `clltk_tracelevel_Info`, `clltk_tracelevel_Debug`
 _FORMAT_:: A valid C String Literal (null terminated `const char*`). Not a variable. For supported format specifiers in the given String, see chapter <<format_specifiers>>
 ... (Variable Argument List):: Arguments with which the format specifiers will be replaced in formatted output. Supported Argument types are listed in chapter <<argument_types>>
 
@@ -112,6 +111,40 @@ However note the following special cases:
 * 8, 16, 32, 64 and 128 bits
 * float (32bits) and double (64bits)
 * string (NULL terminated)
+
+== Dynamic Tracebuffer API
+In addition to the static `CLLTK_TRACEBUFFER` macro, CLLTK provides a dynamic API for runtime tracebuffer management:
+
+=== Creating a Tracebuffer at Runtime
+[source,C]
+----
+clltk_dynamic_tracebuffer_creation(const char *buffer_name, size_t size);
+----
+Creates a new tracebuffer with the specified name and size at runtime. This is useful when the tracebuffer name or size needs to be determined dynamically.
+
+=== Clearing a Tracebuffer at Runtime
+[source,C]
+----
+clltk_dynamic_tracebuffer_clear(const char *buffer_name);
+----
+Clears all entries from the specified tracebuffer. The tracebuffer remains allocated and can continue to receive new tracepoints.
+
+=== Dynamic Tracepoints
+[source,C]
+----
+CLLTK_DYN_TRACEPOINT(_BUFFER_, _FORMAT_, ...)
+----
+Similar to `CLLTK_TRACEPOINT`, but for use with dynamically created tracebuffers.
+
+== Command Line Tool
+The `clltk` command line tool provides several commands for working with tracebuffers:
+
+=== Clear Command
+The `clear` command removes all entries from a tracebuffer:
+----
+clltk clear <buffer_name>
+----
+This is useful for resetting a tracebuffer without restarting the application.
 
 == CLLTK Decoder
 [source,C,linenums]

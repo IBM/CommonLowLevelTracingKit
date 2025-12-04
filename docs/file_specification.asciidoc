@@ -90,14 +90,16 @@ The following table shows the structure of the ringbuffer head, with all offsets
 [cols="1,1,6"]
 |====
 >h| offset  >h| size h|
- >| 0        >| 32    |  unnamed semaphore (memory-based) as interprocess and interthread. mutex for ringbuffer access.
- >| 32       >| 8     | body size as uint64 
- >| 40       >| 8     | wrapped counter as uint64, incremented each time the ringbuffer wrapped.
- >| 48       >| 8     | dropped counter as uint64, incremented each time a traceentry neetes to be dropped to make space for newer entry. 
- >| 56       >| 8     | next_free offset in body as uint64. Offset to the next free byte inside the ringbuffer body to which the next write access will place the next entry.
- >| 64       >| 8     | last_valid offset in body as uint64. Offset to the last valid byte inside the ringbuffer body from which the next read access will take the oldest entry. 
- >| 72       >| 40    | reserved space for future usage
- >| 112      >| flex  | ringbuffer body which holds traceentries. 
+ >| 0        >| 8     | version as uint64
+ >| 8        >| 64    | unnamed semaphore (memory-based) as interprocess and interthread. mutex for ringbuffer access.
+ >| 72       >| 8     | body size as uint64 
+ >| 80       >| 8     | wrapped counter as uint64, incremented each time the ringbuffer wrapped.
+ >| 88       >| 8     | dropped counter as uint64, incremented each time a traceentry needs to be dropped to make space for newer entry. 
+ >| 96       >| 8     | entries counter as uint64, incremented each time a traceentry is added.
+ >| 104      >| 8     | next_free offset in body as uint64. Offset to the next free byte inside the ringbuffer body to which the next write access will place the next entry.
+ >| 112      >| 8     | last_valid offset in body as uint64. Offset to the last valid byte inside the ringbuffer body from which the next read access will take the oldest entry. 
+ >| 120      >| 40    | reserved space for future usage
+ >| 160      >| flex  | ringbuffer body which holds traceentries. 
 |====
 
 All write access to a tracebuffer is only permitted after obtaining the semaphore. The valid states of the semaphore are therefore 0 and 1. With 0 meaning some process or thread obtained write access. And 1 that now one is currently writing to the tracebuffer. +
