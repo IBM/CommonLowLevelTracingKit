@@ -10,6 +10,21 @@
 #include <string.h>
 #endif
 
+/**
+ * @brief Find the length of the name in a definition body.
+ * @param header Pointer to the definition header
+ * @param body Pointer to the definition body (after header)
+ * @return Length of the name (excluding null terminator)
+ */
+static size_t find_name_length(const definition_header_t *header, const char *body)
+{
+	size_t name_length = 0;
+	while (name_length < header->body_size && body[name_length] != '\0') {
+		name_length++;
+	}
+	return name_length;
+}
+
 size_t definition_calculate_body_size(size_t name_length)
 {
 	// body = name (with null terminator) + extended fields
@@ -71,10 +86,7 @@ bool definition_has_extended(const void *definition)
 	const char *body = (const char *)definition + sizeof(definition_header_t);
 
 	// Find end of name (null terminator)
-	size_t name_length = 0;
-	while (name_length < header->body_size && body[name_length] != '\0') {
-		name_length++;
-	}
+	size_t name_length = find_name_length(header, body);
 
 	// Check if there's enough space after name for extended fields
 	const size_t remaining = header->body_size - (name_length + 1);
@@ -97,10 +109,7 @@ definition_source_type_t definition_get_source_type(const void *definition)
 	const char *body = (const char *)definition + sizeof(definition_header_t);
 
 	// Find end of name
-	size_t name_length = 0;
-	while (name_length < header->body_size && body[name_length] != '\0') {
-		name_length++;
-	}
+	size_t name_length = find_name_length(header, body);
 
 	const definition_extended_t *extended = (const definition_extended_t *)(body + name_length + 1);
 
@@ -133,10 +142,7 @@ bool definition_validate_crc(const void *definition)
 	const uint8_t *body = (const uint8_t *)definition + sizeof(definition_header_t);
 
 	// Find end of name
-	size_t name_length = 0;
-	while (name_length < header->body_size && body[name_length] != '\0') {
-		name_length++;
-	}
+	size_t name_length = find_name_length(header, (const char *)body);
 
 	const definition_extended_t *extended = (const definition_extended_t *)(body + name_length + 1);
 
