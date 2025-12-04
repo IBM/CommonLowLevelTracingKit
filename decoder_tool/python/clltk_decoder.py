@@ -683,12 +683,12 @@ class Tracebuffer:
         entry: StaticTraceentry
         buffer_name = self.definition.name
         infos = [   
-                    f"{{\"tracebuffer info version\":\"{tb.version}\"}}",
-                    f"{{\"tracebuffer info size\":{tb.ringbuffer.body_size}}}",
-                    f"{{\"tracebuffer info entries\":{len(tb.entries)}}}",
-                    f"{{\"tracebuffer info in_use\":{tb.ringbuffer.used}}}",
-                    f"{{\"tracebuffer info dropped\":{tb.ringbuffer.dropped}}}",
-                    f"{{\"tracebuffer info wrapped\":{tb.ringbuffer.wrapped}}}",
+                    f"{{\"tracebuffer info version\":\"{self.version}\"}}",
+                    f"{{\"tracebuffer info size\":{self.ringbuffer.body_size}}}",
+                    f"{{\"tracebuffer info entries\":{len(self.entries)}}}",
+                    f"{{\"tracebuffer info in_use\":{self.ringbuffer.used}}}",
+                    f"{{\"tracebuffer info dropped\":{self.ringbuffer.dropped}}}",
+                    f"{{\"tracebuffer info wrapped\":{self.ringbuffer.wrapped}}}",
                     f"{{\"tracebuffer info path\":\"{buffer_name}\"}}",
         ]
         for info in infos:

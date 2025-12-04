@@ -89,7 +89,7 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 
 	// write definition section (with CRC protection)
 	void *const definition_ptr =
-		(void *)((uint64_t)file_mmap_ptr(temp_file) + file_head.definition_section_offset);
+		(void *)((uintptr_t)file_mmap_ptr(temp_file) + file_head.definition_section_offset);
 #if defined(__KERNEL__)
 	const definition_source_type_t source_type = DEFINITION_SOURCE_KERNEL;
 #else
@@ -100,7 +100,7 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 	}
 
 	void *const ringbuffer_ptr =
-		(void *)((uint64_t)file_mmap_ptr(temp_file) + file_head.ringbuffer_section_offset);
+		(void *)((uintptr_t)file_mmap_ptr(temp_file) + file_head.ringbuffer_section_offset);
 	const size_t ringbuffer_area_size =
 		file_head.stack_section_offset - file_head.ringbuffer_section_offset;
 	ringbuffer_head_t *const ringbuffer = ringbuffer_init(ringbuffer_ptr, ringbuffer_area_size);
@@ -114,7 +114,7 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 		ERROR_AND_EXIT("failed to init stack");
 	}
 	sync_mutex_t *const stack_mutex =
-		(void *)((uint64_t)file_mmap_ptr(temp_file) + file_head.stack_section_offset +
+		(void *)((uintptr_t)file_mmap_ptr(temp_file) + file_head.stack_section_offset +
 				 offsetof(unique_stack_header_t, mutex));
 	sync_memory_mutex_init(stack_mutex);
 
@@ -178,7 +178,7 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 		}
 	}
 
-	void *const ringbuffer_ptr = (void *)((uint64_t)file_mmap_ptr(tracebuffer_handler->file) +
+	void *const ringbuffer_ptr = (void *)((uintptr_t)file_mmap_ptr(tracebuffer_handler->file) +
 										  file_head.ringbuffer_section_offset);
 	tracebuffer_handler->ringbuffer = ringbuffer_open(ringbuffer_ptr);
 	if (tracebuffer_handler->ringbuffer == NULL) {
@@ -192,7 +192,7 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 		ERROR_AND_EXIT("failed to init stack");
 	}
 	unique_stack_header_t *const stack_header =
-		(void *)((uint64_t)file_mmap_ptr(tracebuffer_handler->file) +
+		(void *)((uintptr_t)file_mmap_ptr(tracebuffer_handler->file) +
 				 file_head.stack_section_offset);
 	tracebuffer_handler->stack_mutex = &stack_header->mutex;
 
