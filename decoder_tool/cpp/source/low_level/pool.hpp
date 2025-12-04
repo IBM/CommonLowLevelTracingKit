@@ -163,7 +163,6 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		 */
 		bool grow_locked() {
 			auto block = std::make_unique<Block>();
-			if (!block) return false;
 
 			// Add all slots from this block to free list
 			std::byte *base = block->data;

@@ -52,7 +52,7 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 	}
 
 	if (unlikely(types->count > 10)) {
-		ERROR_LOG("to much arguments (%d) in clltk tracepoint", types->count);
+		ERROR_LOG("too many arguments (%d) in clltk tracepoint", types->count);
 		return;
 	}
 

@@ -79,7 +79,7 @@ struct TracepointFilter {
 	}
 
 	// Main filter function - optimized for hot path
-	[[gnu::hot]] inline bool operator()(const Tracepoint &tp) const noexcept
+	[[gnu::hot]] inline bool operator()(const Tracepoint &tp) const
 	{
 		// Fast path: no filters active
 		if (!has_any_filter) [[likely]]

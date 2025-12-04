@@ -211,10 +211,6 @@ static void add_decode_command(CLI::App &app)
 			}
 		}
 
-		// Check if we need trace bounds to resolve time specs
-		bool needs_trace_bounds =
-			time_min_spec.needs_trace_bounds() || time_max_spec.needs_trace_bounds();
-
 		// Build tracepoint filter (without time initially if we need bounds)
 		decode::TracepointFilter tpFilter;
 		tpFilter.pids.insert(filter_pids.begin(), filter_pids.end());

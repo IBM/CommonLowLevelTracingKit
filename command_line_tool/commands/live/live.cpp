@@ -6,6 +6,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -46,7 +47,7 @@ void signal_handler(int sig)
 
 	if (count >= 2) {
 		// Second signal - force exit
-		std::_Exit(128 + sig);
+		std::quick_exit(128 + sig);
 	}
 }
 
