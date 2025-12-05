@@ -36,12 +36,12 @@ else
     exit 1 
 fi
 
-robot --outputdir build/robot_output tests/robot.tests/
+python3 -m unittest discover -v -s "./tests/integration_tests" -p 'test_*.py'
 if [ $? -eq 0 ];
 then
-    echo "robot framework test ok"
+    echo "python integration test ok"
 else
-    echo "robot framework  test failed"
+    echo "python integration test failed"
     exit 1 
 fi
 

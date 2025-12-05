@@ -70,4 +70,4 @@ add_compile_options(-O0)
 
 add_subdirectory(tracing.tests)
 add_subdirectory(decoder.tests)
-add_subdirectory(robot.tests)
+add_subdirectory(cmd.tests)

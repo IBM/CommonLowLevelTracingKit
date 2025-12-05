@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 __thread _Atomic uint32_t cached_pid;
-__thread _Atomic uint32_t cached_tip;
+__thread _Atomic uint32_t cached_tid;
 
 void update_cache(void)
 {
@@ -21,7 +21,7 @@ void update_cache(void)
 	}
 	{
 		const uint32_t value = (uint32_t)syscall(SYS_gettid);
-		atomic_store(&cached_tip, value);
+		atomic_store(&cached_tid, value);
 	}
 }
 
@@ -47,11 +47,12 @@ uint64_t info_get_timestamp_ns()
 uint32_t info_get_thread_id()
 {
 	init();
-	uint32_t value = atomic_load(&cached_tip);
+	uint32_t value = atomic_load(&cached_tid);
 	if (likely(value))
 		return value;
 	update_cache();
-	return info_get_thread_id();
+	value = atomic_load(&cached_tid);
+	return value;
 }
 
 uint32_t info_get_process_id()
@@ -61,5 +62,6 @@ uint32_t info_get_process_id()
 	if (likely(value))
 		return value;
 	update_cache();
-	return info_get_process_id();
+	value = atomic_load(&cached_pid);
+	return value;
 }

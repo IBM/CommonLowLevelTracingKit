@@ -64,6 +64,10 @@ void Archive::unpack() {
 	struct archive_entry *entry;
 	while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
 		const char *pathname = archive_entry_pathname(entry);
+		if (pathname == nullptr) {
+			archive_read_data_skip(a);
+			continue;
+		}
 		fs::path dest = m_tmp / pathname;
 
 		if (archive_entry_filetype(entry) == AE_IFDIR) {
@@ -71,6 +75,10 @@ void Archive::unpack() {
 		} else {
 			fs::create_directories(dest.parent_path());
 			std::ofstream ofs(dest, std::ios::binary);
+			if (!ofs) {
+				archive_read_data_skip(a);
+				continue;
+			}
 			const void *buffer;
 			size_t size;
 			la_int64_t offset;

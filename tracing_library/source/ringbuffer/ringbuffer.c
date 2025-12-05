@@ -303,3 +303,10 @@ size_t ringbuffer_out(void *destination, size_t max_size, ringbuffer_head_t *sou
 	}
 	return 0;
 }
+
+void ringbuffer_clear(ringbuffer_head_t *rb)
+{
+	RETURN_IF_INVALID(rb, );
+	rb->dropped = rb->entries;		// All entries now considered dropped
+	rb->last_valid = rb->next_free; // Empty the buffer
+}

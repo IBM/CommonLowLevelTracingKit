@@ -122,6 +122,17 @@ uint64_t ringbuffer_occupied(ringbuffer_head_t *rb);
  */
 uint64_t ringbuffer_available(ringbuffer_head_t *rb);
 
+/**
+ * @brief Clear all entries from ringbuffer
+ *
+ * Sets last_valid = next_free to make buffer appear empty.
+ * Updates dropped counter to reflect all entries as dropped.
+ * Does not modify next_free, wrapped, or entries counters.
+ *
+ * @param rb ringbuffer to clear
+ */
+void ringbuffer_clear(ringbuffer_head_t *rb);
+
 #ifdef __cplusplus
 }
 #endif

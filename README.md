@@ -42,6 +42,29 @@ The tracepoints `CLLTK_TRACEPOINT` defines first the target tracebuffer, than th
       `decoder_tool/python/clltk_decoder.py <path to tracebuffers>`
 8. View your traces in `output.csv`
 
+## CLI Tool Commands
+
+The `clltk` command-line tool provides several commands for working with tracebuffers:
+
+### Tracebuffer Management
+
+- **`tb` / `tracebuffer`** - Create a new tracebuffer with a given name and size
+- **`clear`** - Clear all entries from a tracebuffer (keeps the file, empties the ringbuffer)
+
+### Tracing
+
+- **`tp` / `tracepoint`** - Write a dynamic tracepoint to a tracebuffer
+- **`tracepipe`** - Pipe tracepoints from stdin or a file to a tracebuffer
+
+### Decoding
+
+- **`de` / `decode`** - Decode and format tracebuffer files
+- **`live`** - Live streaming decoder for real-time trace monitoring
+
+### Snapshots
+
+- **`sp` / `snapshot`** - Take a snapshot of tracebuffers
+
 ## Security Considerations
 **Tampering with Trace Files**: Any modification or tampering with the trace files can cause the library to **crash or potentially freeze** the system. Ensure the integrity of these files is maintained to avoid instability.
 
@@ -146,7 +169,7 @@ By default all Features, Extensions and debugging tools are build. A minimal bui
 ```
 mkdir build
 cd build
-cmake .. -DCLLTK_SNAPSHOT=OFF -D -DCLLTK_DECODER=OFF -DCLLTK_COMMAND_LINE_TOOL=OFF -DCLLTK_KERNEL_TRACING=OFF -DCLLTK_EXAMPLES=OFF -DCLLTK_TESTS=OFF
+cmake .. -DCLLTK_SNAPSHOT=OFF -DCLLTK_DECODER=OFF -DCLLTK_COMMAND_LINE_TOOL=OFF -DCLLTK_KERNEL_TRACING=OFF -DCLLTK_EXAMPLES=OFF -DCLLTK_TESTS=OFF
 ```
 
 > [!IMPORTANT] Be aware that this disables the build of snapshot and decoding tool. Mixing versions and using this tools from older build is highly discouraged!

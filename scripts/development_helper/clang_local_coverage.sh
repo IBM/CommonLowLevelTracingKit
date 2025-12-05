@@ -32,7 +32,6 @@ gcovr --root $ROOT_PATH \
     --exclude-unreachable-branches \
     --exclude-throw-branches \
     --merge-mode-functions=separate \
-    --merge-mode-conditions=fold \
     --html --html-details -o build/coverage/gcovr/coverage.html \
     --lcov build/coverage/lcov/coverage_raw.info \
 

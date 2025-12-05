@@ -28,6 +28,7 @@ clltk_kernel_tracing-y +=  $(addprefix ../../tracing_library/source/, \
 							tracepoint.o \
 							c-vector/vec.o \
 							md5/md5.o \
+							definition/definition.o \
 							ringbuffer/ringbuffer.o \
 							unique_stack/unique_stack.o \
 							)

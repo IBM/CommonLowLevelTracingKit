@@ -21,23 +21,64 @@ The following tables shows the location of different values, with offsets to sta
 |====
  >h| offset  >h| size h|
  >| 0        >| 16    | magic (`?#$~tracebuffer\0`) to identify file as clltk tracebuffer 
- >| 16       >| 8     | file version (`1`) to identify future changes
+ >| 16       >| 8     | file version to identify future changes
  >| 24       >| 8     | definition file offset
  >| 32       >| 8     | ringbuffer file offset
  >| 40       >| 8     | stack file offset
- >| 48       >| 1     | crc8 over file header
+ >| 48       >| 7     | reserved padding
+ >| 55       >| 1     | crc8 over file header (first 55 bytes)
 |====
 
-=== Definition Section
-The definition section is located at a file offset defined inside the file header and consists of the path and name of the tracebuffer. Thereby, even after a file is renamed, the original tracebuffer name could be recovered.
+The file header is exactly 56 bytes. The crc8 is calculated over the first 55 bytes (offset 0-54).
 
-The following table shows the location of the different values inside the definition section, as offsets to definition file offset.
+=== Definition Section
+The definition section is located at a file offset defined inside the file header and consists of the path and name of the tracebuffer, along with optional extended metadata. Thereby, even after a file is renamed, the original tracebuffer name could be recovered.
+
+==== Definition Section V1 (Legacy)
+The original definition section format contains only the tracebuffer name:
+
 [cols="1,1,6"]
 |====
 >h| offset  >h| size h|
  >| 0        >| 8     | definition body size 
- >| 8        >| flex  | body contains path and name of tracebuffer
+ >| 8        >| flex  | body contains path and name of tracebuffer (not null-terminated)
 |====
+
+==== Definition Section V2 (Extended)
+The extended definition section adds source type information and CRC protection. The format is backwards compatible: legacy decoders will read the name correctly and ignore extended fields.
+
+[cols="1,1,6"]
+|====
+>h| offset  >h| size h|
+ >| 0        >| 8     | definition body size (includes name + extended fields)
+ >| 8        >| flex  | name as null-terminated string
+ >| 8+N+1    >| 8     | extended magic (`CLLTK_EX`) to identify V2 format
+ >| 8+N+9    >| 1     | extended version (`2`)
+ >| 8+N+10   >| 1     | source_type (see table below)
+ >| 8+N+11   >| 5     | reserved for future use
+ >| 8+N+16   >| 1     | crc8 over body (from name start to reserved end)
+|====
+
+Where N is the length of the name string (excluding null terminator).
+
+===== Source Type Values
+The source_type field identifies the origin of the trace:
+
+[cols="1,1,6"]
+|====
+h| value h| name h| description
+ | 0x00   | Unknown   | Legacy files or unspecified source
+ | 0x01   | Userspace | Trace from userspace application (`.clltk_trace` files)
+ | 0x02   | Kernel    | Trace from kernel module (`.clltk_ktrace` files)
+ | 0x03   | TTY       | Kernel trace with TTY buffer name (special case of kernel)
+|====
+
+===== Backwards Compatibility
+* **V1 files read by V2 decoder**: The decoder checks for the `CLLTK_EX` magic after the null-terminated name. If absent, source type is determined by file extension (`.clltk_trace` = userspace, `.clltk_ktrace` = kernel).
+* **V2 files read by V1 decoder**: Legacy decoders read `body_size` bytes as the name. Since the name is now null-terminated, they will see the correct name followed by garbage bytes (the extended fields). Most implementations stop at the null terminator or use `body_size` as the length, both of which produce acceptable results.
+
+===== CRC Validation
+The crc8 field validates the integrity of the entire body (name + extended fields, excluding the crc8 byte itself). The same CRC algorithm is used as elsewhere in the file format (Poly=0x07, Init=0x0).
 
 While searching for an existing tracebuffer by a traced application only the file names are used to identify an tracebuffer. And the values inside definition are only used at decoding time.
 
@@ -49,14 +90,16 @@ The following table shows the structure of the ringbuffer head, with all offsets
 [cols="1,1,6"]
 |====
 >h| offset  >h| size h|
- >| 0        >| 32    |  unnamed semaphore (memory-based) as interprocess and interthread. mutex for ringbuffer access.
- >| 32       >| 8     | body size as uint64 
- >| 40       >| 8     | wrapped counter as uint64, incremented each time the ringbuffer wrapped.
- >| 48       >| 8     | dropped counter as uint64, incremented each time a traceentry neetes to be dropped to make space for newer entry. 
- >| 56       >| 8     | next_free offset in body as uint64. Offset to the next free byte inside the ringbuffer body to which the next write access will place the next entry.
- >| 64       >| 8     | last_valid offset in body as uint64. Offset to the last valid byte inside the ringbuffer body from which the next read access will take the oldest entry. 
- >| 72       >| 40    | reserved space for future usage
- >| 112      >| flex  | ringbuffer body which holds traceentries. 
+ >| 0        >| 8     | version as uint64
+ >| 8        >| 64    | unnamed semaphore (memory-based) as interprocess and interthread. mutex for ringbuffer access.
+ >| 72       >| 8     | body size as uint64 
+ >| 80       >| 8     | wrapped counter as uint64, incremented each time the ringbuffer wrapped.
+ >| 88       >| 8     | dropped counter as uint64, incremented each time a traceentry needs to be dropped to make space for newer entry. 
+ >| 96       >| 8     | entries counter as uint64, incremented each time a traceentry is added.
+ >| 104      >| 8     | next_free offset in body as uint64. Offset to the next free byte inside the ringbuffer body to which the next write access will place the next entry.
+ >| 112      >| 8     | last_valid offset in body as uint64. Offset to the last valid byte inside the ringbuffer body from which the next read access will take the oldest entry. 
+ >| 120      >| 40    | reserved space for future usage
+ >| 160      >| flex  | ringbuffer body which holds traceentries. 
 |====
 
 All write access to a tracebuffer is only permitted after obtaining the semaphore. The valid states of the semaphore are therefore 0 and 1. With 0 meaning some process or thread obtained write access. And 1 that now one is currently writing to the tracebuffer. +

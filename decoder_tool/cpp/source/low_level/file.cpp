@@ -60,20 +60,18 @@ internal::File::File(const std::filesystem::path &a_path)
 internal::File::~File() {
 	std::scoped_lock lock(m_mutex);
 	if (!m_moved) {
-		m_size = 0;
-		if (m_size && m_base && m_base != (uintptr_t)MAP_FAILED) {
-			munmap((void *)m_base, s_max_file_size);
-		}
+		if (m_base && m_base != (uintptr_t)MAP_FAILED) { munmap((void *)m_base, s_max_file_size); }
 		m_base = 0;
-		if (m_fd > 0) {
+		m_size = 0;
+		if (m_fd >= 0) {
 			close(m_fd);
-			m_fd = 0;
+			m_fd = -1;
 		}
 	}
 }
 
 size_t internal::File::getRealSize() const {
-	if (m_fd <= 0) { return 0; }
+	if (m_fd < 0) { return 0; }
 	struct stat sb;
 	if (fstat(m_fd, &sb) == -1) {
 		throw std::runtime_error("Error getting file size: "s + strerror(errno));

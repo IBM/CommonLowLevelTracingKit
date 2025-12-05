@@ -61,6 +61,7 @@ set(CLLTK_TRACING_SOURCE
     source/c-vector/vec.c
     source/md5/md5.c
 
+    source/definition/definition.c
     source/ringbuffer/ringbuffer.c
     source/ringbuffer/ringbuffer_layout_assert.c
     source/unique_stack/unique_stack.c

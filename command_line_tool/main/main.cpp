@@ -37,14 +37,21 @@ static std::unique_ptr<CLI::App> createMainApp(void)
 {
 	auto app = std::make_unique<CLI::App>();
 	app->name("clltk");
+	app->description("Common Low Level Tracing Kit - A high-performance tracing toolkit for "
+					 "userspace and kernel tracing");
 
-	auto *const silent = app->add_flag_callback("--silent,-s", set_silent);
+	auto *const silent = app->add_flag_callback(
+		"--silent,-s", set_silent,
+		"Redirect stdout/stderr to /dev/null (silent mode). Useful for scripting");
 
-	app->add_option_function("--clltk_tracing_path,-C"s, std::function(set_path), "")
+	app->add_option_function("--clltk_tracing_path,-C"s, std::function(set_path),
+							 "Set the tracing path directory where tracebuffers are stored")
 		->envname("CLLTK_TRACING_PATH")
-		->check(CLI::ExistingPath);
+		->check(CLI::ExistingPath)
+		->type_name("PATH");
 
-	auto *const version = app->add_flag_callback("--version", print_version);
+	auto *const version =
+		app->add_flag_callback("--version", print_version, "Print version information and exit");
 
 	version->excludes(silent);
 

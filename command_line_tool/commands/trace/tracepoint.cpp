@@ -13,55 +13,67 @@ using namespace CommonLowLevelTracingKit::cmd::interface;
 
 static void add_create_tracepoint_command(CLI::App &app)
 {
-	// trace command
-	const std::string description =
-		"Tracing a string to tracebuffer as a dynamic tracepoint.\nWith the possibility to add "
-		"line number, file name, tid and pid.";
-
-	CLI::App *const command = app.add_subcommand("tp", description);
+	CLI::App *const command = app.add_subcommand("tp", "Trace a single message to a tracebuffer");
 	command->alias("tracepoint");
+	command->description(
+		"Write a single string message as a dynamic tracepoint to a tracebuffer.\n"
+		"Useful for manual trace injection from scripts, shell commands, or external programs.\n"
+		"Can include optional metadata: source file, line number, process ID, and thread ID.");
 
 	static std::string tracebuffer{};
 	command
 		->add_option("tracebuffer,--tracebuffer,--tb", tracebuffer,
-					 "The tracebuffer to which this tracepoint should be added. It does not yet "
-					 "exist. it will be created with a ringbuffer size of 10kByte.")
+					 "Target tracebuffer name.\n"
+					 "If the tracebuffer does not exist, it will be created automatically")
 		->required()
-		->check(validator::TracebufferName{});
+		->check(validator::TracebufferName{})
+		->type_name("NAME");
 
 	static size_t size{512000};
 	command
 		->add_option("--tracebuffer-size", size,
-					 "The size of the ringbuffer in this tracebuffer in bytes. (one tracepoint "
-					 "entry, without any arguments will be ~ 32bytes)")
+					 "Ring buffer size in bytes if creating a new tracebuffer.\n"
+					 "One basic tracepoint is approximately 32 bytes.\n"
+					 "Supports size suffixes: K, M, G (e.g., 512K, 1M)")
 		->capture_default_str()
-		->transform(CLI::AsSizeValue{false});
+		->transform(CLI::AsSizeValue{false})
+		->type_name("SIZE");
 
 	static std::string message{};
 	command
 		->add_option("message,--message,--msg,-m", message,
-					 "The ascii message string which should be traced")
-		->required();
+					 "ASCII message string to trace.\n"
+					 "This is the main content of the tracepoint")
+		->required()
+		->type_name("TEXT");
 
 	static std::string filename{};
-	command->add_option(
-		"--file,-f", filename,
-		"The source file from where this was traced. Otherwise it will be set to \"<unknown>\".");
+	command
+		->add_option("--file,-f", filename,
+					 "Source file name to associate with this tracepoint.\n"
+					 "Defaults to \"<unknown>\" if not specified")
+		->type_name("FILE");
 
 	static size_t line{};
-	command->add_option(
-		"--line,-l", line,
-		"The source file line number where this was traced. Otherwise it will be set to 0.");
+	command
+		->add_option("--line,-l", line,
+					 "Source line number to associate with this tracepoint.\n"
+					 "Defaults to 0 if not specified")
+		->type_name("LINE");
 
 	static uint32_t tid{};
-	command->add_option("--tid,-t", tid,
-						"The thread id where this was traced. Otherwise the command line tool "
-						"thread id will be used");
+	command
+		->add_option("--tid,-t", tid,
+					 "Thread ID to associate with this tracepoint.\n"
+					 "Defaults to the clltk process's thread ID if not specified")
+		->type_name("TID");
 
 	static uint32_t pid{};
-	command->add_option("--pid,-p", pid,
-						"The process id where this was traced. Otherwise the command line tool "
-						"process id will be used");
+	command
+		->add_option("--pid,-p", pid,
+					 "Process ID to associate with this tracepoint.\n"
+					 "Defaults to the clltk process's PID if not specified")
+		->type_name("PID");
 
 	command->callback([]() {
 		clltk_dynamic_tracepoint_execution(tracebuffer.c_str(), filename.c_str(), line, pid, tid,

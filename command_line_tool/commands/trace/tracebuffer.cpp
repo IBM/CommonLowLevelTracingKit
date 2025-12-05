@@ -12,38 +12,64 @@ using namespace CommonLowLevelTracingKit::cmd::interface;
 
 static void add_create_tracebuffer_command(CLI::App &app)
 {
-
-	// create tracebuffer command
-	const std::string description{
-		"Creating a new tracebuffer, if not already exists.\nWith a given size. At "
-		"CLLTK_TRACING_PATH.\nThis tool is only able to create user space tracebuffers."};
-
-	CLI::App *const command = app.add_subcommand("tb", description);
+	CLI::App *const command = app.add_subcommand("tb", "Create a new tracebuffer");
 	command->alias("tracebuffer");
+	command->description(
+		"Create a new userspace tracebuffer with a specified ring buffer size.\n"
+		"The tracebuffer is created at CLLTK_TRACING_PATH.\n"
+		"If the tracebuffer already exists, this command has no effect.\n"
+		"Note: This tool only creates userspace tracebuffers, not kernel tracebuffers.");
 
 	static std::string tracebuffer{};
 	command
-		->add_option(
-			"name,--name,-n", tracebuffer,
-			"Will be the name of this tracebuffer and should therefore be unique for this system.")
+		->add_option("name,--name,-n", tracebuffer,
+					 "Unique name for this tracebuffer.\n"
+					 "Must start with a letter and contain only alphanumeric characters or "
+					 "underscores.\n"
+					 "Maximum length: 257 characters")
 		->check(validator::TracebufferName{})
-		->required();
+		->required()
+		->type_name("NAME");
 
 	static size_t size{512000};
 	command
 		->add_option("size,--size,-s", size,
-					 "The size of the ringbuffer in this tracebuffer in bytes. (one "
-					 "tracepoint entry, without any arguments will be ~ 32bytes)")
+					 "Ring buffer size in bytes.\n"
+					 "One basic tracepoint entry is approximately 32 bytes.\n"
+					 "Supports size suffixes: K (kilobytes), M (megabytes), G (gigabytes).\n"
+					 "Example: 512K, 1M, 2G")
 		->capture_default_str()
 		->transform(CLI::AsSizeValue{false})
-		->required();
+		->required()
+		->type_name("SIZE");
 
 	command->callback([]() { clltk_dynamic_tracebuffer_creation(tracebuffer.c_str(), size); });
+}
+
+static void add_clear_tracebuffer_command(CLI::App &app)
+{
+	CLI::App *const command = app.add_subcommand("clear", "Clear all entries from a tracebuffer");
+	command->description(
+		"Clear all entries from an existing tracebuffer without deleting the file.\n"
+		"The tracebuffer file is preserved; only the ring buffer content is discarded.\n"
+		"Useful for resetting a tracebuffer to start fresh without recreating it.");
+
+	static std::string tracebuffer{};
+	command
+		->add_option("name,--name,-n", tracebuffer,
+					 "Name of the tracebuffer to clear.\n"
+					 "Must match an existing tracebuffer at CLLTK_TRACING_PATH")
+		->check(validator::TracebufferName{})
+		->required()
+		->type_name("NAME");
+
+	command->callback([]() { clltk_dynamic_tracebuffer_clear(tracebuffer.c_str()); });
 }
 
 static void init_function() noexcept
 {
 	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
 	add_create_tracebuffer_command(app);
+	add_clear_tracebuffer_command(app);
 }
 COMMAND_INIT(init_function);

@@ -203,7 +203,9 @@ void get_arguments(void *_buffer, uint32_t sizes[], const _clltk_argument_types_
 			memcpy((void *)buffer, &string_size, fix_arg_size);
 			buffer += fix_arg_size;
 
-			memcpy((void *)buffer, value, string_size - 1);
+			if (value != NULL && string_size > 1) {
+				memcpy((void *)buffer, value, string_size - 1);
+			}
 			memset((void *)(buffer + string_size - 1), 0, 1); // add null terminator to string
 			buffer += string_size;
 		} break;

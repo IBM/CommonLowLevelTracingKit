@@ -4,6 +4,7 @@
 #include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "CommonLowLevelTracingKit/version.gen.h"
 
+#include "definition/definition.h"
 #include "ringbuffer/ringbuffer.h"
 #include "tracebuffer.h"
 
@@ -63,7 +64,7 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 
 	const size_t file_header_size = sizeof(file_head);
 	file_head.definition_section_offset = file_header_size;
-	const size_t definition_section_size = sizeof(uint64_t) + name_length;
+	const size_t definition_section_size = definition_calculate_size(name_length);
 
 	file_head.ringbuffer_section_offset =
 		round_up(file_head.definition_section_offset + definition_section_size, 8);
@@ -86,14 +87,20 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 	// write header
 	file_pwrite(temp_file, &file_head, sizeof(file_head), 0);
 
-	// write definition
-	file_pwrite(temp_file, &name_length, sizeof(name_length),
-				file_head.definition_section_offset); // definition body size
-	file_pwrite(temp_file, name, name_length,
-				file_head.definition_section_offset + sizeof(name_length)); // definition body
+	// write definition section (with CRC protection)
+	void *const definition_ptr =
+		(void *)((uintptr_t)file_mmap_ptr(temp_file) + file_head.definition_section_offset);
+#if defined(__KERNEL__)
+	const definition_source_type_t source_type = DEFINITION_SOURCE_KERNEL;
+#else
+	const definition_source_type_t source_type = DEFINITION_SOURCE_USERSPACE;
+#endif
+	if (!definition_init(definition_ptr, name, name_length, source_type)) {
+		ERROR_AND_EXIT("failed to init definition section");
+	}
 
 	void *const ringbuffer_ptr =
-		(void *)((uint64_t)file_mmap_ptr(temp_file) + file_head.ringbuffer_section_offset);
+		(void *)((uintptr_t)file_mmap_ptr(temp_file) + file_head.ringbuffer_section_offset);
 	const size_t ringbuffer_area_size =
 		file_head.stack_section_offset - file_head.ringbuffer_section_offset;
 	ringbuffer_head_t *const ringbuffer = ringbuffer_init(ringbuffer_ptr, ringbuffer_area_size);
@@ -107,7 +114,7 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 		ERROR_AND_EXIT("failed to init stack");
 	}
 	sync_mutex_t *const stack_mutex =
-		(void *)((uint64_t)file_mmap_ptr(temp_file) + file_head.stack_section_offset +
+		(void *)((uintptr_t)file_mmap_ptr(temp_file) + file_head.stack_section_offset +
 				 offsetof(unique_stack_header_t, mutex));
 	sync_memory_mutex_init(stack_mutex);
 
@@ -116,7 +123,8 @@ create_tracebuffer_file(const char *const name, const size_t name_length, const 
 	return file_file;
 }
 
-static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t size)
+static _clltk_tracebuffer_t *tracebuffer_open_internal(const char *const name, size_t size,
+													   bool create_if_not_exists)
 {
 	if ((name == NULL)) {
 		return NULL;
@@ -128,6 +136,17 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 	if (match.found)
 		return tracebufferes[match.position];
 
+	const size_t name_length = strnlen_s(name, CLLTK_MAX_NAME_SIZE);
+
+	// try to get existing tracebuffer file
+	file_t *fh = file_try_get(name);
+	if (fh == NULL) {
+		if (!create_if_not_exists) {
+			return NULL; // Don't create, just return NULL
+		}
+		fh = create_tracebuffer_file(name, name_length, size);
+	}
+
 	// create tracebuffer handler
 	_clltk_tracebuffer_t *const tracebuffer_handler =
 		memory_heap_allocation(sizeof(*tracebuffer_handler));
@@ -135,18 +154,11 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 		ERROR_AND_EXIT("failed to allocate space for tracebuffer_handler for %s", name);
 	}
 	memset(tracebuffer_handler, 0, sizeof(*tracebuffer_handler));
-	const size_t name_length = strnlen_s(name, CLLTK_MAX_NAME_SIZE);
 	tracebuffer_handler->name = memory_heap_allocation(name_length + 1);
 	if (tracebuffer_handler->name == NULL) {
 		ERROR_AND_EXIT("failed to allocate space for name for %s", name);
 	}
 	memcpy(tracebuffer_handler->name, name, name_length);
-
-	// try to get existing tracebuffer file
-	file_t *fh = file_try_get(name);
-	if (fh == NULL) {
-		fh = create_tracebuffer_file(name, name_length, size);
-	}
 
 	// now tracebuffer file must exist
 	tracebuffer_handler->file = fh;
@@ -162,8 +174,16 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 		ERROR_AND_EXIT("found incompatible file version (%" PRIu64 ") in %s", file_head.version,
 					   name);
 	}
+	{
+		const uint8_t calculated_crc =
+			crc8_continue(0, (const uint8_t *)&file_head, sizeof(file_head) - 1);
+		if (file_head.crc != calculated_crc) {
+			ERROR_AND_EXIT("file header CRC mismatch in %s (expected 0x%02x, got 0x%02x)", name,
+						   calculated_crc, file_head.crc);
+		}
+	}
 
-	void *const ringbuffer_ptr = (void *)((uint64_t)file_mmap_ptr(tracebuffer_handler->file) +
+	void *const ringbuffer_ptr = (void *)((uintptr_t)file_mmap_ptr(tracebuffer_handler->file) +
 										  file_head.ringbuffer_section_offset);
 	tracebuffer_handler->ringbuffer = ringbuffer_open(ringbuffer_ptr);
 	if (tracebuffer_handler->ringbuffer == NULL) {
@@ -177,13 +197,18 @@ static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t siz
 		ERROR_AND_EXIT("failed to init stack");
 	}
 	unique_stack_header_t *const stack_header =
-		(void *)((uint64_t)file_mmap_ptr(tracebuffer_handler->file) +
-				 file_head.ringbuffer_section_offset);
+		(void *)((uintptr_t)file_mmap_ptr(tracebuffer_handler->file) +
+				 file_head.stack_section_offset);
 	tracebuffer_handler->stack_mutex = &stack_header->mutex;
 
 	vector_add(&tracebufferes, tracebuffer_handler);
 
 	return tracebuffer_handler;
+}
+
+static _clltk_tracebuffer_t *tracebuffer_open(const char *const name, size_t size)
+{
+	return tracebuffer_open_internal(name, size, true);
 }
 
 _clltk_file_offset_t _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_handler_t *buffer,
@@ -326,4 +351,50 @@ void clltk_dynamic_tracebuffer_creation(const char *buffer_name, size_t size)
 		return;
 	}
 	_clltk_tracebuffer_deinit(&buffer);
+}
+
+void clltk_dynamic_tracebuffer_clear(const char *buffer_name)
+{
+	SYNC_GLOBAL_LOCK(global_lock);
+	if (system_closed)
+		return;
+	if (tracebufferes == NULL) {
+		tracebufferes = vector_create();
+		if (tracebufferes == NULL) {
+			ERROR_AND_EXIT("could not create vector for tracebuffers");
+		}
+	}
+
+	// Open existing tracebuffer without creating a new one
+	_clltk_tracebuffer_t *const tb = tracebuffer_open_internal(buffer_name, 0, false);
+	if (tb == NULL) {
+		return; // Tracebuffer doesn't exist, nothing to clear
+	}
+	tb->used++;
+
+	// Clear the ringbuffer
+	{
+		SYNC_MEMORY_LOCK(lock, tb->ringbuffer_mutex);
+		if (lock.locked) {
+			ringbuffer_clear(tb->ringbuffer);
+		}
+	}
+
+	// Decrease usage counter
+	tb->used--;
+	if (tb->used == 0) {
+		// Clean up the tracebuffer handler
+		const vector_entry_match_t match =
+			vector_find(tracebufferes, tracebuffer_handler_matcher, buffer_name);
+		if (match.found) {
+			memory_heap_free(tb->name);
+			file_drop(&tb->file);
+			memory_heap_free(tb);
+			vector_remove(tracebufferes, match.position);
+		}
+		if (vector_size(tracebufferes) == 0) {
+			vector_free(&tracebufferes);
+			tracebufferes = NULL;
+		}
+	}
 }

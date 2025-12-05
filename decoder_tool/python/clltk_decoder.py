@@ -173,10 +173,18 @@ def get_double(raw, offset):
 class Definition:
     size: int
     data: bytes()
+    name: str
 
     def __init__(self, file_offset: int, raw: bytes):
         self.size = int.from_bytes(raw[file_offset: file_offset+8], current_Endian.value)
         self.data = raw[file_offset+8:file_offset+8+self.size]
+        # Extract name (null-terminated string at start of body)
+        # V2 format has extended fields after the null terminator, so we must stop at null
+        null_pos = self.data.find(b'\x00')
+        if null_pos >= 0:
+            self.name = self.data[:null_pos].decode(encoding="utf8", errors="ignore")
+        else:
+            self.name = decode(self.data)
 
 def timestamp_to_time(timestamp_ns) -> str:
     sub_seconds = (timestamp_ns % int(1e9))
@@ -673,14 +681,14 @@ class Tracebuffer:
     def to_csv(self):
         csv = []
         entry: StaticTraceentry
-        buffer_name = decode(self.definition.data)
+        buffer_name = self.definition.name
         infos = [   
-                    f"{{\"tracebuffer info version\":\"{tb.version}\"}}",
-                    f"{{\"tracebuffer info size\":{tb.ringbuffer.body_size}}}",
-                    f"{{\"tracebuffer info entries\":{len(tb.entries)}}}",
-                    f"{{\"tracebuffer info in_use\":{tb.ringbuffer.used}}}",
-                    f"{{\"tracebuffer info dropped\":{tb.ringbuffer.dropped}}}",
-                    f"{{\"tracebuffer info wrapped\":{tb.ringbuffer.wrapped}}}",
+                    f"{{\"tracebuffer info version\":\"{self.version}\"}}",
+                    f"{{\"tracebuffer info size\":{self.ringbuffer.body_size}}}",
+                    f"{{\"tracebuffer info entries\":{len(self.entries)}}}",
+                    f"{{\"tracebuffer info in_use\":{self.ringbuffer.used}}}",
+                    f"{{\"tracebuffer info dropped\":{self.ringbuffer.dropped}}}",
+                    f"{{\"tracebuffer info wrapped\":{self.ringbuffer.wrapped}}}",
                     f"{{\"tracebuffer info path\":\"{buffer_name}\"}}",
         ]
         for info in infos:

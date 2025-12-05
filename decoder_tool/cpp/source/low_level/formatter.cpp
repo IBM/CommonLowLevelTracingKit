@@ -247,7 +247,8 @@ static INLINE std::string clean_up_str_view(const std::string_view str) {
 std::string formatter::printf(const std::string_view format, const std::span<const char> &types_raw,
 							  const std::span<const uint8_t> &args_raw) {
 	if (format.empty()) return "";
-	if (*format.end() != '\0') CLLTK_DECODER_THROW(FormattingFailed, "missing format termination");
+	if (format.data()[format.size()] != '\0')
+		CLLTK_DECODER_THROW(FormattingFailed, "missing format termination");
 	const auto fixed_typ_array = fix_types_based_on_format(format, types_raw);
 	if (args_raw.empty()) return clean_up_str_view(format);
 	const std::span<const char> fixed_types{fixed_typ_array.data(), types_raw.size()};
