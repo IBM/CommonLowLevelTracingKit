@@ -1,6 +1,19 @@
-1.2.50
+1.2.51
 
 # Change log
+## 1.2.51
+- perf: optimize CRC validation and formatting
+- perf: reduce lock contention in OrderedBuffer
+- perf: batch output flush calls
+- perf: cache timestamp prefixes
+- perf: use fast UTC date calculation
+- fix: prevent use-after-free in tracebuffer name
+- ci: refactor kernel module build and test
+- cli: improve command naming and add tracebuffer list
+- cli: add global verbose/quiet flags and signal handling
+- refactor: clean up includes with IWYU
+- fix: address clang-tidy warnings
+- ci: modularize CI and add static analysis
 ## 1.2.50
 - add live streaming decoder subcommand with ordered output buffer
 - add lock-free memory pool for tracepoint allocation
@@ -46,4 +59,3 @@ refactor: reorganize include structure and improve project layout
 - change dump format
 ## 1.2.39
 - release to open source
-
