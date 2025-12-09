@@ -1,0 +1,144 @@
+---
+# clang-tidy configuration for CommonLowLevelTracingKit
+# Documentation: https://clang.llvm.org/extra/clang-tidy/
+
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  performance-*,
+  readability-braces-around-statements,
+  readability-const-return-type,
+  readability-container-size-empty,
+  readability-duplicate-include,
+  readability-else-after-return,
+  readability-implicit-bool-conversion,
+  readability-inconsistent-declaration-parameter-name,
+  readability-misleading-indentation,
+  readability-misplaced-array-index,
+  readability-non-const-parameter,
+  readability-redundant-*,
+  readability-simplify-*,
+  readability-static-accessed-through-instance,
+  readability-string-compare,
+  readability-uniqueptr-delete-release,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-no-malloc,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-cstyle-cast,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-pro-type-vararg,
+  -modernize-avoid-c-arrays,
+  -modernize-macro-to-enum,
+  -modernize-use-trailing-return-type,
+  -readability-function-cognitive-complexity,
+  -readability-magic-numbers,
+  -bugprone-reserved-identifier,
+  -bugprone-branch-clone,
+  -bugprone-macro-parentheses,
+  -bugprone-multi-level-implicit-pointer-conversion,
+  -cert-dcl37-c,
+  -cert-dcl51-cpp,
+  -cert-err33-c,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-macro-to-enum,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-use-enum-class,
+  -modernize-deprecated-headers,
+  -modernize-redundant-void-arg,
+  -modernize-type-traits,
+  -modernize-use-auto,
+  -modernize-use-bool-literals,
+  -modernize-use-designated-initializers,
+  -modernize-use-nodiscard,
+  -modernize-use-using,
+  -performance-avoid-endl,
+  -performance-enum-size,
+  -performance-no-int-to-ptr,
+  -readability-braces-around-statements,
+  -readability-const-return-type,
+  -readability-implicit-bool-conversion,
+  -readability-redundant-declaration,
+  -readability-redundant-inline-specifier,
+  -clang-diagnostic-unknown-warning-option,
+  -cppcoreguidelines-special-member-functions,
+  -cppcoreguidelines-init-variables,
+  -cppcoreguidelines-use-default-member-init,
+  -cppcoreguidelines-pro-type-member-init,
+  -modernize-use-default-member-init,
+  -modernize-use-equals-delete,
+  -modernize-pass-by-value,
+  -modernize-return-braced-init-list,
+  -modernize-use-ranges,
+  -modernize-use-scoped-lock,
+  -readability-redundant-casting,
+  -cert-dcl16-c
+
+# Don't treat warnings as errors by default (use --warnings-as-errors=* flag for CI)
+WarningsAsErrors: ''
+
+# Only check project headers, not system headers
+HeaderFilterRegex: '.*/CommonLowLevelTracingKit/.*\.(h|hpp)$'
+
+CheckOptions:
+  # bugprone
+  - key: bugprone-argument-comment.StrictMode
+    value: 'false'
+  - key: bugprone-assert-side-effect.AssertMacros
+    value: 'assert'
+  - key: bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression
+    value: 'true'
+
+  # cert
+  - key: cert-dcl16-c.NewSuffixes
+    value: 'L;LL;LU;LLU'
+  - key: cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField
+    value: 'false'
+
+  # cppcoreguidelines
+  - key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
+    value: 'true'
+  - key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions
+    value: 'true'
+
+  # modernize
+  - key: modernize-loop-convert.MinConfidence
+    value: 'reasonable'
+  - key: modernize-pass-by-value.IncludeStyle
+    value: 'google'
+  - key: modernize-use-auto.MinTypeNameLength
+    value: '5'
+  - key: modernize-use-nullptr.NullMacros
+    value: 'NULL'
+
+  # performance
+  - key: performance-move-const-arg.CheckTriviallyCopyableMove
+    value: 'false'
+  - key: performance-unnecessary-value-param.IncludeStyle
+    value: 'google'
+
+  # readability
+  - key: readability-identifier-length.MinimumVariableNameLength
+    value: '2'
+  - key: readability-identifier-length.MinimumParameterNameLength
+    value: '2'
+  - key: readability-identifier-length.MinimumLoopCounterNameLength
+    value: '1'
+  - key: readability-implicit-bool-conversion.AllowPointerConditions
+    value: 'true'
+  - key: readability-implicit-bool-conversion.AllowIntegerConditions
+    value: 'true'

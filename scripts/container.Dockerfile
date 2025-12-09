@@ -22,6 +22,11 @@ RUN dnf -y install \
     libasan \
     rpmdevtools
 
+# Static analysis tools
+RUN dnf -y install \
+    cppcheck \
+    jq
+
 RUN dnf -y install \
     file \
     rsync \

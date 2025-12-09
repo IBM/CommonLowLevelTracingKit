@@ -39,6 +39,16 @@
                 "CLLTK_TESTS": "OFF",
                 "CLLTK_SNAPSHOT": "ON"
             }
+        },
+        {
+            "name": "static-analysis",
+            "inherits": "unittests",
+            "description": "Build with clang-tidy enabled during compilation",
+            "cacheVariables": {
+                "ENABLE_CLANG_TIDY": "ON",
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++"
+            }
         }
     ],
     "buildPresets": [
@@ -59,6 +69,13 @@
         {
             "name": "rpm",
             "configurePreset": "rpm",
+            "targets": [
+                "all"
+            ]
+        },
+        {
+            "name": "static-analysis",
+            "configurePreset": "static-analysis",
             "targets": [
                 "all"
             ]

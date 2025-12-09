@@ -37,11 +37,66 @@ For feature requests, bug reports or technical discussions, please use the [issu
 Otherwise please contact one of the [maintainers](MAINTAINERS.md) directly for general questions or feedback.
 
 ## Testing
-We encourage contributors to ensure that existing tests pass by running `./scripts/container.sh ./scripts/ci-cd/run.sh` before
-submitting a pull request. Also it is highly appreciated if you implement unit-tests for new code.
 
-## Coding style guidelines
-Clang Format is enforced for code formatting. Failure to adhere to this standard will result in a CI (Continuous Integration) failure. You can format everything by running `./scripts/container.sh ./scripts/development_helper/format_everything.sh`, which uses a containerized environment to ensure the correct version of Clang Format is applied.
+We encourage contributors to ensure that existing tests pass before submitting a pull request. 
+
+### Running the Full CI Pipeline Locally
+
+The CI pipeline is designed so that everything running on GitHub Actions can also be run locally:
+
+```bash
+# Run the full CI pipeline (same as GitHub Actions)
+./scripts/container.sh ./scripts/ci-cd/run_all.sh
+```
+
+### Running Individual CI Steps
+
+Each CI step is an independent script that can be run separately:
+
+```bash
+./scripts/container.sh ./scripts/ci-cd/step_format.sh           # Check code formatting
+./scripts/container.sh ./scripts/ci-cd/step_build.sh            # Build the project
+./scripts/container.sh ./scripts/ci-cd/step_test.sh             # Run all tests
+./scripts/container.sh ./scripts/ci-cd/step_memcheck.sh         # Run Valgrind memory checks
+./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh  # Run static analysis
+./scripts/container.sh ./scripts/ci-cd/step_package.sh          # Build RPM packages
+```
+
+It is highly appreciated if you implement unit-tests for new code.
+
+## Code Quality
+
+### Code Formatting
+
+Clang Format is enforced for code formatting. Failure to adhere to this standard will result in a CI failure. 
+
+```bash
+# Check formatting (same as CI)
+./scripts/container.sh ./scripts/ci-cd/step_format.sh
+
+# Auto-format all files
+./scripts/container.sh ./scripts/development_helper/format_everything.sh
+```
+
+### Static Analysis
+
+We use clang-tidy and cppcheck for static analysis. While not currently blocking CI, we encourage fixing any issues found:
+
+```bash
+# Run all static analysis tools
+./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --all
+
+# Run clang-tidy with auto-fix
+./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --clang-tidy --fix
+
+# Analyze specific component
+./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --clang-tidy --filter decoder_tool
+```
+
+Configuration files:
+- `.clang-tidy` - clang-tidy checks configuration
+- `.clang-format` - Code formatting rules
+- `.iwyu.imp` - Include-what-you-use mappings
 
 ### Directory structure
 We are trying to stay close to _Canonical Project Structure_ as described [in this proposal](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1204r0.html).
