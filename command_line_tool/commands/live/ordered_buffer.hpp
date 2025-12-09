@@ -4,6 +4,7 @@
 #ifndef CLLTK_CMD_LIVE_ORDERED_BUFFER_HPP
 #define CLLTK_CMD_LIVE_ORDERED_BUFFER_HPP
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
@@ -163,7 +164,7 @@ class OrderedBuffer
 	std::condition_variable m_cv;
 	std::vector<TracepointPtr> m_heap; // Min-heap via std::*_heap algorithms
 	uint64_t m_watermark_ns{0};
-	bool m_finished{false};
+	std::atomic<bool> m_finished{false}; // Atomic for lock-free read in output loop
 	Stats m_stats{};
 };
 

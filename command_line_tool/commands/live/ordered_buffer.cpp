@@ -11,6 +11,12 @@ namespace CommonLowLevelTracingKit::cmd::live
 OrderedBuffer::OrderedBuffer(size_t max_size, uint64_t order_delay_ns)
 	: m_max_size(max_size), m_order_delay_ns(order_delay_ns)
 {
+	// Pre-allocate to reduce reallocations during operation
+	if (max_size > 0) {
+		m_heap.reserve(max_size);
+	} else {
+		m_heap.reserve(100000); // Reasonable default for unlimited mode
+	}
 }
 
 bool OrderedBuffer::push(TracepointPtr tp)
@@ -36,8 +42,9 @@ bool OrderedBuffer::push(TracepointPtr tp)
 		m_stats.high_water_mark = m_heap.size();
 	}
 
-	// Notify waiting consumer
-	m_cv.notify_one();
+	// Note: We don't notify on every push - the output loop polls periodically
+	// and the watermark update will notify when tracepoints become ready.
+	// This reduces lock contention significantly.
 
 	return true;
 }
@@ -51,8 +58,8 @@ void OrderedBuffer::update_watermark(uint64_t max_seen_ns)
 
 void OrderedBuffer::finish()
 {
+	m_finished.store(true, std::memory_order_release);
 	std::lock_guard lock(m_mutex);
-	m_finished = true;
 	m_cv.notify_all();
 }
 
@@ -61,7 +68,9 @@ std::optional<TracepointPtr> OrderedBuffer::pop(std::chrono::milliseconds timeou
 	std::unique_lock lock(m_mutex);
 
 	// Wait for a tracepoint to be ready or finish signal
-	if (!m_cv.wait_for(lock, timeout, [this] { return has_ready_locked() || m_finished; })) {
+	if (!m_cv.wait_for(lock, timeout, [this] {
+			return has_ready_locked() || m_finished.load(std::memory_order_acquire);
+		})) {
 		return std::nullopt; // Timeout
 	}
 
@@ -69,7 +78,7 @@ std::optional<TracepointPtr> OrderedBuffer::pop(std::chrono::milliseconds timeou
 		return std::nullopt;
 	}
 
-	if (m_finished) {
+	if (m_finished.load(std::memory_order_acquire)) {
 		// Flushing mode - output everything
 		return pop_front_locked();
 	}
@@ -91,13 +100,14 @@ std::vector<TracepointPtr> OrderedBuffer::pop_all_ready()
 	std::vector<TracepointPtr> result;
 	std::lock_guard lock(m_mutex);
 
+	const bool is_finished = m_finished.load(std::memory_order_acquire);
 	const uint64_t safe_threshold =
 		(m_watermark_ns > m_order_delay_ns) ? (m_watermark_ns - m_order_delay_ns) : 0;
 
 	while (!m_heap.empty()) {
 		const uint64_t oldest_ts = m_heap.front()->timestamp_ns;
 
-		if (m_finished || oldest_ts <= safe_threshold) {
+		if (is_finished || oldest_ts <= safe_threshold) {
 			result.push_back(pop_front_locked());
 		} else {
 			break;
@@ -122,8 +132,13 @@ size_t OrderedBuffer::size() const
 
 bool OrderedBuffer::finished() const
 {
+	// Fast path: check atomic finished flag without lock
+	if (!m_finished.load(std::memory_order_acquire)) {
+		return false;
+	}
+	// Need lock to check if heap is empty
 	std::lock_guard lock(m_mutex);
-	return m_finished && m_heap.empty();
+	return m_heap.empty();
 }
 
 OrderedBuffer::Stats OrderedBuffer::stats() const
@@ -165,7 +180,7 @@ bool OrderedBuffer::has_ready_locked() const
 {
 	if (m_heap.empty())
 		return false;
-	if (m_finished)
+	if (m_finished.load(std::memory_order_acquire))
 		return true;
 
 	const uint64_t oldest_ts = m_heap.front()->timestamp_ns;
