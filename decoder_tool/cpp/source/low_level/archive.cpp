@@ -90,5 +90,4 @@ void Archive::unpack() {
 	}
 
 	archive_read_close(a);
-	return;
 }

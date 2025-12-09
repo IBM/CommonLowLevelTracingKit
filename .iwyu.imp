@@ -1,0 +1,46 @@
+# IWYU (Include What You Use) mapping file for CommonLowLevelTracingKit
+# Documentation: https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md
+#
+# This file tells IWYU about:
+# - Private headers that should map to public headers
+# - Symbol-to-header mappings
+# - Headers to keep together
+
+[
+  # ==========================================================================
+  # C standard library mappings (internal headers -> public headers)
+  # ==========================================================================
+  { include: ["<bits/types/struct_timespec.h>", "private", "<time.h>", "public"] },
+  { include: ["<bits/stdint-uintn.h>", "private", "<stdint.h>", "public"] },
+  { include: ["<bits/stdint-intn.h>", "private", "<stdint.h>", "public"] },
+  { include: ["<bits/types/FILE.h>", "private", "<stdio.h>", "public"] },
+  { include: ["<bits/types/__FILE.h>", "private", "<stdio.h>", "public"] },
+  { include: ["<bits/types/struct_iovec.h>", "private", "<sys/uio.h>", "public"] },
+
+  # ==========================================================================
+  # C++ standard library mappings
+  # ==========================================================================
+  { symbol: ["std::string", "private", "<string>", "public"] },
+  { symbol: ["std::vector", "private", "<vector>", "public"] },
+  { symbol: ["std::span", "private", "<span>", "public"] },
+  { symbol: ["std::optional", "private", "<optional>", "public"] },
+  { symbol: ["std::variant", "private", "<variant>", "public"] },
+  { symbol: ["std::unique_ptr", "private", "<memory>", "public"] },
+  { symbol: ["std::shared_ptr", "private", "<memory>", "public"] },
+  { symbol: ["std::function", "private", "<functional>", "public"] },
+  { symbol: ["std::filesystem::path", "private", "<filesystem>", "public"] },
+
+  # ==========================================================================
+  # Boost library mappings
+  # ==========================================================================
+  { include: ["@<boost/sort/.*>", "private", "<boost/sort/sort.hpp>", "public"] },
+
+  # ==========================================================================
+  # Project-specific mappings
+  # ==========================================================================
+  # Keep tracing.h as the main public header
+  { include: ["\"tracing.h\"", "public", "<CommonLowLevelTracingKit/tracing.h>", "public"] },
+  
+  # Internal headers that should not be suggested for direct inclusion
+  { include: ["\"abstraction/.*\"", "private", "<CommonLowLevelTracingKit/tracing.h>", "public"] }
+]

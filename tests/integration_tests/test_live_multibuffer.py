@@ -35,44 +35,49 @@ class TestLiveMultiBufferScenarios(LiveTestCase):
         """
         buffer_names = ["MultiBufA", "MultiBufB", "MultiBufC"]
         clltk_path = get_clltk_path()
-        
+
         all_pre_messages = {}
 
         # Create all buffers and write pre-existing tracepoints
         for buf_name in buffer_names:
-            clltk("tracebuffer", "--name", buf_name, "--size", "4KB")
-            
+            clltk("buffer", "--buffer", buf_name, "--size", "4KB")
+
             pre_msgs = [f"{buf_name}_pre_{i}" for i in range(2)]
             all_pre_messages[buf_name] = pre_msgs
-            
+
             for msg in pre_msgs:
                 result = subprocess.run(
-                    [str(clltk_path), 'tracepoint', '--tb', buf_name, '--msg', msg],
-                    env=os.environ.copy(), capture_output=True
+                    [str(clltk_path), "trace", "--buffer", buf_name, "--message", msg],
+                    env=os.environ.copy(),
+                    capture_output=True,
                 )
                 self.assertEqual(result.returncode, 0)
 
         # Run decoder
-        result = run_live_with_timeout(self.trace_path, timeout_seconds=3,
-                                       order_delay=50, poll_interval=5)
-        
-        stdout_text = result.stdout.decode('utf-8')
-        
+        result = run_live_with_timeout(
+            self.trace_path, timeout_seconds=3, order_delay=50, poll_interval=5
+        )
+
+        stdout_text = result.stdout.decode("utf-8")
+
         for buf_name, pre_msgs in all_pre_messages.items():
             for msg in pre_msgs:
-                self.assertIn(msg, stdout_text,
+                self.assertIn(
+                    msg,
+                    stdout_text,
                     f"Pre-existing message '{msg}' from buffer '{buf_name}' not found.\n"
-                    f"Output sample: {stdout_text[:500]}...")
+                    f"Output sample: {stdout_text[:500]}...",
+                )
 
     def test_timestamp_ordering_across_multiple_buffers(self):
         """
         Test that tracepoints from multiple buffers are output in timestamp order.
         """
         clltk_path = get_clltk_path()
-        
+
         # Create two buffers
-        clltk("tracebuffer", "--name", "OrderBufA", "--size", "4KB")
-        clltk("tracebuffer", "--name", "OrderBufB", "--size", "4KB")
+        clltk("buffer", "--buffer", "OrderBufA", "--size", "4KB")
+        clltk("buffer", "--buffer", "OrderBufB", "--size", "4KB")
 
         # Write interleaved tracepoints with delays to ensure timestamp ordering
         messages_in_order = []
@@ -80,18 +85,20 @@ class TestLiveMultiBufferScenarios(LiveTestCase):
             buf = "OrderBufA" if i % 2 == 0 else "OrderBufB"
             msg = f"order_test_{i:02d}_{buf}"
             messages_in_order.append(msg)
-            
+
             subprocess.run(
-                [str(clltk_path), 'tracepoint', '--tb', buf, '--msg', msg],
-                env=os.environ.copy(), capture_output=True
+                [str(clltk_path), "trace", "--buffer", buf, "--message", msg],
+                env=os.environ.copy(),
+                capture_output=True,
             )
             time.sleep(0.03)  # Ensure distinct timestamps
 
         # Run decoder
-        result = run_live_with_timeout(self.trace_path, timeout_seconds=2,
-                                       order_delay=30, poll_interval=5)
-        
-        stdout_text = result.stdout.decode('utf-8')
+        result = run_live_with_timeout(
+            self.trace_path, timeout_seconds=2, order_delay=30, poll_interval=5
+        )
+
+        stdout_text = result.stdout.decode("utf-8")
 
         # Verify all messages present
         for msg in messages_in_order:
@@ -104,8 +111,11 @@ class TestLiveMultiBufferScenarios(LiveTestCase):
             positions.append((msg, pos))
 
         for i in range(1, len(positions)):
-            self.assertLess(positions[i-1][1], positions[i][1],
-                f"Messages out of order: '{positions[i-1][0]}' should appear before '{positions[i][0]}'")
+            self.assertLess(
+                positions[i - 1][1],
+                positions[i][1],
+                f"Messages out of order: '{positions[i - 1][0]}' should appear before '{positions[i][0]}'",
+            )
 
     def test_empty_buffer_then_write(self):
         """
@@ -115,14 +125,24 @@ class TestLiveMultiBufferScenarios(LiveTestCase):
         clltk_path = get_clltk_path()
 
         # Create empty buffer
-        clltk("tracebuffer", "--name", buffer_name, "--size", "4KB")
+        clltk("buffer", "--buffer", buffer_name, "--size", "4KB")
 
         # Start decoder on empty buffer
         decoder_proc = subprocess.Popen(
-            ["stdbuf", "-oL", str(clltk_path), "live", self.trace_path,
-             "--order-delay", "30", "--poll-interval", "5"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            env=os.environ.copy()
+            [
+                "stdbuf",
+                "-oL",
+                str(clltk_path),
+                "live",
+                self.trace_path,
+                "--order-delay",
+                "30",
+                "--poll-interval",
+                "5",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=os.environ.copy(),
         )
 
         try:
@@ -137,8 +157,16 @@ class TestLiveMultiBufferScenarios(LiveTestCase):
             test_messages = [f"delayed_write_{i}" for i in range(3)]
             for msg in test_messages:
                 subprocess.run(
-                    [str(clltk_path), 'tracepoint', '--tb', buffer_name, '--msg', msg],
-                    env=os.environ.copy(), capture_output=True
+                    [
+                        str(clltk_path),
+                        "trace",
+                        "--buffer",
+                        buffer_name,
+                        "--message",
+                        msg,
+                    ],
+                    env=os.environ.copy(),
+                    capture_output=True,
                 )
                 time.sleep(0.05)
 
@@ -161,12 +189,15 @@ class TestLiveMultiBufferScenarios(LiveTestCase):
             remaining, _ = decoder_proc.communicate(timeout=2)
             collected += remaining
 
-            stdout_text = collected.decode('utf-8')
+            stdout_text = collected.decode("utf-8")
 
             for msg in test_messages:
-                self.assertIn(msg, stdout_text,
+                self.assertIn(
+                    msg,
+                    stdout_text,
                     f"Message '{msg}' not found. Decoder may not handle initially empty buffers.\n"
-                    f"Output: {stdout_text[:500]}...")
+                    f"Output: {stdout_text[:500]}...",
+                )
 
         except subprocess.TimeoutExpired:
             decoder_proc.kill()
@@ -179,5 +210,5 @@ class TestLiveMultiBufferScenarios(LiveTestCase):
             raise e
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

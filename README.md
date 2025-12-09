@@ -125,6 +125,7 @@ Due to the implementation, design decisions and compiler limitation there are so
   ```
 
 ## Build, Test and Packaging
+
 You may use the repository with or without a container. To run any scripts, build, test, or package commands inside the recommended container, use: `./scripts/container.sh <your command + args>`. Alternatively, you can jump directly into the container with `./scripts/container.sh`.
 
 It is also possible to cross compile with the container env by using of example: `CONTAINER_ARCH=arm64 ./scripts/container.sh`.
@@ -134,30 +135,74 @@ It is also possible to cross compile with the container env by using of example:
 To build this repository for test purposes or development run:
 
 ```bash
-./scripts/ci-cd/build_userspace.sh
+./scripts/container.sh ./scripts/ci-cd/step_build.sh
 ```
 
-### Tests tracing standalone
-
-To run all test build the whole project with cmake and than run:
+Or using CMake presets directly:
 
 ```bash
-./scripts/ci-cd/test_userspace.sh
+cmake --preset unittests
+cmake --build --preset unittests
 ```
 
-This will run all c++ and python tests.
+### Run Tests
 
-For c++ googletests are used and there are covering many internal function and some api functions. To test internal function access to these function is required. There for a static linked version of `clltk_tracing` is used.
- 
-For python test unittest is used and these test covers the tracing and decoding of the examples and building test cases with valid and invalid use of the tracing api.
+To run all tests (C++ and Python):
 
-### Run CI locally
 ```bash
-./scripts/ci-cd/run.sh
+./scripts/container.sh ./scripts/ci-cd/step_test.sh
 ```
 
-### package this repository
+For C++ googletests are used covering internal functions and API functions. For Python, unittest is used covering tracing, decoding, and build validation.
+
+### Run CI Locally
+
+The CI pipeline is designed so that everything running on GitHub Actions can also be run locally. Each CI step is an independent script:
+
 ```bash
+# Run the full CI pipeline (same as GitHub Actions)
+./scripts/container.sh ./scripts/ci-cd/run_all.sh
+
+# Or run individual steps:
+./scripts/container.sh ./scripts/ci-cd/step_format.sh       # Format check
+./scripts/container.sh ./scripts/ci-cd/step_build.sh        # Build
+./scripts/container.sh ./scripts/ci-cd/step_test.sh         # Tests
+./scripts/container.sh ./scripts/ci-cd/step_memcheck.sh     # Valgrind memory check
+./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --all  # Static analysis
+./scripts/container.sh ./scripts/ci-cd/step_package.sh      # RPM packaging
+```
+
+### Static Analysis
+
+Static analysis tools (clang-tidy, cppcheck) are integrated into the CI pipeline:
+
+```bash
+# Run all static analysis
+./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --all
+
+# Run only clang-tidy
+./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --clang-tidy
+
+# Run with auto-fix (clang-tidy only)
+./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --clang-tidy --fix
+
+# Analyze specific component
+./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --clang-tidy --filter decoder_tool
+```
+
+You can also build with clang-tidy integrated into compilation:
+
+```bash
+cmake --preset static-analysis
+cmake --build --preset static-analysis
+```
+
+### Package this repository
+
+```bash
+./scripts/container.sh ./scripts/ci-cd/step_package.sh
+
+# Or directly:
 cmake --workflow --preset rpms
 ```
 

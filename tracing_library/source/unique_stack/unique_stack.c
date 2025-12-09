@@ -80,7 +80,6 @@ static uint64_t check_if_already_in_file(unique_stack_handler_t *handler, __uint
 
 		// increment to next entry
 		offset_in_stack_body += sizeof(head) + head.body_size;
-		continue;
 	}
 
 	return 0; // if searched to whole stack without any finding
@@ -107,31 +106,28 @@ uint64_t unique_stack_add(unique_stack_handler_t *handler, const void *body, uin
 	if (file_offset > 0) {
 		// already in stack
 		return file_offset;
-	} else {
-		// not in stack, so add this
-		entry_head_t entry_head = {
-			.md5_hash = md5_hash,
-			.body_size = size,
-		};
-		entry_head.crc = crc8_continue(0, (const uint8_t *)&entry_head, sizeof(entry_head) - 1);
-		// add entry
-		uint64_t stack_body_size = 0;
-		const uint64_t stack_body_size_offset =
-			handler->file_offset + offsetof(unique_stack_header_t, body_size);
-		file_pread(handler->file, &stack_body_size, sizeof(stack_body_size),
-				   stack_body_size_offset);
-
-		const size_t base_offset = body_offset(handler) + stack_body_size;
-		const size_t entry_head_offset = base_offset;
-		const size_t body_offset = entry_head_offset + sizeof(entry_head);
-
-		file_pwrite(handler->file, body, size, body_offset);
-		file_pwrite(handler->file, &entry_head, sizeof(entry_head), entry_head_offset);
-
-		stack_body_size += sizeof(entry_head) + size;
-		file_pwrite(handler->file, &stack_body_size, sizeof(stack_body_size),
-					stack_body_size_offset);
-		// return offset of data in file
-		return base_offset + sizeof(entry_head);
 	}
+	// not in stack, so add this
+	entry_head_t entry_head = {
+		.md5_hash = md5_hash,
+		.body_size = size,
+	};
+	entry_head.crc = crc8_continue(0, (const uint8_t *)&entry_head, sizeof(entry_head) - 1);
+	// add entry
+	uint64_t stack_body_size = 0;
+	const uint64_t stack_body_size_offset =
+		handler->file_offset + offsetof(unique_stack_header_t, body_size);
+	file_pread(handler->file, &stack_body_size, sizeof(stack_body_size), stack_body_size_offset);
+
+	const size_t base_offset = body_offset(handler) + stack_body_size;
+	const size_t entry_head_offset = base_offset;
+	const size_t body_offset = entry_head_offset + sizeof(entry_head);
+
+	file_pwrite(handler->file, body, size, body_offset);
+	file_pwrite(handler->file, &entry_head, sizeof(entry_head), entry_head_offset);
+
+	stack_body_size += sizeof(entry_head) + size;
+	file_pwrite(handler->file, &stack_body_size, sizeof(stack_body_size), stack_body_size_offset);
+	// return offset of data in file
+	return base_offset + sizeof(entry_head);
 }

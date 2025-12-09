@@ -2,6 +2,7 @@
 #define DECODER_TOOL_TRACEPOINT_HEADER
 #include <cstdint>
 #include <memory>
+#include <string_view>
 #include <vector>
 
 #include "Common.hpp"
@@ -53,11 +54,11 @@ namespace CommonLowLevelTracingKit::decoder {
 		};
 		virtual ~Tracepoint() = default;
 
-		const std::string_view tracebuffer;
 		const uint64_t nr;
 		const uint64_t timestamp_ns;
 		const SourceType source_type;
 		virtual Type type() const noexcept = 0;
+		[[nodiscard]] virtual const std::string_view tracebuffer() const noexcept = 0;
 		[[nodiscard]] virtual const std::string_view file() const noexcept = 0;
 		[[nodiscard]] virtual uint64_t line() const noexcept = 0;
 		[[nodiscard]] virtual uint32_t pid() const noexcept = 0;
@@ -72,10 +73,8 @@ namespace CommonLowLevelTracingKit::decoder {
 		}
 
 	  protected:
-		Tracepoint(const std::string_view tb, uint64_t n, uint64_t t,
-				   SourceType src = SourceType::Unknown) noexcept
-			: tracebuffer(tb)
-			, nr(n)
+		Tracepoint(uint64_t n, uint64_t t, SourceType src = SourceType::Unknown) noexcept
+			: nr(n)
 			, timestamp_ns(t)
 			, source_type(src) {};
 	};

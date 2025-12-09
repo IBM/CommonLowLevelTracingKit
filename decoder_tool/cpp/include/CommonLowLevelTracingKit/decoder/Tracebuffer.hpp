@@ -122,8 +122,8 @@ namespace CommonLowLevelTracingKit::decoder {
 
 		TracepointCollection tracepoints;
 
-		virtual const std::string_view name() const noexcept { return m_name; }
-		virtual size_t size() const noexcept { return m_size; }
+		const std::string_view name() const noexcept override { return m_name; }
+		size_t size() const noexcept override { return m_size; }
 
 		// is path, directory, clltk user or kernel trace or is compressed or uncompressed tar
 		static bool is_formattable(const std::filesystem::path &);
@@ -133,7 +133,7 @@ namespace CommonLowLevelTracingKit::decoder {
 		SnapTracebuffer &operator=(const SnapTracebuffer &) noexcept = delete;
 		SnapTracebuffer &operator=(SnapTracebuffer &&) noexcept = delete;
 
-		virtual ~SnapTracebuffer() noexcept = default;
+		~SnapTracebuffer() noexcept override = default;
 
 	  protected:
 		SnapTracebuffer(const std::filesystem::path &, TracepointCollection &&, std::string &&,

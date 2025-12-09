@@ -110,6 +110,10 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 		std::variant<EntryPtr, std::string> getNextEntry() noexcept;
 
+		// Safe zone threshold: entries this far behind the write head are guaranteed
+		// to not be overwritten, so CRC validation can be skipped for better performance.
+		static constexpr size_t SAFE_ZONE_THRESHOLD = 4096;
+
 	  private:
 		std::mutex m_this_lock;
 		const FilePart m_file;
@@ -129,13 +133,13 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 		static EntryPtr make(const uint64_t a_entry_number, const uint64_t a_body_start,
 							 const size_t a_body_size, const FilePart &a_rb_body,
-							 const uint64_t a_rb_size);
+							 const uint64_t a_rb_size, const bool skip_crc = false);
 
 		const uint64_t nr;
 
 	  private:
 		Entry(const uint64_t a_entry_number, const uint64_t a_body_start, const size_t a_body_size,
-			  const FilePart &a_rb_body, const uint64_t a_rb_size) noexcept;
+			  const FilePart &a_rb_body, const uint64_t a_rb_size, const bool skip_crc) noexcept;
 		static inline constexpr size_t static_body_size = 256;
 		friend class Ringbuffer;
 

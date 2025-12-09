@@ -109,7 +109,8 @@ TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) noexcept 
 
 		const uint64_t fileoffset = get<uint64_t>(e->body()) & ((1ULL << 48) - 1);
 		if (fileoffset == 0x01) {
-			auto tp = make_tracepoint<TracepointDynamic>(name(), std::move(e), m_source_type);
+			auto tp = make_tracepoint<TracepointDynamic>(std::string(name()), std::move(e),
+														 m_source_type);
 			if (!filter || filter(*tp)) return tp;
 		} else if (fileoffset < 0xFF) {
 			return ErrorTracepoint::make(
@@ -129,7 +130,7 @@ TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) noexcept 
 				return ErrorTracepoint::make(name(), "meta entry bigger than file end");
 			const std::span<const uint8_t> meta{&m_file.getReference<const uint8_t>(fileoffset),
 												meta_size};
-			auto tp = make_tracepoint<TracepointStatic>(name(), std::move(e), meta,
+			auto tp = make_tracepoint<TracepointStatic>(std::string(name()), std::move(e), meta,
 														m_file.getFileInternal(), m_source_type);
 			if (!filter || filter(*tp)) return tp;
 		}
@@ -147,8 +148,8 @@ TracepointPtr SyncTbInternal::next_pooled(TracepointPool &pool,
 
 		const uint64_t fileoffset = get<uint64_t>(e->body()) & ((1ULL << 48) - 1);
 		if (fileoffset == 0x01) {
-			auto tp = make_pooled_tracepoint<TracepointDynamic>(pool, name(), std::move(e),
-																m_source_type);
+			auto tp = make_pooled_tracepoint<TracepointDynamic>(pool, std::string(name()),
+																std::move(e), m_source_type);
 			if (!filter || filter(*tp)) return tp;
 		} else if (fileoffset < 0xFF) {
 			return ErrorTracepoint::make(
@@ -169,7 +170,8 @@ TracepointPtr SyncTbInternal::next_pooled(TracepointPool &pool,
 			const std::span<const uint8_t> meta{&m_file.getReference<const uint8_t>(fileoffset),
 												meta_size};
 			auto tp = make_pooled_tracepoint<TracepointStatic>(
-				pool, name(), std::move(e), meta, m_file.getFileInternal(), m_source_type);
+				pool, std::string(name()), std::move(e), meta, m_file.getFileInternal(),
+				m_source_type);
 			if (!filter || filter(*tp)) return tp;
 		}
 	}

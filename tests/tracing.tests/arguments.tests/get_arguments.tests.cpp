@@ -17,7 +17,6 @@ void _helper(const char *const format, void *const buffer, _clltk_argument_types
 	get_argument_sizes(format, sizes, types, args);
 	get_arguments(buffer, sizes, types, args);
 	va_end(args);
-	return;
 }
 
 bool memzero(const uint8_t *const ptr, const size_t size)

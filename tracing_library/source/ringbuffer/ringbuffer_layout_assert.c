@@ -3,7 +3,6 @@
 
 #include "ringbuffer.h"
 #include <stddef.h>
-#include <stdint.h>
 
 _Static_assert(0 == offsetof(ringbuffer_head_t, version), "layout failed");
 _Static_assert(8 == offsetof(ringbuffer_head_t, mutex), "layout failed");

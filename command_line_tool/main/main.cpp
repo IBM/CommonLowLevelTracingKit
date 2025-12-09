@@ -14,18 +14,21 @@
 
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
+using namespace CommonLowLevelTracingKit::cmd::interface;
 
-static void set_silent(void)
+static void set_quiet(void)
 {
-	static std::ostringstream deadEnd;
-	std::cout.rdbuf(deadEnd.rdbuf());
-	std::cerr.rdbuf(deadEnd.rdbuf());
+	set_verbosity(Verbosity::quiet);
 }
 
-static void set_path(const std::string_view &input)
+static void set_verbose(void)
 {
-	if (0 != setenv("CLLTK_TRACING_PATH", input.data(), 1))
-		throw CLI::RuntimeError("could not set env variable CLLTK_TRACING_PATH", 1);
+	set_verbosity(Verbosity::verbose);
+}
+
+static void set_path(const std::string &input)
+{
+	set_path_option(input);
 }
 
 static void print_version(void)
@@ -40,20 +43,24 @@ static std::unique_ptr<CLI::App> createMainApp(void)
 	app->description("Common Low Level Tracing Kit - A high-performance tracing toolkit for "
 					 "userspace and kernel tracing");
 
-	auto *const silent = app->add_flag_callback(
-		"--silent,-s", set_silent,
-		"Redirect stdout/stderr to /dev/null (silent mode). Useful for scripting");
+	auto *const quiet = app->add_flag_callback(
+		"--quiet,-q", set_quiet, "Quiet mode: only show error messages, hide info and progress");
 
-	app->add_option_function("--clltk_tracing_path,-C"s, std::function(set_path),
-							 "Set the tracing path directory where tracebuffers are stored")
+	auto *const verbose = app->add_flag_callback(
+		"--verbose,-v", set_verbose, "Verbose mode: show detailed progress and info messages");
+
+	quiet->excludes(verbose);
+
+	app->add_option_function("-P,--path"s, std::function(set_path),
+							 "Tracing path where tracebuffers are stored (default: .)")
 		->envname("CLLTK_TRACING_PATH")
-		->check(CLI::ExistingPath)
 		->type_name("PATH");
 
 	auto *const version =
-		app->add_flag_callback("--version", print_version, "Print version information and exit");
+		app->add_flag_callback("-V,--version", print_version, "Print version information and exit");
 
-	version->excludes(silent);
+	version->excludes(quiet);
+	version->excludes(verbose);
 
 	app->require_subcommand(0, 1);
 
@@ -79,8 +86,9 @@ void call_all_init_functions(void)
 
 int main(int argc, const char **argv)
 {
+	install_signal_handlers();
 	call_all_init_functions();
-	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
+	auto [app, lock] = acquireMainApp();
 	if (argc == 1) {
 		std::cout << app.help() << std::endl;
 		return 0;

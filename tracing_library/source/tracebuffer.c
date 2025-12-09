@@ -42,8 +42,7 @@ __attribute__((always_inline)) static inline size_t round_up(size_t value, size_
 	const size_t r = (value % alignment);
 	if (r == 0)
 		return value;
-	else
-		return value + (alignment - r);
+	return value + (alignment - r);
 }
 #endif
 
@@ -231,11 +230,10 @@ _clltk_file_offset_t _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_ha
 	if ((elf_sec_start <= this_start) && (this_stop <= elf_sec_stop)) {
 		// if meta for this tracepoint is in section
 		return buffer->runtime.file_offset + (_clltk_file_offset_t)(this_start - elf_sec_start);
-	} else {
-		// if meta for this tracepoint is not in section
-		// this will happen with template functions
-		return _clltk_tracebuffer_add_to_stack(buffer, this_meta, this_meta_size);
 	}
+	// if meta for this tracepoint is not in section
+	// this will happen with template functions
+	return _clltk_tracebuffer_add_to_stack(buffer, this_meta, this_meta_size);
 }
 
 bool _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
@@ -341,7 +339,6 @@ void add_to_ringbuffer(_clltk_tracebuffer_handler_t *handler, const void *const 
 		ERROR_LOG("could not lock ringbuffer update. ERROR was: %s", lock.error_msg);
 	else if (0 == ringbuffer_in(buffer->ringbuffer, entry, size))
 		ERROR_LOG("ringbuffer in failed for add_to_ringbuffer");
-	return;
 }
 
 void clltk_dynamic_tracebuffer_creation(const char *buffer_name, size_t size)

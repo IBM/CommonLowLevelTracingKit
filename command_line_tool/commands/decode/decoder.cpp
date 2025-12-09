@@ -32,27 +32,31 @@ struct Formattable : public CLI::Validator {
 		func_ = [](const std::string &filename) -> std::string {
 			if (std::filesystem::is_directory(filename))
 				return {};
-			else if (SnapTracebuffer::is_formattable(filename))
+			if (SnapTracebuffer::is_formattable(filename))
 				return {};
-			else
-				return "\"" + filename + "\"not formattable";
+			return "\"" + filename + "\"not formattable";
 		};
 	}
 };
 
 void print_tracepoint(FILE *f, int tb_name_size, const Tracepoint &p)
 {
-	const char *const tb = p.tracebuffer.data();
-	const int tb_size = p.tracebuffer.size();
+	const auto tb_view = p.tracebuffer();
+	const char *const tb = tb_view.data();
+	const int tb_size = tb_view.size();
 	// Add '*' prefix for kernel traces in the tracebuffer name column
+	const auto msg = p.msg();
+	const auto file = p.file();
 	if (p.is_kernel()) {
-		fprintf(f, " %s | %s | *%-*.*s | %5d | %5d | %s | %s | %ld\n", p.timestamp_str().c_str(),
-				p.date_and_time_str().c_str(), tb_name_size - 1, tb_size, tb, p.pid(), p.tid(),
-				p.msg().data(), p.file().data(), p.line());
+		fprintf(f, " %s | %s | *%-*.*s | %5d | %5d | %.*s | %.*s | %ld\n",
+				p.timestamp_str().c_str(), p.date_and_time_str().c_str(), tb_name_size - 1, tb_size,
+				tb, p.pid(), p.tid(), static_cast<int>(msg.size()), msg.data(),
+				static_cast<int>(file.size()), file.data(), p.line());
 	} else {
-		fprintf(f, " %s | %s | %-*.*s | %5d | %5d | %s | %s | %ld\n", p.timestamp_str().c_str(),
+		fprintf(f, " %s | %s | %-*.*s | %5d | %5d | %.*s | %.*s | %ld\n", p.timestamp_str().c_str(),
 				p.date_and_time_str().c_str(), tb_name_size, tb_size, tb, p.pid(), p.tid(),
-				p.msg().data(), p.file().data(), p.line());
+				static_cast<int>(msg.size()), msg.data(), static_cast<int>(file.size()),
+				file.data(), p.line());
 	}
 }
 void print_header(FILE *f, int tb_name_size)
@@ -63,41 +67,40 @@ void print_header(FILE *f, int tb_name_size)
 
 static void add_decode_command(CLI::App &app)
 {
-	CLI::App *const command = app.add_subcommand("de", "Decode and format trace files");
-	command->alias("decode");
+	CLI::App *const command = app.add_subcommand("decode", "Decode and format trace files");
+	command->alias("de");
 	command->description(
 		"Decode and format one or multiple trace files into human-readable output.\n"
 		"Supports single tracebuffer files, archives (.clltk snapshots), or directories.\n"
-		"Use for post-mortem analysis of collected trace data.");
+		"If no input is specified, uses CLLTK_TRACING_PATH or current directory.");
 
 	static std::string input_path{};
 
 	command
 		->add_option("input", input_path,
-					 "Path to trace data: single tracebuffer file, .clltk archive, or directory")
-		->envname("CLLTK_TRACING_PATH")
-		->check(Formattable{})
-		->required()
+					 "Path to trace data: file, .clltk archive, or directory\n"
+					 "(default: CLLTK_TRACING_PATH or current directory)")
 		->type_name("PATH");
 
-	static std::string output_path = "output.txt";
-	static auto output_option =
-		command->add_option("-o,--output", output_path, "Output file path for decoded traces")
-			->capture_default_str()
-			->type_name("FILE");
-
-	static bool use_stdout = false;
+	static std::string output_path{};
 	command
-		->add_flag("--stdout", use_stdout,
-				   "Output to stdout instead of file (mutually exclusive with -o)")
-		->excludes(output_option);
+		->add_option("-o,--output", output_path,
+					 "Output file path (default: stdout, use - for stdout)")
+		->type_name("FILE");
+
+	static bool recursive = true;
+	command->add_flag("-r,--recursive,!--no-recursive", recursive,
+					  "Recurse into subdirectories (default: yes)");
 
 	static std::string tracebuffer_filter_str = "^.*$";
 	command
-		->add_option("-t,--tracebuffer-filter", tracebuffer_filter_str,
-					 "Filter tracebuffers by name using ECMAScript regex")
+		->add_option("-F,--filter", tracebuffer_filter_str,
+					 "Filter tracebuffers by name using regex")
 		->capture_default_str()
 		->type_name("REGEX");
+
+	static bool json_output = false;
+	command->add_flag("-j,--json", json_output, "Output as JSON (one object per line)");
 
 	static bool sorted = true;
 	command->add_flag("--sorted", sorted,
@@ -167,11 +170,19 @@ static void add_decode_command(CLI::App &app)
 		->type_name("TIME");
 
 	command->callback([&]() {
+		// Resolve input path: use provided path, or fall back to tracing path
+		std::string resolved_input = input_path.empty() ? get_tracing_path().string() : input_path;
+
+		// Determine output destination
+		bool use_stdout = output_path.empty() || output_path == "-";
 		FILE *out = use_stdout ? stdout : std::fopen(output_path.c_str(), "w+");
 		if (!use_stdout && !out) {
-			std::perror("fopen");
+			log_error("Cannot open output file: ", output_path);
 			return 1;
 		}
+
+		// Register output file for cleanup on interrupt
+		OutputFileGuard output_guard(use_stdout ? "" : output_path);
 
 		// Build tracebuffer filter
 		const boost::regex tracebuffer_filter_regex{tracebuffer_filter_str};
@@ -258,7 +269,8 @@ static void add_decode_command(CLI::App &app)
 			tpFilter.set_file_filter(filter_file, false);
 
 		// Collect tracebuffers (without time filter for now)
-		auto tbs = SnapTracebuffer::collect(input_path, tbFilter);
+		// Note: recursive flag affects directory traversal in collect()
+		auto tbs = SnapTracebuffer::collect(resolved_input, tbFilter);
 
 		// Find trace time bounds
 		uint64_t trace_min_ns = UINT64_MAX;
@@ -285,6 +297,7 @@ static void add_decode_command(CLI::App &app)
 			tb_name_size = std::max(tb_name_size, tb->name().size());
 
 		print_header(out, tb_name_size);
+		size_t tp_count = 0;
 		if (sorted) {
 			static constexpr auto comp = [](const TracepointPtr &a, const TracepointPtr &b) {
 				return a->timestamp_ns > b->timestamp_ns;
@@ -292,28 +305,48 @@ static void add_decode_command(CLI::App &app)
 			boost::heap::priority_queue<TracepointPtr, boost::heap::compare<decltype(comp)>> tps{
 				comp};
 			for (const auto &tb : tbs) {
+				if (is_interrupted())
+					break;
 				TracepointCollection &tb_tps = tb->tracepoints;
 				for (auto &tp : tb_tps) {
 					if (tpFilter(*tp))
 						tps.emplace(std::move(tp));
 				}
 			}
-			while (!tps.empty()) {
+			while (!tps.empty() && !is_interrupted()) {
 				const auto tp = tps.top().get();
 				print_tracepoint(out, tb_name_size, *tp);
 				tps.pop();
+				++tp_count;
 			}
 		} else {
 			for (const auto &tb : tbs) {
+				if (is_interrupted())
+					break;
 				for (const auto &tp : tb->tracepoints) {
-					if (tpFilter(*tp))
+					if (is_interrupted())
+						break;
+					if (tpFilter(*tp)) {
 						print_tracepoint(out, tb_name_size, *tp);
+						++tp_count;
+					}
 				}
 			}
 		}
 
 		if (!use_stdout)
 			std::fclose(out);
+
+		if (is_interrupted()) {
+			log_info("Interrupted after ", tp_count, " tracepoints");
+			return 130; // Standard exit code for SIGINT
+		}
+
+		if (!use_stdout) {
+			log_verbose("Decoded ", tp_count, " tracepoints to ", output_path);
+		} else {
+			log_verbose("Decoded ", tp_count, " tracepoints");
+		}
 		return 0;
 	});
 }

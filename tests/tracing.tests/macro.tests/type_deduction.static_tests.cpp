@@ -136,7 +136,7 @@ _CLLTK_STATIC_ASSERT(_CLLTK_TYPE_TO_TYPE(0, _clltk_arg_test_variable_cpp_struct)
 					 "CommonLowLevelTracingKit: type deduction failed");
 
 struct {
-} *_clltk_arg_test_variable_cpp_struct_ptr = 0;
+} *_clltk_arg_test_variable_cpp_struct_ptr = nullptr;
 _CLLTK_STATIC_ASSERT(_CLLTK_TYPE_TO_TYPE(0, _clltk_arg_test_variable_cpp_struct_ptr) ==
 						 _clltk_argument_pointer,
 					 "CommonLowLevelTracingKit: type deduction failed");

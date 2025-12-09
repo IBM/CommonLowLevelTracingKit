@@ -81,18 +81,17 @@ syn_lock_object_t sync_memory_mutex_get(sync_mutex_t *const ptr)
 	if (status == 0) {
 		// if no error occurred than return valid lock object
 		return CREATE_SYN_LOCK_OBJECT(ptr, true, "");
-	} else if (status == EOWNERDEAD) {
+	}
+	if (status == EOWNERDEAD) {
 		// dead owner therefore we recover the state
 		// we also got the lock
 		if (pthread_mutex_consistent(mutex) == 0) {
 			return CREATE_SYN_LOCK_OBJECT(ptr, true, "mutex recovered from dead owner");
-		} else {
-			return CREATE_SYN_LOCK_OBJECT(ptr, false, strerror(status));
 		}
-	} else {
-		// if any other error occurred than return object with error info
 		return CREATE_SYN_LOCK_OBJECT(ptr, false, strerror(status));
 	}
+	// if any other error occurred than return object with error info
+	return CREATE_SYN_LOCK_OBJECT(ptr, false, strerror(status));
 }
 
 void sync_memory_mutex_release(syn_lock_object_t *const lock)
@@ -101,10 +100,9 @@ void sync_memory_mutex_release(syn_lock_object_t *const lock)
 		if (*lock->error_msg == '\0') {
 			ERROR_LOG("releasing an unlocked mutex is not allowed");
 			return;
-		} else {
-			// an error while locking occurred therefore do nothing in clean up function
-			return;
 		}
+		// an error while locking occurred therefore do nothing in clean up function
+		return;
 	}
 	if (!lock->internal) {
 		ERROR_AND_EXIT("releasing a NULL lock is not allowed");

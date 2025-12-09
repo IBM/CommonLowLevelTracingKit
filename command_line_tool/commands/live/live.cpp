@@ -22,6 +22,7 @@
 
 // Include pool header for TracepointPool (from decoder_tool source)
 #include "pool.hpp"
+#include "to_string.hpp"
 
 using namespace std::chrono_literals;
 
@@ -32,6 +33,7 @@ using SyncTracebufferPtr = CommonLowLevelTracingKit::decoder::SyncTracebufferPtr
 using Tracepoint = CommonLowLevelTracingKit::decoder::Tracepoint;
 using TracepointPtr = CommonLowLevelTracingKit::decoder::TracepointPtr;
 using TracepointPool = CommonLowLevelTracingKit::decoder::source::TracepointPool;
+using ToString = CommonLowLevelTracingKit::decoder::source::low_level::ToString;
 
 namespace
 {
@@ -308,6 +310,7 @@ class LiveDecoder
 	 * @brief Output thread loop
 	 *
 	 * Waits for tracepoints to become ready (based on watermark), outputs them.
+	 * Uses batched flushing for better I/O performance.
 	 */
 	void output_loop()
 	{
@@ -319,8 +322,11 @@ class LiveDecoder
 				++m_total_output;
 			}
 
-			// If nothing ready, wait a bit
-			if (ready.empty()) {
+			// Flush after processing a batch, not after each tracepoint
+			if (!ready.empty()) {
+				fflush(m_config.output);
+			} else {
+				// If nothing ready, wait a bit
 				std::this_thread::sleep_for(10ms);
 			}
 		}
@@ -335,21 +341,28 @@ class LiveDecoder
 
 	void print_tracepoint(const Tracepoint &p)
 	{
-		const char *const tb = p.tracebuffer.data();
-		const int tb_size = static_cast<int>(p.tracebuffer.size());
+		const auto tb_view = p.tracebuffer();
+		const char *const tb = tb_view.data();
+		const int tb_size = static_cast<int>(tb_view.size());
 		const int tb_width = static_cast<int>(m_tb_name_width);
+
+		// Use stack buffers for timestamp formatting (no allocation)
+		char ts_buf[ToString::TIMESTAMP_NS_BUF_SIZE];
+		char dt_buf[ToString::DATE_AND_TIME_BUF_SIZE];
+		const char *ts_str = ToString::timestamp_ns_to(ts_buf, p.timestamp_ns);
+		const char *dt_str = ToString::date_and_time_to(dt_buf, p.timestamp_ns);
 
 		// Add '*' prefix for kernel traces
 		if (p.is_kernel()) {
-			fprintf(m_config.output, " %s | %s | *%-*.*s | %5d | %5d | %s | %s | %ld\n",
-					p.timestamp_str().c_str(), p.date_and_time_str().c_str(), tb_width - 1, tb_size,
-					tb, p.pid(), p.tid(), p.msg().data(), p.file().data(), p.line());
+			fprintf(m_config.output, " %s | %s | *%-*.*s | %5d | %5d | %s | %s | %ld\n", ts_str,
+					dt_str, tb_width - 1, tb_size, tb, p.pid(), p.tid(), p.msg().data(),
+					p.file().data(), p.line());
 		} else {
-			fprintf(m_config.output, " %s | %s | %-*.*s | %5d | %5d | %s | %s | %ld\n",
-					p.timestamp_str().c_str(), p.date_and_time_str().c_str(), tb_width, tb_size, tb,
-					p.pid(), p.tid(), p.msg().data(), p.file().data(), p.line());
+			fprintf(m_config.output, " %s | %s | %-*.*s | %5d | %5d | %s | %s | %ld\n", ts_str,
+					dt_str, tb_width, tb_size, tb, p.pid(), p.tid(), p.msg().data(),
+					p.file().data(), p.line());
 		}
-		fflush(m_config.output);
+		// Note: fflush is now done in output_loop after processing a batch
 	}
 
 	void print_summary()
@@ -388,9 +401,11 @@ static void add_live_command(CLI::App &app)
 {
 	CLI::App *const command =
 		app.add_subcommand("live", "Live streaming decoder for real-time trace monitoring");
+	command->alias("lv");
 	command->description(
 		"Monitor tracebuffers in real-time and output tracepoints as they arrive.\n"
 		"Uses a reader thread to poll tracebuffers and an output thread for ordered display.\n"
+		"If no input is specified, uses CLLTK_TRACING_PATH or current directory.\n"
 		"Supports graceful shutdown via Ctrl+C (SIGINT/SIGTERM). Press twice to force exit.");
 
 	// Use static variables for CLI option storage, but reset defaults in callback
@@ -400,6 +415,7 @@ static void add_live_command(CLI::App &app)
 	static uint64_t order_delay_ms{};
 	static uint64_t poll_interval_ms{};
 	static bool show_summary{};
+	static bool recursive{};
 
 	// Default values (used for display and reset)
 	constexpr const char *default_filter = "^.*$";
@@ -409,19 +425,21 @@ static void add_live_command(CLI::App &app)
 
 	command
 		->add_option("input", input_path,
-					 "Path to tracebuffer file or directory containing tracebuffers to monitor")
-		->envname("CLLTK_TRACING_PATH")
-		->required()
+					 "Path to tracebuffer file or directory to monitor\n"
+					 "(default: CLLTK_TRACING_PATH or current directory)")
 		->type_name("PATH");
 
+	command->add_flag("-r,--recursive,!--no-recursive", recursive,
+					  "Recurse into subdirectories (default: no)");
+
 	command
-		->add_option("-t,--tracebuffer-filter", tracebuffer_filter_str,
-					 "Filter tracebuffers by name using ECMAScript regex")
+		->add_option("-F,--filter", tracebuffer_filter_str,
+					 "Filter tracebuffers by name using regex")
 		->default_val(default_filter)
 		->type_name("REGEX");
 
 	command
-		->add_option("-b,--buffer-size", buffer_size,
+		->add_option("--buffer-size", buffer_size,
 					 "Maximum tracepoints to buffer in memory.\n"
 					 "Older tracepoints are dropped when limit is reached.\n"
 					 "Set to 0 for unlimited (may consume large memory)")
@@ -429,7 +447,7 @@ static void add_live_command(CLI::App &app)
 		->type_name("SIZE");
 
 	command
-		->add_option("-d,--order-delay", order_delay_ms,
+		->add_option("--order-delay", order_delay_ms,
 					 "Delay window in milliseconds for timestamp ordering.\n"
 					 "Higher values improve ordering accuracy but increase latency.\n"
 					 "Tracepoints are held until this delay passes to allow reordering")
@@ -437,18 +455,21 @@ static void add_live_command(CLI::App &app)
 		->type_name("MS");
 
 	command
-		->add_option("-p,--poll-interval", poll_interval_ms,
+		->add_option("--poll-interval", poll_interval_ms,
 					 "Poll interval in milliseconds when no tracepoints are pending.\n"
 					 "Lower values reduce latency but increase CPU usage")
 		->default_val(default_poll_interval_ms)
 		->type_name("MS");
 
-	command->add_flag("-s,--summary", show_summary,
+	command->add_flag("-S,--summary", show_summary,
 					  "Show statistics summary on exit (read/output/dropped counts, buffer usage)");
 
 	command->callback([&]() {
 		// Reset global signal state (for multiple runs in same process)
 		reset_signal_state();
+
+		// Resolve input path: use provided path, or fall back to tracing path
+		std::string resolved_input = input_path.empty() ? get_tracing_path().string() : input_path;
 
 		// Save previous signal handlers to restore later
 		struct sigaction old_sigint{}, old_sigterm{};
@@ -463,7 +484,7 @@ static void add_live_command(CLI::App &app)
 
 		// Configure decoder
 		LiveDecoder::Config config;
-		config.input_path = input_path;
+		config.input_path = resolved_input;
 		config.tracebuffer_filter = tracebuffer_filter_str;
 		config.buffer_size = buffer_size;
 		config.order_delay_ms = order_delay_ms;

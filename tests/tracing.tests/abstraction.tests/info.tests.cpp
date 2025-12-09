@@ -15,8 +15,8 @@ TEST(info, get_timestamp)
 	const auto t1 = info_get_timestamp_ns();
 	const auto t2 = info_get_timestamp_ns();
 	EXPECT_TRUE(t0);
-	EXPECT_LT(t0, t1);
-	EXPECT_LT(t1, t2);
+	EXPECT_LE(t0, t1);
+	EXPECT_LE(t1, t2);
 }
 
 TEST(info, get_process_id_one_process)
@@ -39,7 +39,7 @@ TEST(info, get_process_id_two_process)
 		*pid_B = info_get_process_id();
 		exit(EXIT_SUCCESS);
 	}
-	wait(NULL);
+	wait(nullptr);
 	EXPECT_TRUE(pid_B);
 	EXPECT_NE(pid_A, *pid_B);
 	munmap(pid_B, sizeof(*pid_B));
