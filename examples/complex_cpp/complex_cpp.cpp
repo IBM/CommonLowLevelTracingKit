@@ -85,8 +85,8 @@ void different_formats(void) // for python test
 	FORMAT_TEST("", "1.0e+01", "%.1e", 1e1);
 	FORMAT_TEST("", "1.0E+01", "%.1E", 1e1);
 	FORMAT_TEST("", "s0 s1", "%s %s", "s0", "s1");
-	FORMAT_TEST("pointer test", "0x0", "%p", (void *)NULL);
-	FORMAT_TEST("pointer test", "0x0", "%p", (int *)NULL);
+	FORMAT_TEST("pointer test", "0x0", "%p", (void *)nullptr);
+	FORMAT_TEST("pointer test", "0x0", "%p", (int *)nullptr);
 	{
 		FILE *fh = (FILE *)0x42;
 		FORMAT_TEST("pointer test", "0x42", "%p", fh);

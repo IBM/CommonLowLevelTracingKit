@@ -3,7 +3,6 @@
 
 #include "c-vector/vec.h"
 #include "gtest/gtest.h"
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <string>
 
@@ -112,7 +111,7 @@ TEST(vector, find_in_empty)
 	auto match = vector_find(vec, matcher, &search);
 	EXPECT_FALSE(match.found);
 	EXPECT_EQ(0, match.position);
-	EXPECT_EQ(0, match.entry);
+	EXPECT_EQ(nullptr, match.entry);
 	vector_free(&vec);
 }
 
@@ -126,7 +125,7 @@ TEST(vector, find_not_in_one)
 	auto match = vector_find(vec, matcher, &search);
 	EXPECT_FALSE(match.found);
 	EXPECT_EQ(0, match.position);
-	EXPECT_EQ(0, match.entry);
+	EXPECT_EQ(nullptr, match.entry);
 	vector_free(&vec);
 }
 
@@ -156,7 +155,7 @@ TEST(vector, find_not_in_three)
 	auto match = vector_find(vec, matcher, &search);
 	EXPECT_FALSE(match.found);
 	EXPECT_EQ(0, match.position);
-	EXPECT_EQ(0, match.entry);
+	EXPECT_EQ(nullptr, match.entry);
 	vector_free(&vec);
 }
 

@@ -3,7 +3,6 @@
 
 #include "ringbuffer/ringbuffer.h"
 #include "gtest/gtest.h"
-#include <gtest/gtest.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string>

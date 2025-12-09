@@ -39,7 +39,7 @@ TEST(info, get_process_id_two_process)
 		*pid_B = info_get_process_id();
 		exit(EXIT_SUCCESS);
 	}
-	wait(NULL);
+	wait(nullptr);
 	EXPECT_TRUE(pid_B);
 	EXPECT_NE(pid_A, *pid_B);
 	munmap(pid_B, sizeof(*pid_B));

@@ -16,7 +16,6 @@ CommonLowLevelTracingKit::cmd::interface::validator::TracebufferName::Tracebuffe
 	func_ = [](const std::string &filename) {
 		if (std::regex_match(filename, pattern))
 			return std::string(); // valid
-		else
-			return "invalid tracebuffer name"s;
+		return "invalid tracebuffer name"s;
 	};
 }

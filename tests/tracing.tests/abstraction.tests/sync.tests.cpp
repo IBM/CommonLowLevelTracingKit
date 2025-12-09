@@ -9,7 +9,6 @@
 #include <barrier>
 #include <csignal>
 #include <errno.h>
-#include <gtest/gtest.h>
 #include <iterator>
 #include <memory>
 #include <ostream>
@@ -274,7 +273,6 @@ TEST(sync, memory_mutex_in_exit_process_during_recovery)
 	}
 	const std::string output = GetCapturedStderr();
 	EXPECT_EQ(output, "");
-	return;
 }
 
 static sync_mutex_t *static_mutex;
@@ -315,7 +313,6 @@ TEST(sync, signal_in_same_process_same_thread)
 	// reset signal handler
 	ASSERT_NE(SIG_ERR, std::signal(SIGUSR1, SIG_DFL));
 	static_mutex = nullptr;
-	return;
 }
 
 TEST(sync, get_mutex_timeout_with_process)

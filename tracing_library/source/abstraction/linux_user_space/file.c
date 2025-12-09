@@ -249,7 +249,6 @@ void file_drop(file_t **const file)
 	}
 
 	free(fh);
-	return;
 }
 
 size_t file_get_size(file_t *fh)

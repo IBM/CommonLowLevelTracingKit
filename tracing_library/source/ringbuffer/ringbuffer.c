@@ -78,12 +78,11 @@ uint64_t ringbuffer_occupied(ringbuffer_head_t *rb)
 	if (rb->last_valid == rb->next_free)
 		// buffer is empty
 		return 0;
-	else if (rb->next_free > rb->last_valid)
+	if (rb->next_free > rb->last_valid)
 		// buffer currently with out wrapping
 		return (rb->next_free - rb->last_valid);
-	else
-		// buffer currently wrapped to calculate for this
-		return (rb->body_size - rb->last_valid) + rb->next_free;
+	// buffer currently wrapped to calculate for this
+	return (rb->body_size - rb->last_valid) + rb->next_free;
 }
 uint64_t ringbuffer_available(ringbuffer_head_t *rb)
 {
@@ -213,17 +212,16 @@ static void drop_oldest_entry(ringbuffer_head_t *rb)
 			if (occupied < (entry_head.body_size + 1ul)) {
 				// not enough data in ringbuffer for this body, so body is invalid -> not dropped
 				return;
-			} else if (0 != inplace_crc(rb, rb->last_valid, entry_head.body_size + 1ul)) {
+			}
+			if (0 != inplace_crc(rb, rb->last_valid, entry_head.body_size + 1ul)) {
 				// crc over body is invalid, so body is invalid -> not dropped
 				return;
-			} else {
-				// body is valid and could be dropped
-				move_last_valid(rb, entry_head.body_size + 1ul);
-				return;
 			}
+			// body is valid and could be dropped
+			move_last_valid(rb, entry_head.body_size + 1ul);
+			return;
 		}
 	}
-	return;
 }
 
 size_t ringbuffer_in(ringbuffer_head_t *destination, const void *source, size_t size)
@@ -290,15 +288,15 @@ size_t ringbuffer_out(void *destination, size_t max_size, ringbuffer_head_t *sou
 			if (occupied < (entry_head.body_size + 1ul)) {
 				// not enough data in ringbuffer for this body, so body is invalid -> not copy
 				continue;
-			} else if (0 != inplace_crc(source, source->last_valid, entry_head.body_size + 1)) {
+			}
+			if (0 != inplace_crc(source, source->last_valid, entry_head.body_size + 1)) {
 				// crc over body is invalid, so body is invalid -> not copy
 				continue;
-			} else {
-				// body is valid and could be copied
-				copy_out(destination, entry_head.body_size, source);
-				move_last_valid(source, entry_head.body_size + 1);
-				return entry_head.body_size;
 			}
+			// body is valid and could be copied
+			copy_out(destination, entry_head.body_size, source);
+			move_last_valid(source, entry_head.body_size + 1);
+			return entry_head.body_size;
 		}
 	}
 	return 0;

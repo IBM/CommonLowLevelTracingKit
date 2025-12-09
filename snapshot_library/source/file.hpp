@@ -42,7 +42,7 @@ struct RegularFile : public File {
 	RegularFile(const std::filesystem::directory_entry &entry,
 				const std::filesystem::path &root_path);
 
-	virtual ~RegularFile();
+	~RegularFile() override;
 
   private:
 	int m_fd{};

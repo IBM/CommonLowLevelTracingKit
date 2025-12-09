@@ -77,7 +77,7 @@ namespace CommonLowLevelTracingKit::decoder {
 
 	class TracepointDynamic final : public TraceEntryHead {
 	  public:
-		~TracepointDynamic() = default;
+		~TracepointDynamic() override = default;
 		TracepointDynamic(const std::string_view tb_name, source::Ringbuffer::EntryPtr entry,
 						  SourceType src = SourceType::Unknown);
 
@@ -96,14 +96,12 @@ namespace CommonLowLevelTracingKit::decoder {
 
 	enum class MetaType : uint8_t { undefined = 0, printf = 1, dump = 2 };
 	static constexpr CONST_INLINE MetaType toMetaType(uint8_t a) {
-		if (a <= static_cast<uint8_t>(MetaType::dump))
-			return static_cast<MetaType>(a);
-		else
-			return MetaType::undefined;
+		if (a <= static_cast<uint8_t>(MetaType::dump)) return static_cast<MetaType>(a);
+		return MetaType::undefined;
 	}
 	class TracepointStatic final : public TraceEntryHead {
 	  public:
-		~TracepointStatic() = default;
+		~TracepointStatic() override = default;
 		TracepointStatic(const std::string_view tb_name, source::Ringbuffer::EntryPtr &&entry,
 						 const std::span<const uint8_t> &meta, const source::internal::FilePtr &&,
 						 SourceType src = SourceType::Unknown);
@@ -144,7 +142,7 @@ namespace CommonLowLevelTracingKit::decoder {
 			, m_file()
 			, m_line() {}
 
-		~VirtualTracepoint() = default;
+		~VirtualTracepoint() override = default;
 		Type type() const noexcept override { return Type::Virtual; }
 		const std::string_view file() const noexcept override { return m_file; }
 		uint64_t line() const noexcept override { return m_line; }
@@ -165,7 +163,7 @@ namespace CommonLowLevelTracingKit::decoder {
 
 	struct ErrorTracepoint : public VirtualTracepoint {
 		using VirtualTracepoint::VirtualTracepoint;
-		~ErrorTracepoint() = default;
+		~ErrorTracepoint() override = default;
 		Type type() const noexcept override { return Type::Error; }
 		using VirtualTracepoint::make;
 	};
