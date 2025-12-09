@@ -172,25 +172,27 @@ class TestClltkTraceBuffer(unittest.TestCase):
                 self.assertEqual(files[0].name, "Buffer.clltk_trace")
 
     def test_custom_tracing_path(self):
-        """Test -C flag for custom tracing paths."""
+        """Test CLLTK_TRACING_PATH environment variable for custom tracing paths."""
         # Create subdirectories
         dir_a = pathlib.Path(self.tmp_dir.name) / "NewDirA"
         dir_b = pathlib.Path(self.tmp_dir.name) / "NewDirB"
         dir_a.mkdir()
         dir_b.mkdir()
 
+        # Create custom environment for dir A
+        env_a = os.environ.copy()
+        env_a["CLLTK_TRACING_PATH"] = str(dir_a)
+
         # Create tracebuffer in dir A
-        os.environ["CLLTK_TRACING_PATH"] = str(dir_a)
-        result = clltk(
-            "-P", str(dir_a), "buffer", "--buffer", "BufferInA", "--size", "1KB"
-        )
+        result = clltk("buffer", "--buffer", "BufferInA", "--size", "1KB", env=env_a)
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
+        # Create custom environment for dir B
+        env_b = os.environ.copy()
+        env_b["CLLTK_TRACING_PATH"] = str(dir_b)
+
         # Create tracebuffer in dir B
-        os.environ["CLLTK_TRACING_PATH"] = str(dir_b)
-        result = clltk(
-            "-P", str(dir_b), "buffer", "--buffer", "BufferInB", "--size", "1KB"
-        )
+        result = clltk("buffer", "--buffer", "BufferInB", "--size", "1KB", env=env_b)
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Verify files in dir A
@@ -245,7 +247,7 @@ class TestClltkTracePoints(unittest.TestCase):
         self.tmp_dir.cleanup()
 
     def test_subcommand_tracepoint_exists(self):
-        """Test that trace subcommand exists and shows help."""
+        """Test that tracepoint subcommand exists and shows help."""
         result = clltk("trace", "--help")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
@@ -292,7 +294,7 @@ class TestClltkClear(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Add a tracepoint
-        result = clltk("trace", "--buffer", "TestBuffer", "--message", "test message")
+        result = clltk("trace", "TestBuffer", "test message")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Clear the tracebuffer

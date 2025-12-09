@@ -20,17 +20,8 @@ namespace CommonLowLevelTracingKit::cmd::live
 using TracepointPtr = decoder::TracepointPtr;
 
 /**
- * @brief Thread-safe ordered buffer for live streaming tracepoints
- *
- * Design:
- * - Min-heap ordered by timestamp (oldest first)
- * - Watermark tracking: only releases tracepoints older than (watermark - delay)
- * - Configurable max size with oldest-drop policy when full
- * - Thread-safe: single reader thread pushes, single output thread pops
- *
- * The watermark represents the maximum timestamp we've seen from tracebuffers.
- * This allows us to safely output tracepoints that are older than
- * (watermark - delay_ns) because we know no older tracepoints will arrive.
+ * Thread-safe ordered buffer for live streaming tracepoints.
+ * Min-heap by timestamp with watermark-based release. Drops oldest on overflow.
  */
 class OrderedBuffer
 {
@@ -44,11 +35,6 @@ class OrderedBuffer
 		uint64_t watermark_ns{0};
 	};
 
-	/**
-	 * @brief Construct ordered buffer
-	 * @param max_size Maximum number of tracepoints to buffer (0 = unlimited)
-	 * @param order_delay_ns Time delay in nanoseconds for ordering safety
-	 */
 	explicit OrderedBuffer(size_t max_size = 10000,
 						   uint64_t order_delay_ns = 100'000'000 /* 100ms */);
 
@@ -60,82 +46,24 @@ class OrderedBuffer
 	OrderedBuffer(OrderedBuffer &&) = delete;
 	OrderedBuffer &operator=(OrderedBuffer &&) = delete;
 
-	/**
-	 * @brief Push a tracepoint into the buffer
-	 *
-	 * Thread-safe. If buffer is full, drops the oldest tracepoint.
-	 *
-	 * @param tp Tracepoint to push (takes ownership)
-	 * @return true if pushed successfully
-	 */
+	// Push tracepoint (takes ownership). Drops oldest if full.
 	bool push(TracepointPtr tp);
 
-	/**
-	 * @brief Update the watermark timestamp
-	 *
-	 * Called by reader thread to indicate the maximum timestamp seen.
-	 * Tracepoints older than (watermark - delay) are safe to output.
-	 *
-	 * @param max_seen_ns Maximum timestamp seen across all tracebuffers
-	 */
-	void update_watermark(uint64_t max_seen_ns);
+	void update_watermark(uint64_t max_seen_ns); // allows releasing old tracepoints
 
-	/**
-	 * @brief Signal that no more tracepoints will be pushed
-	 *
-	 * Called when reader thread is stopping. Allows remaining tracepoints
-	 * to be flushed without waiting for watermark.
-	 */
-	void finish();
+	void finish(); // signal end of input for flushing
 
-	/**
-	 * @brief Pop the oldest tracepoint if it's safe to output
-	 *
-	 * A tracepoint is safe to output if:
-	 * - Buffer is finished (flushing remaining), OR
-	 * - Its timestamp is older than (watermark - order_delay)
-	 *
-	 * @param timeout Maximum time to wait for a ready tracepoint
-	 * @return Tracepoint if available and safe, nullopt otherwise
-	 */
+	// Pop oldest if safe (ts < watermark - delay or finished)
 	std::optional<TracepointPtr> pop(std::chrono::milliseconds timeout = std::chrono::milliseconds{
 										 100});
 
-	/**
-	 * @brief Pop all ready tracepoints (non-blocking)
-	 *
-	 * Returns a vector of all tracepoints that are safe to output.
-	 */
 	std::vector<TracepointPtr> pop_all_ready();
 
-	/**
-	 * @brief Check if buffer is empty
-	 */
 	[[nodiscard]] bool empty() const;
-
-	/**
-	 * @brief Get current buffer size
-	 */
 	[[nodiscard]] size_t size() const;
-
-	/**
-	 * @brief Check if buffer is finished (no more pushes expected)
-	 */
 	[[nodiscard]] bool finished() const;
-
-	/**
-	 * @brief Get buffer statistics
-	 */
 	[[nodiscard]] Stats stats() const;
-
-	/**
-	 * @brief Get the order delay setting
-	 */
 	[[nodiscard]] uint64_t order_delay_ns() const noexcept;
-
-	/**
-	 * @brief Get the max size setting
-	 */
 	[[nodiscard]] size_t max_size() const noexcept;
 
   private:
@@ -146,16 +74,8 @@ class OrderedBuffer
 		bool operator()(const TracepointPtr &a, const TracepointPtr &b) const;
 	};
 
-	/**
-	 * @brief Pop front element from the heap (must hold lock)
-	 * @return The oldest tracepoint
-	 */
-	TracepointPtr pop_front_locked();
-
-	/**
-	 * @brief Check if there's a ready tracepoint (must hold lock)
-	 */
-	bool has_ready_locked() const;
+	TracepointPtr pop_front_locked(); // must hold lock
+	bool has_ready_locked() const;	  // must hold lock
 
 	const size_t m_max_size;
 	const uint64_t m_order_delay_ns;

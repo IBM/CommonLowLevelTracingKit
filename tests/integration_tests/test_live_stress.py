@@ -46,14 +46,7 @@ class TestLiveExtremeStress(LiveTestCase):
         # Write many tracepoints as fast as possible
         for i in range(num_messages):
             subprocess.run(
-                [
-                    str(clltk_path),
-                    "trace",
-                    "--buffer",
-                    buffer_name,
-                    "--message",
-                    f"highvol_{i:05d}",
-                ],
+                [str(clltk_path), "trace", "-b", buffer_name, f"highvol_{i:05d}"],
                 env=os.environ.copy(),
                 capture_output=True,
             )
@@ -141,23 +134,14 @@ class TestLiveExtremeStress(LiveTestCase):
         # Write messages
         for i in range(num_messages):
             subprocess.run(
-                [
-                    str(clltk_path),
-                    "trace",
-                    "--buffer",
-                    buffer_name,
-                    "--message",
-                    f"overflow_{i:04d}",
-                ],
+                [str(clltk_path), "trace", "-b", buffer_name, f"overflow_{i:04d}"],
                 env=os.environ.copy(),
                 capture_output=True,
             )
 
         # Run with very small buffer to force drops
-        result = subprocess.run(
+        proc = subprocess.Popen(
             [
-                "timeout",
-                "2",
                 str(clltk_path),
                 "live",
                 self.trace_path,
@@ -169,11 +153,18 @@ class TestLiveExtremeStress(LiveTestCase):
                 "--poll-interval",
                 "1",
             ],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             env=os.environ.copy(),
         )
 
-        stderr_text = result.stderr.decode("utf-8")
+        # Give it time to read the tracepoints
+        time.sleep(2)
+
+        # Send SIGINT for graceful shutdown with summary
+        proc.send_signal(signal.SIGINT)
+        stdout, stderr = proc.communicate(timeout=5)
+        stderr_text = stderr.decode("utf-8")
 
         # Verify we got drops
         dropped_match = re.search(r"Tracepoints dropped:\s+(\d+)", stderr_text)
@@ -212,14 +203,7 @@ class TestLiveExtremeStress(LiveTestCase):
                     with lock:
                         all_messages.append(msg)
                     result = subprocess.run(
-                        [
-                            str(clltk_path),
-                            "trace",
-                            "--buffer",
-                            buf_name,
-                            "--message",
-                            msg,
-                        ],
+                        [str(clltk_path), "trace", "-b", buf_name, msg],
                         env=os.environ.copy(),
                         capture_output=True,
                     )
@@ -245,10 +229,8 @@ class TestLiveExtremeStress(LiveTestCase):
         self.assertEqual(len(errors), 0, f"Write errors: {errors}")
 
         # Run decoder with summary
-        result = subprocess.run(
+        proc = subprocess.Popen(
             [
-                "timeout",
-                "5",
                 str(clltk_path),
                 "live",
                 self.trace_path,
@@ -260,12 +242,20 @@ class TestLiveExtremeStress(LiveTestCase):
                 "--poll-interval",
                 "2",
             ],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             env=os.environ.copy(),
         )
 
-        stdout_text = result.stdout.decode("utf-8")
-        stderr_text = result.stderr.decode("utf-8")
+        # Give it time to read all the tracepoints
+        time.sleep(5)
+
+        # Send SIGINT for graceful shutdown with summary
+        proc.send_signal(signal.SIGINT)
+        stdout, stderr = proc.communicate(timeout=5)
+
+        stdout_text = stdout.decode("utf-8")
+        stderr_text = stderr.decode("utf-8")
 
         # Verify all buffer names appear in output
         for name in buffer_names:
@@ -327,14 +317,7 @@ class TestLiveExtremeStress(LiveTestCase):
                     msg = f"sustained_{msg_id:06d}"
                     messages_written.append(msg)
                     result = subprocess.run(
-                        [
-                            str(clltk_path),
-                            "trace",
-                            "--buffer",
-                            buffer_name,
-                            "--message",
-                            msg,
-                        ],
+                        [str(clltk_path), "trace", "-b", buffer_name, msg],
                         env=os.environ.copy(),
                         capture_output=True,
                     )
@@ -415,22 +398,13 @@ class TestLiveExtremeStress(LiveTestCase):
 
         for i in range(num_messages):
             subprocess.run(
-                [
-                    str(clltk_path),
-                    "trace",
-                    "--buffer",
-                    buffer_name,
-                    "--message",
-                    f"unlimited_{i:04d}",
-                ],
+                [str(clltk_path), "trace", "-b", buffer_name, f"unlimited_{i:04d}"],
                 env=os.environ.copy(),
                 capture_output=True,
             )
 
-        result = subprocess.run(
+        proc = subprocess.Popen(
             [
-                "timeout",
-                "3",
                 str(clltk_path),
                 "live",
                 self.trace_path,
@@ -442,11 +416,18 @@ class TestLiveExtremeStress(LiveTestCase):
                 "--poll-interval",
                 "1",
             ],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             env=os.environ.copy(),
         )
 
-        stderr_text = result.stderr.decode("utf-8")
+        # Give it time to read all tracepoints
+        time.sleep(3)
+
+        # Send SIGINT for graceful shutdown with summary
+        proc.send_signal(signal.SIGINT)
+        stdout, stderr = proc.communicate(timeout=5)
+        stderr_text = stderr.decode("utf-8")
 
         dropped_match = re.search(r"Tracepoints dropped:\s+(\d+)", stderr_text)
         self.assertIsNotNone(dropped_match, f"Could not parse dropped: {stderr_text}")
@@ -476,7 +457,7 @@ class TestLiveExtremeStress(LiveTestCase):
                 msg = f"order_r{round_num:02d}_b{buf_idx}"
                 messages_in_order.append(msg)
                 subprocess.run(
-                    [str(clltk_path), "trace", "--buffer", buf_name, "--message", msg],
+                    [str(clltk_path), "trace", "-b", buf_name, msg],
                     env=os.environ.copy(),
                     capture_output=True,
                 )
@@ -517,14 +498,7 @@ class TestLiveExtremeStress(LiveTestCase):
 
         for i in range(20):
             subprocess.run(
-                [
-                    str(clltk_path),
-                    "trace",
-                    "--buffer",
-                    buffer_name,
-                    "--message",
-                    f"cycle_init_{i}",
-                ],
+                [str(clltk_path), "trace", "-b", buffer_name, f"cycle_init_{i}"],
                 env=os.environ.copy(),
                 capture_output=True,
             )
@@ -532,14 +506,7 @@ class TestLiveExtremeStress(LiveTestCase):
         for cycle in range(num_cycles):
             cycle_msg = f"cycle_marker_{cycle:02d}"
             subprocess.run(
-                [
-                    str(clltk_path),
-                    "trace",
-                    "--buffer",
-                    buffer_name,
-                    "--message",
-                    cycle_msg,
-                ],
+                [str(clltk_path), "trace", "-b", buffer_name, cycle_msg],
                 env=os.environ.copy(),
                 capture_output=True,
             )
@@ -605,9 +572,8 @@ class TestLiveExtremeStress(LiveTestCase):
                     [
                         str(clltk_path),
                         "trace",
-                        "--buffer",
+                        "-b",
                         buffer_name,
-                        "--message",
                         f"tp_{messages_written}",
                     ],
                     env=os.environ.copy(),
@@ -683,7 +649,7 @@ class TestLiveExtremeStress(LiveTestCase):
             size = sizes[i % len(sizes)]
             msg = f"sz{size}_" + "X" * (size - 10)
             subprocess.run(
-                [str(clltk_path), "trace", "--buffer", buffer_name, "--message", msg],
+                [str(clltk_path), "trace", "-b", buffer_name, msg],
                 env=os.environ.copy(),
                 capture_output=True,
             )

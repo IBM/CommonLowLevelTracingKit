@@ -38,7 +38,6 @@ using ToString = CommonLowLevelTracingKit::decoder::source::low_level::ToString;
 namespace
 {
 
-// Global signal state for graceful shutdown
 std::atomic<int> g_signal_count{0};
 std::atomic<bool> g_stop_requested{false};
 
@@ -48,12 +47,10 @@ void signal_handler(int sig)
 	g_stop_requested.store(true, std::memory_order_release);
 
 	if (count >= 2) {
-		// Second signal - force exit
 		std::quick_exit(128 + sig);
 	}
 }
 
-// Reset global signal state (for multiple runs in same process)
 void reset_signal_state()
 {
 	g_signal_count.store(0, std::memory_order_release);
@@ -61,13 +58,8 @@ void reset_signal_state()
 }
 
 /**
- * @brief Live streaming decoder for real-time tracepoint monitoring
- *
- * Architecture:
- * - Reader thread: polls all tracebuffers, prioritizes by pending count
- * - Output thread: outputs tracepoints in timestamp order with delay window
- * - Uses memory pool for efficient tracepoint allocation
- * - Signal handling for graceful shutdown (Ctrl+C)
+ * Live streaming decoder for real-time tracepoint monitoring.
+ * Reader thread polls buffers, output thread emits in timestamp order.
  */
 class LiveDecoder
 {
@@ -91,18 +83,12 @@ class LiveDecoder
 
 	~LiveDecoder() { stop(); }
 
-	/**
-	 * @brief Start the live decoder
-	 *
-	 * Discovers tracebuffers, starts reader and output threads.
-	 */
-	bool start()
+	bool start() // false if already running or no buffers found
 	{
 		if (m_running.exchange(true)) {
 			return false;
-		} // Already running
+		}
 
-		// Discover tracebuffers
 		if (!discover_tracebuffers()) {
 			m_running = false;
 			return false;
@@ -116,56 +102,40 @@ class LiveDecoder
 
 		std::cerr << "Monitoring " << m_tracebuffers.size() << " tracebuffer(s)..." << std::endl;
 
-		// Calculate max tracebuffer name width for formatting
 		for (const auto &tb : m_tracebuffers) {
 			m_tb_name_width = std::max(m_tb_name_width, tb->name().size());
 		}
 
-		// Print header
 		print_header();
 
-		// Start threads
 		m_reader_thread = std::thread(&LiveDecoder::reader_loop, this);
 		m_output_thread = std::thread(&LiveDecoder::output_loop, this);
 
 		return true;
 	}
 
-	/**
-	 * @brief Stop the live decoder gracefully
-	 *
-	 * Signals reader to stop, waits for output to flush remaining tracepoints.
-	 */
-	void stop()
+	void stop() // waits for flush
 	{
 		if (!m_running.exchange(false)) {
 			return;
-		} // Already stopped
+		}
 
 		m_stop_reader.store(true, std::memory_order_release);
 
-		// Wait for reader thread
 		if (m_reader_thread.joinable()) {
 			m_reader_thread.join();
 		}
-
-		// Signal output buffer that no more tracepoints will arrive
 		m_buffer.finish();
 
-		// Wait for output thread
 		if (m_output_thread.joinable()) {
 			m_output_thread.join();
 		}
 
-		// Print summary
 		if (m_config.show_summary) {
 			print_summary();
 		}
 	}
 
-	/**
-	 * @brief Check if decoder is running
-	 */
 	[[nodiscard]] bool running() const noexcept
 	{
 		return m_running.load(std::memory_order_acquire);

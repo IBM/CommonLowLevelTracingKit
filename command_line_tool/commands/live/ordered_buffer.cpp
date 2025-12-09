@@ -26,9 +26,7 @@ bool OrderedBuffer::push(TracepointPtr tp)
 
 	std::lock_guard lock(m_mutex);
 
-	// Check if buffer is full
 	if (m_max_size > 0 && m_heap.size() >= m_max_size) {
-		// Drop oldest (which is at the front of min-heap)
 		std::pop_heap(m_heap.begin(), m_heap.end(), TimestampCompare{});
 		m_heap.pop_back();
 		++m_stats.total_dropped;
@@ -53,7 +51,7 @@ void OrderedBuffer::update_watermark(uint64_t max_seen_ns)
 {
 	std::lock_guard lock(m_mutex);
 	m_watermark_ns = max_seen_ns;
-	m_cv.notify_one(); // Wake up consumer to check for ready tracepoints
+	m_cv.notify_one();
 }
 
 void OrderedBuffer::finish()
@@ -83,7 +81,6 @@ std::optional<TracepointPtr> OrderedBuffer::pop(std::chrono::milliseconds timeou
 		return pop_front_locked();
 	}
 
-	// Check watermark condition
 	const uint64_t oldest_ts = m_heap.front()->timestamp_ns;
 	const uint64_t safe_threshold =
 		(m_watermark_ns > m_order_delay_ns) ? (m_watermark_ns - m_order_delay_ns) : 0;

@@ -40,9 +40,7 @@ class TestLiveWithSummary(LiveTestCase):
 
             # Write some tracepoints
             for i in range(5):
-                clltk(
-                    "trace", "--buffer", buffer_name, "--message", f"summary_test_{i}"
-                )
+                clltk("trace", "-b", buffer_name, f"summary_test_{i}")
                 time.sleep(0.02)
 
             time.sleep(0.5)
@@ -85,7 +83,7 @@ class TestLiveMultipleBuffers(LiveTestCase):
             # Write unique messages to each buffer
             for name in buffer_names:
                 msg = f"message_from_{name}"
-                result = clltk("trace", "--buffer", name, "--message", msg)
+                result = clltk("trace", "-b", name, msg)
                 self.assertEqual(result.returncode, 0)
                 time.sleep(0.05)
 
@@ -107,7 +105,7 @@ class TestLiveMultipleBuffers(LiveTestCase):
 
 
 class TestLiveTraceBufferFilter(LiveTestCase):
-    """Test the --tracebuffer-filter regex option."""
+    """Test the --filter regex option."""
 
     def test_filter_includes_matching_buffer(self):
         """Test that filter includes only matching buffers."""
@@ -125,9 +123,9 @@ class TestLiveTraceBufferFilter(LiveTestCase):
             time.sleep(0.3)
 
             # Write to all buffers
-            clltk("trace", "--buffer", "TestBufferOne", "--message", "msg_test_one")
-            clltk("trace", "--buffer", "TestBufferTwo", "--message", "msg_test_two")
-            clltk("trace", "--buffer", "OtherBuffer", "--message", "msg_other")
+            clltk("trace", "-b", "TestBufferOne", "msg_test_one")
+            clltk("trace", "-b", "TestBufferTwo", "msg_test_two")
+            clltk("trace", "-b", "OtherBuffer", "msg_other")
             time.sleep(0.1)
 
             time.sleep(0.5)
@@ -163,7 +161,7 @@ class TestLiveContinuousWriting(LiveTestCase):
             # Write messages rapidly
             for i in range(num_messages):
                 msg = f"continuous_{i:04d}"
-                clltk("trace", "--buffer", buffer_name, "--message", msg)
+                clltk("trace", "-b", buffer_name, msg)
                 # No sleep - write as fast as possible
 
             # Give time for processing
