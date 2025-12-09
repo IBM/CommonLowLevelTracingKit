@@ -58,7 +58,7 @@ class Command
 			"Only 'message' is required; other fields default to 0 or empty string.");
 
 		cmd->sub
-			->add_option("tracebuffer-name,--tracebuffer-name", cmd->tracebuffer_name,
+			->add_option("tracebuffer,--tracebuffer,--tb", cmd->tracebuffer_name,
 						 "Target tracebuffer name.\n"
 						 "The tracebuffer will be created if it does not exist")
 			->check(validator::TracebufferName{})
@@ -66,7 +66,7 @@ class Command
 			->type_name("NAME");
 
 		cmd->sub
-			->add_option("tracebuffer-size,--tracebuffer-size", cmd->tracebuffer_size,
+			->add_option("--size", cmd->tracebuffer_size,
 						 "Ring buffer size in bytes if creating a new tracebuffer.\n"
 						 "One basic tracepoint is approximately 32 bytes.\n"
 						 "Supports size suffixes: K, M, G (e.g., 512K, 1M)")
@@ -100,7 +100,9 @@ class Command
 	static void handle_line(Command &cmd, std::istream &input)
 	{
 		std::string line;
-		while (std::getline(input, line)) {
+		size_t line_count = 0;
+		while (!is_interrupted() && std::getline(input, line)) {
+			++line_count;
 
 			if (cmd.try_json) {
 				try {
@@ -112,7 +114,7 @@ class Command
 													   entry.tid, "%s", entry.message.c_str());
 					continue;
 				} catch (const json::exception &e) {
-					std::cerr << "no valid json: " << e.what() << std::endl;
+					log_error("no valid json: ", e.what());
 					// continue with backup case
 				}
 			}
@@ -120,6 +122,12 @@ class Command
 			// default and backup case
 			clltk_dynamic_tracepoint_execution(cmd.tracebuffer_name.c_str(), "", 0, 0, 0, "%s",
 											   line.c_str());
+		}
+
+		if (is_interrupted()) {
+			log_info("Interrupted after ", line_count, " lines");
+		} else {
+			log_verbose("Processed ", line_count, " lines");
 		}
 	}
 

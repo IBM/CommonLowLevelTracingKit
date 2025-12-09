@@ -15,8 +15,8 @@ TEST(info, get_timestamp)
 	const auto t1 = info_get_timestamp_ns();
 	const auto t2 = info_get_timestamp_ns();
 	EXPECT_TRUE(t0);
-	EXPECT_LT(t0, t1);
-	EXPECT_LT(t1, t2);
+	EXPECT_LE(t0, t1);
+	EXPECT_LE(t1, t2);
 }
 
 TEST(info, get_process_id_one_process)

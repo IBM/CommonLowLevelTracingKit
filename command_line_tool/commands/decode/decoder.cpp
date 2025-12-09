@@ -97,7 +97,7 @@ static void add_decode_command(CLI::App &app)
 
 	static std::string tracebuffer_filter_str = "^.*$";
 	command
-		->add_option("-t,--tracebuffer-filter", tracebuffer_filter_str,
+		->add_option("-T,--tracebuffer-filter", tracebuffer_filter_str,
 					 "Filter tracebuffers by name using ECMAScript regex")
 		->capture_default_str()
 		->type_name("REGEX");
@@ -175,6 +175,9 @@ static void add_decode_command(CLI::App &app)
 			std::perror("fopen");
 			return 1;
 		}
+
+		// Register output file for cleanup on interrupt
+		OutputFileGuard output_guard(use_stdout ? "" : output_path);
 
 		// Build tracebuffer filter
 		const boost::regex tracebuffer_filter_regex{tracebuffer_filter_str};
@@ -288,6 +291,7 @@ static void add_decode_command(CLI::App &app)
 			tb_name_size = std::max(tb_name_size, tb->name().size());
 
 		print_header(out, tb_name_size);
+		size_t tp_count = 0;
 		if (sorted) {
 			static constexpr auto comp = [](const TracepointPtr &a, const TracepointPtr &b) {
 				return a->timestamp_ns > b->timestamp_ns;
@@ -295,28 +299,44 @@ static void add_decode_command(CLI::App &app)
 			boost::heap::priority_queue<TracepointPtr, boost::heap::compare<decltype(comp)>> tps{
 				comp};
 			for (const auto &tb : tbs) {
+				if (is_interrupted())
+					break;
 				TracepointCollection &tb_tps = tb->tracepoints;
 				for (auto &tp : tb_tps) {
 					if (tpFilter(*tp))
 						tps.emplace(std::move(tp));
 				}
 			}
-			while (!tps.empty()) {
+			while (!tps.empty() && !is_interrupted()) {
 				const auto tp = tps.top().get();
 				print_tracepoint(out, tb_name_size, *tp);
 				tps.pop();
+				++tp_count;
 			}
 		} else {
 			for (const auto &tb : tbs) {
+				if (is_interrupted())
+					break;
 				for (const auto &tp : tb->tracepoints) {
-					if (tpFilter(*tp))
+					if (is_interrupted())
+						break;
+					if (tpFilter(*tp)) {
 						print_tracepoint(out, tb_name_size, *tp);
+						++tp_count;
+					}
 				}
 			}
 		}
 
 		if (!use_stdout)
 			std::fclose(out);
+
+		if (is_interrupted()) {
+			log_info("Interrupted after ", tp_count, " tracepoints");
+			return 130; // Standard exit code for SIGINT
+		}
+
+		log_verbose("Decoded ", tp_count, " tracepoints to ", output_path);
 		return 0;
 	});
 }

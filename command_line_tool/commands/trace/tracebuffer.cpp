@@ -33,7 +33,7 @@ static void add_create_tracebuffer_command(CLI::App &app)
 
 	static size_t size{512000};
 	command
-		->add_option("size,--size,-s", size,
+		->add_option("size,--size", size,
 					 "Ring buffer size in bytes.\n"
 					 "One basic tracepoint entry is approximately 32 bytes.\n"
 					 "Supports size suffixes: K (kilobytes), M (megabytes), G (gigabytes).\n"
@@ -43,7 +43,10 @@ static void add_create_tracebuffer_command(CLI::App &app)
 		->required()
 		->type_name("SIZE");
 
-	command->callback([]() { clltk_dynamic_tracebuffer_creation(tracebuffer.c_str(), size); });
+	command->callback([]() {
+		clltk_dynamic_tracebuffer_creation(tracebuffer.c_str(), size);
+		log_verbose("Created tracebuffer '", tracebuffer, "' with size ", size, " bytes");
+	});
 }
 
 static void add_clear_tracebuffer_command(CLI::App &app)
@@ -63,7 +66,10 @@ static void add_clear_tracebuffer_command(CLI::App &app)
 		->required()
 		->type_name("NAME");
 
-	command->callback([]() { clltk_dynamic_tracebuffer_clear(tracebuffer.c_str()); });
+	command->callback([]() {
+		clltk_dynamic_tracebuffer_clear(tracebuffer.c_str());
+		log_verbose("Cleared tracebuffer '", tracebuffer, "'");
+	});
 }
 
 static void init_function() noexcept

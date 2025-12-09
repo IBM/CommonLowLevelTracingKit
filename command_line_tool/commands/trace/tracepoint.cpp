@@ -78,6 +78,7 @@ static void add_create_tracepoint_command(CLI::App &app)
 	command->callback([]() {
 		clltk_dynamic_tracepoint_execution(tracebuffer.c_str(), filename.c_str(), line, pid, tid,
 										   "%s", message.c_str());
+		log_verbose("Traced message to ", tracebuffer);
 	});
 }
 
