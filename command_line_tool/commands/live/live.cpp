@@ -308,6 +308,7 @@ class LiveDecoder
 	 * @brief Output thread loop
 	 *
 	 * Waits for tracepoints to become ready (based on watermark), outputs them.
+	 * Uses batched flushing for better I/O performance.
 	 */
 	void output_loop()
 	{
@@ -319,8 +320,11 @@ class LiveDecoder
 				++m_total_output;
 			}
 
-			// If nothing ready, wait a bit
-			if (ready.empty()) {
+			// Flush after processing a batch, not after each tracepoint
+			if (!ready.empty()) {
+				fflush(m_config.output);
+			} else {
+				// If nothing ready, wait a bit
 				std::this_thread::sleep_for(10ms);
 			}
 		}
@@ -350,7 +354,7 @@ class LiveDecoder
 					p.timestamp_str().c_str(), p.date_and_time_str().c_str(), tb_width, tb_size, tb,
 					p.pid(), p.tid(), p.msg().data(), p.file().data(), p.line());
 		}
-		fflush(m_config.output);
+		// Note: fflush is now done in output_loop after processing a batch
 	}
 
 	void print_summary()
