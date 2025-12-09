@@ -67,9 +67,9 @@ namespace CommonLowLevelTracingKit::decoder {
 	struct TraceEntryHead : public Tracepoint {
 		const uint32_t m_pid;
 		const uint32_t m_tid;
-		TraceEntryHead(std::string_view tb_name, uint64_t n, uint64_t t,
-					   const std::span<const uint8_t> &body, SourceType src = SourceType::Unknown);
-		TraceEntryHead(std::string_view tb_name, uint64_t n, uint64_t t, uint32_t pid, uint32_t tid,
+		TraceEntryHead(uint64_t n, uint64_t t, const std::span<const uint8_t> &body,
+					   SourceType src = SourceType::Unknown);
+		TraceEntryHead(uint64_t n, uint64_t t, uint32_t pid, uint32_t tid,
 					   SourceType src = SourceType::Unknown);
 		uint32_t pid() const noexcept override { return m_pid; };
 		uint32_t tid() const noexcept override { return m_tid; };
@@ -78,16 +78,17 @@ namespace CommonLowLevelTracingKit::decoder {
 	class TracepointDynamic final : public TraceEntryHead {
 	  public:
 		~TracepointDynamic() override = default;
-		TracepointDynamic(const std::string_view tb_name, source::Ringbuffer::EntryPtr entry,
+		TracepointDynamic(std::string tb_name, source::Ringbuffer::EntryPtr entry,
 						  SourceType src = SourceType::Unknown);
 
 		Type type() const noexcept override { return Type::Dynamic; }
+		const std::string_view tracebuffer() const noexcept override { return m_tracebuffer; }
 		const std::string_view file() const noexcept override { return m_file; }
 		uint64_t line() const noexcept override { return m_line; }
 		const std::string_view msg() const override { return m_msg; }
 
 	  private:
-		const std::string_view m_tracebuffer;
+		const std::string m_tracebuffer; // Owns the tracebuffer name string
 		const source::Ringbuffer::EntryPtr e;
 		std::string_view m_file;
 		size_t m_line;
@@ -102,17 +103,19 @@ namespace CommonLowLevelTracingKit::decoder {
 	class TracepointStatic final : public TraceEntryHead {
 	  public:
 		~TracepointStatic() override = default;
-		TracepointStatic(const std::string_view tb_name, source::Ringbuffer::EntryPtr &&entry,
+		TracepointStatic(std::string tb_name, source::Ringbuffer::EntryPtr &&entry,
 						 const std::span<const uint8_t> &meta, const source::internal::FilePtr &&,
 						 SourceType src = SourceType::Unknown);
 
 		Type type() const noexcept override { return Type::Static; }
+		const std::string_view tracebuffer() const noexcept override { return m_tracebuffer; }
 		const std::string_view file() const noexcept override;
 		uint64_t line() const noexcept override { return m_line; }
 		const std::string_view msg() const override;
 
 	  private:
 		const std::string_view format() const noexcept;
+		const std::string m_tracebuffer; // Owns the tracebuffer name string
 		const std::span<const uint8_t> m;
 
 		const source::Ringbuffer::EntryPtr e;
@@ -127,16 +130,16 @@ namespace CommonLowLevelTracingKit::decoder {
 	};
 
 	struct VirtualTracepoint : public TraceEntryHead {
-		VirtualTracepoint(const std::string tb_name, const std::string &msg,
+		VirtualTracepoint(std::string tb_name, const std::string &msg,
 						  SourceType src = SourceType::Unknown)
-			: TraceEntryHead(tb_name, 0, 0, 0, 0, src)
+			: TraceEntryHead(0, 0, 0, 0, src)
 			, m_tracebuffer(std::move(tb_name))
 			, m_msg(msg)
 			, m_file()
 			, m_line() {}
-		VirtualTracepoint(const std::string tb_name, const source::Ringbuffer::Entry &e,
+		VirtualTracepoint(std::string tb_name, const source::Ringbuffer::Entry &e,
 						  const std::string &msg, SourceType src = SourceType::Unknown)
-			: TraceEntryHead(tb_name, e.nr, get<uint64_t>(e.body(), 14), 0, 0, src)
+			: TraceEntryHead(e.nr, get<uint64_t>(e.body(), 14), 0, 0, src)
 			, m_tracebuffer(std::move(tb_name))
 			, m_msg(msg)
 			, m_file()
@@ -144,6 +147,7 @@ namespace CommonLowLevelTracingKit::decoder {
 
 		~VirtualTracepoint() override = default;
 		Type type() const noexcept override { return Type::Virtual; }
+		const std::string_view tracebuffer() const noexcept override { return m_tracebuffer; }
 		const std::string_view file() const noexcept override { return m_file; }
 		uint64_t line() const noexcept override { return m_line; }
 		const std::string_view msg() const override { return m_msg; }

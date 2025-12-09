@@ -31,21 +31,21 @@ void TracepointDeleter::operator()(Tracepoint *ptr) const noexcept {
 	}
 }
 
-TraceEntryHead::TraceEntryHead(std::string_view tb_name, uint64_t n, uint64_t t,
-							   const std::span<const uint8_t> &body, SourceType src)
-	: Tracepoint(tb_name, n, t, src)
+TraceEntryHead::TraceEntryHead(uint64_t n, uint64_t t, const std::span<const uint8_t> &body,
+							   SourceType src)
+	: Tracepoint(n, t, src)
 	, m_pid(get<uint32_t>(body, 6))
 	, m_tid(get<uint32_t>(body, 10)) {}
 
-TraceEntryHead::TraceEntryHead(std::string_view tb_name, uint64_t n, uint64_t t, uint32_t pid,
-							   uint32_t tid, SourceType src)
-	: Tracepoint(tb_name, n, t, src)
+TraceEntryHead::TraceEntryHead(uint64_t n, uint64_t t, uint32_t pid, uint32_t tid, SourceType src)
+	: Tracepoint(n, t, src)
 	, m_pid(pid)
 	, m_tid(tid) {};
 
-TracepointDynamic::TracepointDynamic(const std::string_view tb_name,
-									 source::Ringbuffer::EntryPtr entry, SourceType src)
-	: TraceEntryHead(tb_name, entry->nr, get<uint64_t>(entry->body(), 14), entry->body(), src)
+TracepointDynamic::TracepointDynamic(std::string tb_name, source::Ringbuffer::EntryPtr entry,
+									 SourceType src)
+	: TraceEntryHead(entry->nr, get<uint64_t>(entry->body(), 14), entry->body(), src)
+	, m_tracebuffer(std::move(tb_name))
 	, e(std::move(entry)) {
 	const size_t size = e->body().size();
 	if (size < 22) {
@@ -87,11 +87,11 @@ TracepointDynamic::TracepointDynamic(const std::string_view tb_name,
 }
 
 using FilePtr = source::internal::FilePtr;
-TracepointStatic::TracepointStatic(const std::string_view tb_name,
-								   source::Ringbuffer::EntryPtr &&entry,
+TracepointStatic::TracepointStatic(std::string tb_name, source::Ringbuffer::EntryPtr &&entry,
 								   const std::span<const uint8_t> &arg_m, const FilePtr &&f,
 								   SourceType src)
-	: TraceEntryHead(tb_name, entry->nr, get<uint64_t>(entry->body(), 14), entry->body(), src)
+	: TraceEntryHead(entry->nr, get<uint64_t>(entry->body(), 14), entry->body(), src)
+	, m_tracebuffer(std::move(tb_name))
 	, m(arg_m)
 	, e(std::move(entry))
 	, m_keep_memory(f)

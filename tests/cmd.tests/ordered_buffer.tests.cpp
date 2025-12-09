@@ -25,11 +25,12 @@ class TestTracepoint : public Tracepoint
 {
   public:
 	TestTracepoint(uint64_t ts, uint32_t p = 0, uint32_t t = 0)
-		: Tracepoint("test_buffer", 0, ts, SourceType::Userspace), m_pid(p), m_tid(t)
+		: Tracepoint(0, ts, SourceType::Userspace), m_pid(p), m_tid(t)
 	{
 	}
 
 	Type type() const noexcept override { return Type::Dynamic; }
+	const std::string_view tracebuffer() const noexcept override { return "test_buffer"; }
 	const std::string_view file() const noexcept override { return "test.cpp"; }
 	uint64_t line() const noexcept override { return 1; }
 	uint32_t pid() const noexcept override { return m_pid; }

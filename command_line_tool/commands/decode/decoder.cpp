@@ -41,8 +41,9 @@ struct Formattable : public CLI::Validator {
 
 void print_tracepoint(FILE *f, int tb_name_size, const Tracepoint &p)
 {
-	const char *const tb = p.tracebuffer.data();
-	const int tb_size = p.tracebuffer.size();
+	const auto tb_view = p.tracebuffer();
+	const char *const tb = tb_view.data();
+	const int tb_size = tb_view.size();
 	// Add '*' prefix for kernel traces in the tracebuffer name column
 	const auto msg = p.msg();
 	const auto file = p.file();

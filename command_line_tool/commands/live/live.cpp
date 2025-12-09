@@ -335,8 +335,9 @@ class LiveDecoder
 
 	void print_tracepoint(const Tracepoint &p)
 	{
-		const char *const tb = p.tracebuffer.data();
-		const int tb_size = static_cast<int>(p.tracebuffer.size());
+		const auto tb_view = p.tracebuffer();
+		const char *const tb = tb_view.data();
+		const int tb_size = static_cast<int>(tb_view.size());
 		const int tb_width = static_cast<int>(m_tb_name_width);
 
 		// Add '*' prefix for kernel traces
