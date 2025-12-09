@@ -79,25 +79,31 @@ namespace CommonLowLevelTracingKit::decoder::source::low_level {
 		}
 
 	  public:
-		static CONST_INLINE std::string date_and_time(uint64_t ts) {
+		static INLINE std::string date_and_time(uint64_t ts) {
 			const int64_t sec = static_cast<int64_t>(ts / 1'000'000'000ULL);
 			const uint32_t nsec = static_cast<uint32_t>(ts % 1'000'000'000ULL);
 
-			const DateTimeUTC dt = unix_to_utc(sec);
+			// Cache the date/time prefix for same-second timestamps
+			// This avoids recalculating date for tracepoints within the same second
+			thread_local int64_t cached_sec = -1;
+			thread_local std::array<char, 30> cached_buf{"YYYY-MM-DD HH:MM:SS.nnnnnnnnn"};
 
-			std::array<char, 30> buf{"YYYY-MM-DD HH:MM:SS.nnnnnnnnn"};
-			static_assert(sizeof("YYYY-MM-DD HH:MM:SS.nnnnnnnnn") == sizeof(buf));
+			if (sec != cached_sec) {
+				cached_sec = sec;
+				const DateTimeUTC dt = unix_to_utc(sec);
 
-			write_digits<4>(&buf[0], static_cast<uint32_t>(dt.year)); // YYYY
-			write_digits<2>(&buf[5], dt.month);						  // MM
-			write_digits<2>(&buf[8], dt.day);						  // DD
-			write_digits<2>(&buf[11], dt.hour);						  // HH
-			write_digits<2>(&buf[14], dt.minute);					  // MM
-			write_digits<2>(&buf[17], dt.second);					  // SS
-			write_digits<9>(&buf[20], nsec);						  // nnnnnnnnn
+				write_digits<4>(&cached_buf[0], static_cast<uint32_t>(dt.year)); // YYYY
+				write_digits<2>(&cached_buf[5], dt.month);						 // MM
+				write_digits<2>(&cached_buf[8], dt.day);						 // DD
+				write_digits<2>(&cached_buf[11], dt.hour);						 // HH
+				write_digits<2>(&cached_buf[14], dt.minute);					 // MM
+				write_digits<2>(&cached_buf[17], dt.second);					 // SS
+			}
 
-			// make std::string once
-			return std::string(buf.data(), buf.size() - 1);
+			// Always update nanoseconds (they change within the same second)
+			write_digits<9>(&cached_buf[20], nsec); // nnnnnnnnn
+
+			return std::string(cached_buf.data(), cached_buf.size() - 1);
 		}
 		static CONST_INLINE std::string timestamp_ns(uint64_t ts) {
 			constexpr size_t decimal_digits = 9;
