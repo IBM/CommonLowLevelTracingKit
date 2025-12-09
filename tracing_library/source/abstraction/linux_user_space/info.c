@@ -5,8 +5,7 @@
 #include "abstraction/optimization.h"
 #include <pthread.h>
 #include <stdatomic.h>
-#include <stddef.h>
-#include <syscall.h>
+#include <sys/syscall.h>
 #include <time.h>
 #include <unistd.h>
 
