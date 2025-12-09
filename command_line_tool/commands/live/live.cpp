@@ -22,6 +22,7 @@
 
 // Include pool header for TracepointPool (from decoder_tool source)
 #include "pool.hpp"
+#include "to_string.hpp"
 
 using namespace std::chrono_literals;
 
@@ -32,6 +33,7 @@ using SyncTracebufferPtr = CommonLowLevelTracingKit::decoder::SyncTracebufferPtr
 using Tracepoint = CommonLowLevelTracingKit::decoder::Tracepoint;
 using TracepointPtr = CommonLowLevelTracingKit::decoder::TracepointPtr;
 using TracepointPool = CommonLowLevelTracingKit::decoder::source::TracepointPool;
+using ToString = CommonLowLevelTracingKit::decoder::source::low_level::ToString;
 
 namespace
 {
@@ -344,15 +346,21 @@ class LiveDecoder
 		const int tb_size = static_cast<int>(tb_view.size());
 		const int tb_width = static_cast<int>(m_tb_name_width);
 
+		// Use stack buffers for timestamp formatting (no allocation)
+		char ts_buf[ToString::TIMESTAMP_NS_BUF_SIZE];
+		char dt_buf[ToString::DATE_AND_TIME_BUF_SIZE];
+		const char *ts_str = ToString::timestamp_ns_to(ts_buf, p.timestamp_ns);
+		const char *dt_str = ToString::date_and_time_to(dt_buf, p.timestamp_ns);
+
 		// Add '*' prefix for kernel traces
 		if (p.is_kernel()) {
-			fprintf(m_config.output, " %s | %s | *%-*.*s | %5d | %5d | %s | %s | %ld\n",
-					p.timestamp_str().c_str(), p.date_and_time_str().c_str(), tb_width - 1, tb_size,
-					tb, p.pid(), p.tid(), p.msg().data(), p.file().data(), p.line());
+			fprintf(m_config.output, " %s | %s | *%-*.*s | %5d | %5d | %s | %s | %ld\n", ts_str,
+					dt_str, tb_width - 1, tb_size, tb, p.pid(), p.tid(), p.msg().data(),
+					p.file().data(), p.line());
 		} else {
-			fprintf(m_config.output, " %s | %s | %-*.*s | %5d | %5d | %s | %s | %ld\n",
-					p.timestamp_str().c_str(), p.date_and_time_str().c_str(), tb_width, tb_size, tb,
-					p.pid(), p.tid(), p.msg().data(), p.file().data(), p.line());
+			fprintf(m_config.output, " %s | %s | %-*.*s | %5d | %5d | %s | %s | %ld\n", ts_str,
+					dt_str, tb_width, tb_size, tb, p.pid(), p.tid(), p.msg().data(),
+					p.file().data(), p.line());
 		}
 		// Note: fflush is now done in output_loop after processing a batch
 	}

@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 
 namespace CommonLowLevelTracingKit::decoder::source::low_level {
@@ -79,6 +80,75 @@ namespace CommonLowLevelTracingKit::decoder::source::low_level {
 		}
 
 	  public:
+		// Buffer size requirements for formatted strings
+		static constexpr size_t DATE_AND_TIME_BUF_SIZE = 30; // "YYYY-MM-DD HH:MM:SS.nnnnnnnnn\0"
+		static constexpr size_t TIMESTAMP_NS_BUF_SIZE = 32;	 // " SSSSSSSSSSS.nnnnnnnnn\0"
+
+		/**
+		 * @brief Write date/time string to buffer (no allocation)
+		 * @param buf Buffer of at least DATE_AND_TIME_BUF_SIZE bytes
+		 * @param ts Timestamp in nanoseconds
+		 * @return Pointer to start of formatted string in buffer
+		 */
+		static INLINE const char *date_and_time_to(char *buf, uint64_t ts) {
+			const int64_t sec = static_cast<int64_t>(ts / 1'000'000'000ULL);
+			const uint32_t nsec = static_cast<uint32_t>(ts % 1'000'000'000ULL);
+
+			// Cache the date/time prefix for same-second timestamps
+			thread_local int64_t cached_sec = -1;
+			thread_local std::array<char, DATE_AND_TIME_BUF_SIZE> cached_buf{
+				"YYYY-MM-DD HH:MM:SS.nnnnnnnnn"};
+
+			if (sec != cached_sec) {
+				cached_sec = sec;
+				const DateTimeUTC dt = unix_to_utc(sec);
+
+				write_digits<4>(&cached_buf[0], static_cast<uint32_t>(dt.year)); // YYYY
+				write_digits<2>(&cached_buf[5], dt.month);						 // MM
+				write_digits<2>(&cached_buf[8], dt.day);						 // DD
+				write_digits<2>(&cached_buf[11], dt.hour);						 // HH
+				write_digits<2>(&cached_buf[14], dt.minute);					 // MM
+				write_digits<2>(&cached_buf[17], dt.second);					 // SS
+			}
+
+			// Always update nanoseconds (they change within the same second)
+			write_digits<9>(&cached_buf[20], nsec); // nnnnnnnnn
+
+			// Copy to output buffer
+			std::memcpy(buf, cached_buf.data(), DATE_AND_TIME_BUF_SIZE - 1);
+			buf[DATE_AND_TIME_BUF_SIZE - 1] = '\0';
+			return buf;
+		}
+
+		/**
+		 * @brief Write timestamp string to buffer (no allocation)
+		 * @param buf Buffer of at least TIMESTAMP_NS_BUF_SIZE bytes
+		 * @param ts Timestamp in nanoseconds
+		 * @return Pointer to start of formatted string in buffer
+		 */
+		static INLINE const char *timestamp_ns_to(char *buf, uint64_t ts) {
+			constexpr size_t decimal_digits = 9;
+			constexpr size_t min_size = 20;
+
+			const uint64_t sec = ts / 1'000'000'000ULL;
+			const uint32_t nsec = uint32_t(ts % 1'000'000'000ULL);
+
+			// Work backwards from end of buffer
+			char *const buf_end = buf + TIMESTAMP_NS_BUF_SIZE - 1;
+			*buf_end = '\0';
+
+			char *const dot_position = buf_end - decimal_digits - 1;
+			*dot_position = '.';
+			write_digits<decimal_digits>(dot_position + 1, nsec);
+
+			char *const number_start = write_digits_rev(dot_position, sec);
+			char *const min_start = buf_end - min_size;
+			char *const start = std::min(min_start, number_start);
+			for (char *c = start; c < number_start; c++) *c = ' ';
+
+			return start;
+		}
+
 		static INLINE std::string date_and_time(uint64_t ts) {
 			const int64_t sec = static_cast<int64_t>(ts / 1'000'000'000ULL);
 			const uint32_t nsec = static_cast<uint32_t>(ts % 1'000'000'000ULL);
