@@ -14,8 +14,8 @@
 #include <vector>
 
 #include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
+#include "commands/filter.hpp"
 #include "commands/interface.hpp"
-#include "filter.hpp"
 #include "timespec.hpp"
 
 using namespace std::string_literals;
@@ -144,12 +144,9 @@ static void add_decode_command(CLI::App &app)
 	command->add_flag("-r,--recursive,!--no-recursive", recursive,
 					  "Recurse into subdirectories (default: yes)");
 
-	static std::string tracebuffer_filter_str = "^.*$";
-	command
-		->add_option("-F,--filter", tracebuffer_filter_str,
-					 "Filter tracebuffers by name using regex")
-		->capture_default_str()
-		->type_name("REGEX");
+	static std::string tracebuffer_filter_str =
+		CommonLowLevelTracingKit::cmd::interface::default_filter_pattern;
+	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, tracebuffer_filter_str);
 
 	static bool json_output = false;
 	command->add_flag("-j,--json", json_output, "Output as JSON (one object per line)");
@@ -256,7 +253,8 @@ static void add_decode_command(CLI::App &app)
 		const auto tbFilter = [&](const Tracebuffer &tb) {
 			// Check tracebuffer name regex
 			const bool tracebuffer_used =
-				boost::regex_match(tb.name().data(), tracebuffer_filter_regex);
+				CommonLowLevelTracingKit::cmd::interface::match_tracebuffer_filter(
+					tb.name(), tracebuffer_filter_regex);
 			if (!tracebuffer_used)
 				return false;
 

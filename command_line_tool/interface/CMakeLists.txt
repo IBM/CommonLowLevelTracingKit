@@ -5,20 +5,31 @@
 
 find_package(RapidJSON REQUIRED)
 find_package(CLI11 REQUIRED)
+find_package(Boost REQUIRED COMPONENTS regex)
 
-add_library(clltk-cmd-interface INTERFACE)
+set(INTERFACE_SOURCES
+    commands/filter.cpp
+)
+
+set(INTERFACE_HEADERS
+    commands/filter.hpp
+    commands/interface.hpp
+)
+
+add_library(clltk-cmd-interface STATIC ${INTERFACE_SOURCES})
 
 target_include_directories(clltk-cmd-interface
-    INTERFACE
+    PUBLIC
         .
 )
 
 target_link_libraries(clltk-cmd-interface
-    INTERFACE
+    PUBLIC
         CLI11::CLI11
+        Boost::regex
 )
 
 target_include_directories(clltk-cmd-interface
-    INTERFACE
+    PUBLIC
         ${RAPIDJSON_INCLUDE_DIRS}
 )

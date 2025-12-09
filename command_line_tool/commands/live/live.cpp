@@ -20,6 +20,7 @@
 #include <rapidjson/writer.h>
 
 #include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
+#include "commands/filter.hpp"
 #include "commands/interface.hpp"
 #include "ordered_buffer.hpp"
 
@@ -69,7 +70,8 @@ class LiveDecoder
   public:
 	struct Config {
 		std::filesystem::path input_path;
-		std::string tracebuffer_filter = "^.*$";
+		std::string tracebuffer_filter =
+			CommonLowLevelTracingKit::cmd::interface::default_filter_pattern;
 		size_t buffer_size = 100000;
 		uint64_t order_delay_ms = 25;
 		uint64_t poll_interval_ms = 5;
@@ -159,7 +161,9 @@ class LiveDecoder
 				for (const auto &entry : std::filesystem::directory_iterator(m_config.input_path)) {
 					if (SyncTracebuffer::is_tracebuffer(entry.path())) {
 						auto tb = SyncTracebuffer::make(entry.path());
-						if (tb && boost::regex_match(tb->name().data(), filter_regex)) {
+						if (tb &&
+							CommonLowLevelTracingKit::cmd::interface::match_tracebuffer_filter(
+								tb->name(), filter_regex)) {
 							m_tracebuffers.push_back(std::move(tb));
 						}
 					}
@@ -167,7 +171,8 @@ class LiveDecoder
 			} else if (SyncTracebuffer::is_tracebuffer(m_config.input_path)) {
 				// Single tracebuffer file
 				auto tb = SyncTracebuffer::make(m_config.input_path);
-				if (tb && boost::regex_match(tb->name().data(), filter_regex)) {
+				if (tb && CommonLowLevelTracingKit::cmd::interface::match_tracebuffer_filter(
+							  tb->name(), filter_regex)) {
 					m_tracebuffers.push_back(std::move(tb));
 				}
 			} else {
@@ -449,7 +454,6 @@ static void add_live_command(CLI::App &app)
 	static bool json_output{};
 
 	// Default values (used for display and reset)
-	constexpr const char *default_filter = "^.*$";
 	constexpr size_t default_buffer_size = 100000;
 	constexpr uint64_t default_order_delay_ms = 25;
 	constexpr uint64_t default_poll_interval_ms = 5;
@@ -463,11 +467,7 @@ static void add_live_command(CLI::App &app)
 	command->add_flag("-r,--recursive,!--no-recursive", recursive,
 					  "Recurse into subdirectories (default: no)");
 
-	command
-		->add_option("-F,--filter", tracebuffer_filter_str,
-					 "Filter tracebuffers by name using regex")
-		->default_val(default_filter)
-		->type_name("REGEX");
+	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, tracebuffer_filter_str);
 
 	command
 		->add_option("--buffer-size", buffer_size,
