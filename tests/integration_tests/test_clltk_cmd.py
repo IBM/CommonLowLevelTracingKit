@@ -60,10 +60,7 @@ class TestClltkCmdBase(unittest.TestCase):
         """Test clltk --version shows version string."""
         result = clltk("--version")
         self.assertEqual(result.returncode, 0)
-        self.assertRegex(
-            result.stdout,
-            r"Common Low Level Tracing Kit \d+\.\d+\.\d+"
-        )
+        self.assertRegex(result.stdout, r"Common Low Level Tracing Kit \d+\.\d+\.\d+")
 
 
 class TestClltkTraceBuffer(unittest.TestCase):
@@ -72,15 +69,15 @@ class TestClltkTraceBuffer(unittest.TestCase):
     def setUp(self):
         """Create temporary directory and set environment."""
         self.tmp_dir = tempfile.TemporaryDirectory()
-        self.old_env = os.environ.get('CLLTK_TRACING_PATH')
-        os.environ['CLLTK_TRACING_PATH'] = self.tmp_dir.name
+        self.old_env = os.environ.get("CLLTK_TRACING_PATH")
+        os.environ["CLLTK_TRACING_PATH"] = self.tmp_dir.name
 
     def tearDown(self):
         """Clean up temporary directory and restore environment."""
         if self.old_env:
-            os.environ['CLLTK_TRACING_PATH'] = self.old_env
+            os.environ["CLLTK_TRACING_PATH"] = self.old_env
         else:
-            os.environ.pop('CLLTK_TRACING_PATH', None)
+            os.environ.pop("CLLTK_TRACING_PATH", None)
         self.tmp_dir.cleanup()
 
     def _list_trace_files(self, path: str = None) -> list:
@@ -100,6 +97,7 @@ class TestClltkTraceBuffer(unittest.TestCase):
                 item.unlink()
             elif item.is_dir():
                 import shutil
+
                 shutil.rmtree(item)
 
     def test_clltk_tracing_path_empty_by_default(self):
@@ -109,7 +107,7 @@ class TestClltkTraceBuffer(unittest.TestCase):
 
     def test_create_tracebuffer(self):
         """Test creating a tracebuffer."""
-        result = clltk("tracebuffer", "--name", "MyFirstTracebuffer", "--size", "1KB")
+        result = clltk("buffer", "--buffer", "MyFirstTracebuffer", "--size", "1KB")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         files = self._list_trace_files()
@@ -119,23 +117,19 @@ class TestClltkTraceBuffer(unittest.TestCase):
     def test_invalid_tracebuffer_names(self):
         """Test that invalid tracebuffer names are rejected."""
         invalid_names = [
-            " Buffer",   # leading space
-            "Buffer ",   # trailing space
-            "_Buffer",   # leading underscore
-            "8uffer",    # leading digit
-            "Buffe~r",   # tilde
-            "Buffe#r",   # hash
-            "Buffe'r",   # quote
+            " Buffer",  # leading space
+            "Buffer ",  # trailing space
+            "_Buffer",  # leading underscore
+            "8uffer",  # leading digit
+            "Buffe~r",  # tilde
+            "Buffe#r",  # hash
+            "Buffe'r",  # quote
         ]
         for name in invalid_names:
             with self.subTest(name=name):
-                result = clltk(
-                    "tracebuffer", "--name", name, "--size", "256",
-                    check=False
-                )
+                result = clltk("buffer", "--buffer", name, "--size", "256", check=False)
                 self.assertNotEqual(
-                    result.returncode, 0,
-                    msg=f"naming tracebuffer '{name}' should fail"
+                    result.returncode, 0, msg=f"naming tracebuffer '{name}' should fail"
                 )
 
     def test_valid_tracebuffer_names(self):
@@ -148,7 +142,7 @@ class TestClltkTraceBuffer(unittest.TestCase):
         for name in valid_names:
             with self.subTest(name=name):
                 self._clean_directory()
-                result = clltk("tracebuffer", "--name", name, "--size", "256")
+                result = clltk("buffer", "--buffer", name, "--size", "256")
                 self.assertEqual(result.returncode, 0)
 
                 files = self._list_trace_files()
@@ -166,10 +160,11 @@ class TestClltkTraceBuffer(unittest.TestCase):
         for size in valid_sizes:
             with self.subTest(size=size):
                 self._clean_directory()
-                result = clltk("tracebuffer", "--name", "Buffer", "--size", size)
+                result = clltk("buffer", "--buffer", "Buffer", "--size", size)
                 self.assertEqual(
-                    result.returncode, 0,
-                    msg=f"creating tracebuffer with size {size} should not fail"
+                    result.returncode,
+                    0,
+                    msg=f"creating tracebuffer with size {size} should not fail",
                 )
 
                 files = self._list_trace_files()
@@ -185,13 +180,17 @@ class TestClltkTraceBuffer(unittest.TestCase):
         dir_b.mkdir()
 
         # Create tracebuffer in dir A
-        os.environ['CLLTK_TRACING_PATH'] = str(dir_a)
-        result = clltk("-C", str(dir_a), "tracebuffer", "--name", "BufferInA", "--size", "1KB")
+        os.environ["CLLTK_TRACING_PATH"] = str(dir_a)
+        result = clltk(
+            "-P", str(dir_a), "buffer", "--buffer", "BufferInA", "--size", "1KB"
+        )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Create tracebuffer in dir B
-        os.environ['CLLTK_TRACING_PATH'] = str(dir_b)
-        result = clltk("-C", str(dir_b), "tracebuffer", "--name", "BufferInB", "--size", "1KB")
+        os.environ["CLLTK_TRACING_PATH"] = str(dir_b)
+        result = clltk(
+            "-P", str(dir_b), "buffer", "--buffer", "BufferInB", "--size", "1KB"
+        )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Verify files in dir A
@@ -211,15 +210,15 @@ class TestClltkTracePipe(unittest.TestCase):
     def setUp(self):
         """Create temporary directory and set environment."""
         self.tmp_dir = tempfile.TemporaryDirectory()
-        self.old_env = os.environ.get('CLLTK_TRACING_PATH')
-        os.environ['CLLTK_TRACING_PATH'] = self.tmp_dir.name
+        self.old_env = os.environ.get("CLLTK_TRACING_PATH")
+        os.environ["CLLTK_TRACING_PATH"] = self.tmp_dir.name
 
     def tearDown(self):
         """Clean up temporary directory and restore environment."""
         if self.old_env:
-            os.environ['CLLTK_TRACING_PATH'] = self.old_env
+            os.environ["CLLTK_TRACING_PATH"] = self.old_env
         else:
-            os.environ.pop('CLLTK_TRACING_PATH', None)
+            os.environ.pop("CLLTK_TRACING_PATH", None)
         self.tmp_dir.cleanup()
 
     def test_subcommand_tracepipe_exists(self):
@@ -234,20 +233,20 @@ class TestClltkTracePoints(unittest.TestCase):
     def setUp(self):
         """Create temporary directory and set environment."""
         self.tmp_dir = tempfile.TemporaryDirectory()
-        self.old_env = os.environ.get('CLLTK_TRACING_PATH')
-        os.environ['CLLTK_TRACING_PATH'] = self.tmp_dir.name
+        self.old_env = os.environ.get("CLLTK_TRACING_PATH")
+        os.environ["CLLTK_TRACING_PATH"] = self.tmp_dir.name
 
     def tearDown(self):
         """Clean up temporary directory and restore environment."""
         if self.old_env:
-            os.environ['CLLTK_TRACING_PATH'] = self.old_env
+            os.environ["CLLTK_TRACING_PATH"] = self.old_env
         else:
-            os.environ.pop('CLLTK_TRACING_PATH', None)
+            os.environ.pop("CLLTK_TRACING_PATH", None)
         self.tmp_dir.cleanup()
 
     def test_subcommand_tracepoint_exists(self):
-        """Test that tracepoint subcommand exists and shows help."""
-        result = clltk("tracepoint", "--help")
+        """Test that trace subcommand exists and shows help."""
+        result = clltk("trace", "--help")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
 
@@ -257,15 +256,15 @@ class TestClltkClear(unittest.TestCase):
     def setUp(self):
         """Create temporary directory and set environment."""
         self.tmp_dir = tempfile.TemporaryDirectory()
-        self.old_env = os.environ.get('CLLTK_TRACING_PATH')
-        os.environ['CLLTK_TRACING_PATH'] = self.tmp_dir.name
+        self.old_env = os.environ.get("CLLTK_TRACING_PATH")
+        os.environ["CLLTK_TRACING_PATH"] = self.tmp_dir.name
 
     def tearDown(self):
         """Clean up temporary directory and restore environment."""
         if self.old_env:
-            os.environ['CLLTK_TRACING_PATH'] = self.old_env
+            os.environ["CLLTK_TRACING_PATH"] = self.old_env
         else:
-            os.environ.pop('CLLTK_TRACING_PATH', None)
+            os.environ.pop("CLLTK_TRACING_PATH", None)
         self.tmp_dir.cleanup()
 
     def _list_trace_files(self, path: str = None) -> list:
@@ -289,15 +288,15 @@ class TestClltkClear(unittest.TestCase):
     def test_clear_existing_tracebuffer(self):
         """Test clearing an existing tracebuffer."""
         # Create tracebuffer
-        result = clltk("tracebuffer", "--name", "TestBuffer", "--size", "1KB")
+        result = clltk("buffer", "--buffer", "TestBuffer", "--size", "1KB")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Add a tracepoint
-        result = clltk("tracepoint", "TestBuffer", "--message", "test message")
+        result = clltk("trace", "--buffer", "TestBuffer", "--message", "test message")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Clear the tracebuffer
-        result = clltk("clear", "--name", "TestBuffer")
+        result = clltk("clear", "--buffer", "TestBuffer")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Verify tracebuffer file still exists
@@ -306,19 +305,19 @@ class TestClltkClear(unittest.TestCase):
         self.assertEqual(files[0].name, "TestBuffer.clltk_trace")
 
     def test_clear_with_short_option(self):
-        """Test clear with -n short option."""
+        """Test clear with -b short option."""
         # Create tracebuffer
-        result = clltk("tracebuffer", "-n", "ShortOptBuffer", "-s", "1KB")
+        result = clltk("buffer", "-b", "ShortOptBuffer", "-s", "1KB")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Clear with short option
-        result = clltk("clear", "-n", "ShortOptBuffer")
+        result = clltk("clear", "-b", "ShortOptBuffer")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
     def test_clear_with_positional_name(self):
         """Test clear with positional name argument."""
         # Create tracebuffer
-        result = clltk("tracebuffer", "PosBuffer", "--size", "1KB")
+        result = clltk("buffer", "PosBuffer", "--size", "1KB")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Clear with positional name
@@ -329,25 +328,26 @@ class TestClltkClear(unittest.TestCase):
         """Test clearing a tracebuffer that doesn't exist."""
         # This should not fail - clltk_dynamic_tracebuffer_clear returns silently
         # if the tracebuffer doesn't exist (matches existing pattern)
-        result = clltk("clear", "--name", "NonExistentBuffer", check=False)
+        result = clltk("clear", "--buffer", "NonExistentBuffer", check=False)
         # The command doesn't fail, it just does nothing if buffer doesn't exist
         # This matches the behavior of the creation function
 
     def test_clear_invalid_name(self):
         """Test that invalid tracebuffer names are rejected."""
         invalid_names = [
-            " Buffer",   # leading space
-            "_Buffer",   # leading underscore
-            "8uffer",    # leading digit
+            " Buffer",  # leading space
+            "_Buffer",  # leading underscore
+            "8uffer",  # leading digit
         ]
         for name in invalid_names:
             with self.subTest(name=name):
-                result = clltk("clear", "--name", name, check=False)
+                result = clltk("clear", "--buffer", name, check=False)
                 self.assertNotEqual(
-                    result.returncode, 0,
-                    msg=f"clearing tracebuffer with invalid name '{name}' should fail"
+                    result.returncode,
+                    0,
+                    msg=f"clearing tracebuffer with invalid name '{name}' should fail",
                 )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

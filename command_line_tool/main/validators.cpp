@@ -16,6 +16,22 @@ namespace CommonLowLevelTracingKit::cmd::interface
 {
 
 // ============================================================================
+// Path Resolution Implementation
+// ============================================================================
+
+static std::string g_path_option{};
+
+const std::string &get_path_option(void)
+{
+	return g_path_option;
+}
+
+void set_path_option(const std::string &path)
+{
+	g_path_option = path;
+}
+
+// ============================================================================
 // Verbosity Control Implementation
 // ============================================================================
 
@@ -93,6 +109,15 @@ TracebufferName::TracebufferName(void) : CLI::Validator("BufferName")
 		if (std::regex_match(filename, pattern))
 			return std::string(); // valid
 		return "invalid tracebuffer name"s;
+	};
+}
+
+ExistingTracePath::ExistingTracePath(void) : CLI::Validator("PATH")
+{
+	func_ = [](const std::string &path) -> std::string {
+		if (std::filesystem::exists(path))
+			return std::string(); // valid
+		return "path does not exist: "s + path;
 	};
 }
 

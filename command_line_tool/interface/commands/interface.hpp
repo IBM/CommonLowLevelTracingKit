@@ -14,6 +14,8 @@
 #include <CLI/Error.hpp>  // IWYU pragma: export
 #include <CLI/Option.hpp> // IWYU pragma: export
 
+#include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <mutex>
 #include <string>
@@ -26,6 +28,35 @@ namespace CommonLowLevelTracingKit::cmd::interface
 {
 using MainAppHandle = std::pair<CLI::App &, std::unique_lock<std::mutex>>;
 MainAppHandle acquireMainApp(void);
+
+// ============================================================================
+// Path Resolution
+// ============================================================================
+
+/// Get the tracing path set via -P/--path option (empty if not set)
+const std::string &get_path_option(void);
+
+/// Set the tracing path via -P/--path option
+void set_path_option(const std::string &path);
+
+/// Resolve the tracing path with priority: -P option > CLLTK_TRACING_PATH env > "."
+inline std::filesystem::path get_tracing_path(void)
+{
+	// 1. Check -P/--path option
+	const auto &path_opt = get_path_option();
+	if (!path_opt.empty()) {
+		return path_opt;
+	}
+
+	// 2. Check CLLTK_TRACING_PATH environment variable
+	const char *env_path = std::getenv("CLLTK_TRACING_PATH");
+	if (env_path != nullptr && env_path[0] != '\0') {
+		return env_path;
+	}
+
+	// 3. Default to current directory
+	return ".";
+}
 
 // ============================================================================
 // Verbosity Control
@@ -52,8 +83,7 @@ inline bool is_quiet(void)
 }
 
 /// Log an info message (shown in normal and verbose mode, hidden in quiet mode)
-template <typename... Args>
-void log_info(Args &&...args)
+template <typename... Args> void log_info(Args &&...args)
 {
 	if (!is_quiet()) {
 		(std::cout << ... << std::forward<Args>(args)) << std::endl;
@@ -61,8 +91,7 @@ void log_info(Args &&...args)
 }
 
 /// Log a verbose message (only shown in verbose mode)
-template <typename... Args>
-void log_verbose(Args &&...args)
+template <typename... Args> void log_verbose(Args &&...args)
 {
 	if (is_verbose()) {
 		(std::cout << ... << std::forward<Args>(args)) << std::endl;
@@ -70,8 +99,7 @@ void log_verbose(Args &&...args)
 }
 
 /// Log an error message (always shown, even in quiet mode)
-template <typename... Args>
-void log_error(Args &&...args)
+template <typename... Args> void log_error(Args &&...args)
 {
 	(std::cerr << ... << std::forward<Args>(args)) << std::endl;
 }
@@ -117,6 +145,11 @@ namespace validator
 {
 struct TracebufferName : public CLI::Validator {
 	TracebufferName(void);
+};
+
+/// Validator for paths that must exist (file or directory)
+struct ExistingTracePath : public CLI::Validator {
+	ExistingTracePath(void);
 };
 
 } // namespace validator

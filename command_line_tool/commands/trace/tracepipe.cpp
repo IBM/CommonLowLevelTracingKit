@@ -49,6 +49,7 @@ class Command
 		auto cmd = std::make_shared<Command>();
 
 		cmd->sub = parent.add_subcommand("tracepipe", "Pipe tracepoints from stdin or file");
+		cmd->sub->alias("tpipe");
 		cmd->sub->description(
 			"Read lines from stdin or a file and write each as a tracepoint to a tracebuffer.\n"
 			"Supports plain text (one line = one tracepoint) or JSON format.\n"
@@ -58,7 +59,7 @@ class Command
 			"Only 'message' is required; other fields default to 0 or empty string.");
 
 		cmd->sub
-			->add_option("tracebuffer,--tracebuffer,--tb", cmd->tracebuffer_name,
+			->add_option("buffer,-b,--buffer", cmd->buffer_name,
 						 "Target tracebuffer name.\n"
 						 "The tracebuffer will be created if it does not exist")
 			->check(validator::TracebufferName{})
@@ -66,7 +67,7 @@ class Command
 			->type_name("NAME");
 
 		cmd->sub
-			->add_option("--size", cmd->tracebuffer_size,
+			->add_option("-s,--size", cmd->buffer_size,
 						 "Ring buffer size in bytes if creating a new tracebuffer.\n"
 						 "One basic tracepoint is approximately 32 bytes.\n"
 						 "Supports size suffixes: K, M, G (e.g., 512K, 1M)")
@@ -74,17 +75,14 @@ class Command
 			->transform(CLI::AsSizeValue{false})
 			->type_name("SIZE");
 
-		cmd->sub
-			->add_flag("--json", cmd->try_json,
-					   "Expect JSON input (one JSON object per line).\n"
-					   "Keys: pid, tid, message (required), file, line.\n"
-					   "If JSON parsing fails, falls back to plain text mode")
-			->capture_default_str();
+		cmd->sub->add_flag("-j,--json", cmd->try_json,
+						   "Expect JSON input (one JSON object per line).\n"
+						   "Keys: pid, tid, message (required), file, line.\n"
+						   "If JSON parsing fails, falls back to plain text mode");
 
 		cmd->sub
 			->add_option("input_file", cmd->input_file,
-						 "Input file path. Reads from stdin if not specified")
-			->check(CLI::ExistingFile)
+						 "Input file path. Reads from stdin if not specified (use - for stdin)")
 			->type_name("FILE");
 
 		cmd->sub->callback(std::bind(&Command::run, std::move(cmd)));
@@ -92,8 +90,8 @@ class Command
 
   protected:
 	CLI::App *sub;
-	std::string tracebuffer_name{"CommonLowLevelTracingKit-cmd-tracepipe-output"};
-	uint32_t tracebuffer_size{512000};
+	std::string buffer_name{};
+	uint32_t buffer_size{512000};
 	std::string input_file;
 	bool try_json{false};
 
@@ -109,9 +107,9 @@ class Command
 
 					auto data = json::parse(line);
 					auto entry = data.get<TracepipeEntry>();
-					clltk_dynamic_tracepoint_execution(cmd.tracebuffer_name.c_str(),
-													   entry.file.c_str(), entry.line, entry.pid,
-													   entry.tid, "%s", entry.message.c_str());
+					clltk_dynamic_tracepoint_execution(cmd.buffer_name.c_str(), entry.file.c_str(),
+													   entry.line, entry.pid, entry.tid, "%s",
+													   entry.message.c_str());
 					continue;
 				} catch (const json::exception &e) {
 					log_error("no valid json: ", e.what());
@@ -120,7 +118,7 @@ class Command
 			}
 
 			// default and backup case
-			clltk_dynamic_tracepoint_execution(cmd.tracebuffer_name.c_str(), "", 0, 0, 0, "%s",
+			clltk_dynamic_tracepoint_execution(cmd.buffer_name.c_str(), "", 0, 0, 0, "%s",
 											   line.c_str());
 		}
 
@@ -133,9 +131,9 @@ class Command
 
 	static void run(std::shared_ptr<Command> cmd)
 	{
-		clltk_dynamic_tracebuffer_creation(cmd->tracebuffer_name.c_str(), cmd->tracebuffer_size);
+		clltk_dynamic_tracebuffer_creation(cmd->buffer_name.c_str(), cmd->buffer_size);
 
-		if (cmd->input_file.empty()) {
+		if (cmd->input_file.empty() || cmd->input_file == "-") {
 			handle_line(*cmd, std::cin);
 		} else {
 			std::ifstream infile(cmd->input_file);

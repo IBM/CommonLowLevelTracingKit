@@ -57,15 +57,16 @@ static void verbose_func(const std::string &stdout, const std::string &stderr)
 
 static void add_snapshot_command(CLI::App &app)
 {
-	CLI::App *const command = app.add_subcommand("sp", "Take a snapshot of trace data");
-	command->alias("snapshot");
+	CLI::App *const command = app.add_subcommand("snapshot", "Take a snapshot of trace data");
+	command->alias("sp");
 	command->description(
 		"Capture the current state of all tracebuffers and save to a portable archive file.\n"
 		"The snapshot can be shared and analyzed later using the 'decode' command.\n"
+		"Captures from CLLTK_TRACING_PATH (or -P path, or current directory).\n"
 		"By default, creates an uncompressed .clltk archive.");
 
 	static bool compress = false;
-	command->add_flag("--compress,-z", compress,
+	command->add_flag("-z,--compress", compress,
 					  "Compress the snapshot using gzip (reduces file size)");
 
 	// Note: Global --verbose/-v flag is handled by main.cpp
@@ -73,17 +74,16 @@ static void add_snapshot_command(CLI::App &app)
 	static CommonLowLevelTracingKit::snapshot::verbose_function_t verbose{};
 
 	static std::string output_file_name{"snapshot.clltk"};
-	command->add_option("--output,-o", output_file_name, "Output filename for the snapshot archive")
+	command->add_option("-o,--output", output_file_name, "Output filename for the snapshot archive")
 		->capture_default_str()
 		->type_name("FILE");
 
-	static std::vector<std::string> tracepoints;
+	static std::vector<std::string> include_paths;
 	command
-		->add_option("tracepoints", tracepoints,
-					 "Additional tracepoint paths to include in the snapshot.\n"
-					 "By default, includes all tracebuffers at CLLTK_TRACING_PATH")
-		->expected(0, -1)
-		->type_name("PATH...");
+		->add_option("--include", include_paths,
+					 "Additional paths to include in the snapshot.\n"
+					 "Can be specified multiple times")
+		->type_name("PATH");
 
 	static uint64_t bucket_size{4096};
 	command
@@ -95,7 +95,7 @@ static void add_snapshot_command(CLI::App &app)
 	command->callback([&]() {
 		// Use global verbose flag to enable detailed snapshot output
 		auto verbose_fn = is_verbose() ? verbose_func : verbose;
-		take_snapshot(output_file_name, tracepoints, compress, bucket_size, verbose_fn);
+		take_snapshot(output_file_name, include_paths, compress, bucket_size, verbose_fn);
 	});
 }
 

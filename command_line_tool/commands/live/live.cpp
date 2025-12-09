@@ -388,9 +388,11 @@ static void add_live_command(CLI::App &app)
 {
 	CLI::App *const command =
 		app.add_subcommand("live", "Live streaming decoder for real-time trace monitoring");
+	command->alias("lv");
 	command->description(
 		"Monitor tracebuffers in real-time and output tracepoints as they arrive.\n"
 		"Uses a reader thread to poll tracebuffers and an output thread for ordered display.\n"
+		"If no input is specified, uses CLLTK_TRACING_PATH or current directory.\n"
 		"Supports graceful shutdown via Ctrl+C (SIGINT/SIGTERM). Press twice to force exit.");
 
 	// Use static variables for CLI option storage, but reset defaults in callback
@@ -400,6 +402,7 @@ static void add_live_command(CLI::App &app)
 	static uint64_t order_delay_ms{};
 	static uint64_t poll_interval_ms{};
 	static bool show_summary{};
+	static bool recursive{};
 
 	// Default values (used for display and reset)
 	constexpr const char *default_filter = "^.*$";
@@ -409,19 +412,21 @@ static void add_live_command(CLI::App &app)
 
 	command
 		->add_option("input", input_path,
-					 "Path to tracebuffer file or directory containing tracebuffers to monitor")
-		->envname("CLLTK_TRACING_PATH")
-		->required()
+					 "Path to tracebuffer file or directory to monitor\n"
+					 "(default: CLLTK_TRACING_PATH or current directory)")
 		->type_name("PATH");
 
+	command->add_flag("-r,--recursive,!--no-recursive", recursive,
+					  "Recurse into subdirectories (default: no)");
+
 	command
-		->add_option("-t,--tracebuffer-filter", tracebuffer_filter_str,
-					 "Filter tracebuffers by name using ECMAScript regex")
+		->add_option("-F,--filter", tracebuffer_filter_str,
+					 "Filter tracebuffers by name using regex")
 		->default_val(default_filter)
 		->type_name("REGEX");
 
 	command
-		->add_option("-b,--buffer-size", buffer_size,
+		->add_option("--buffer-size", buffer_size,
 					 "Maximum tracepoints to buffer in memory.\n"
 					 "Older tracepoints are dropped when limit is reached.\n"
 					 "Set to 0 for unlimited (may consume large memory)")
@@ -429,7 +434,7 @@ static void add_live_command(CLI::App &app)
 		->type_name("SIZE");
 
 	command
-		->add_option("-d,--order-delay", order_delay_ms,
+		->add_option("--order-delay", order_delay_ms,
 					 "Delay window in milliseconds for timestamp ordering.\n"
 					 "Higher values improve ordering accuracy but increase latency.\n"
 					 "Tracepoints are held until this delay passes to allow reordering")
@@ -437,18 +442,21 @@ static void add_live_command(CLI::App &app)
 		->type_name("MS");
 
 	command
-		->add_option("-p,--poll-interval", poll_interval_ms,
+		->add_option("--poll-interval", poll_interval_ms,
 					 "Poll interval in milliseconds when no tracepoints are pending.\n"
 					 "Lower values reduce latency but increase CPU usage")
 		->default_val(default_poll_interval_ms)
 		->type_name("MS");
 
-	command->add_flag("-s,--summary", show_summary,
+	command->add_flag("-S,--summary", show_summary,
 					  "Show statistics summary on exit (read/output/dropped counts, buffer usage)");
 
 	command->callback([&]() {
 		// Reset global signal state (for multiple runs in same process)
 		reset_signal_state();
+
+		// Resolve input path: use provided path, or fall back to tracing path
+		std::string resolved_input = input_path.empty() ? get_tracing_path().string() : input_path;
 
 		// Save previous signal handlers to restore later
 		struct sigaction old_sigint{}, old_sigterm{};
@@ -463,7 +471,7 @@ static void add_live_command(CLI::App &app)
 
 		// Configure decoder
 		LiveDecoder::Config config;
-		config.input_path = input_path;
+		config.input_path = resolved_input;
 		config.tracebuffer_filter = tracebuffer_filter_str;
 		config.buffer_size = buffer_size;
 		config.order_delay_ms = order_delay_ms;

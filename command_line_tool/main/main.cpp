@@ -26,10 +26,9 @@ static void set_verbose(void)
 	set_verbosity(Verbosity::verbose);
 }
 
-static void set_path(const std::string_view &input)
+static void set_path(const std::string &input)
 {
-	if (0 != setenv("CLLTK_TRACING_PATH", input.data(), 1))
-		throw CLI::RuntimeError("could not set env variable CLLTK_TRACING_PATH", 1);
+	set_path_option(input);
 }
 
 static void print_version(void)
@@ -52,14 +51,13 @@ static std::unique_ptr<CLI::App> createMainApp(void)
 
 	quiet->excludes(verbose);
 
-	app->add_option_function("--clltk_tracing_path,-C"s, std::function(set_path),
-							 "Set the tracing path directory where tracebuffers are stored")
+	app->add_option_function("-P,--path"s, std::function(set_path),
+							 "Tracing path where tracebuffers are stored (default: .)")
 		->envname("CLLTK_TRACING_PATH")
-		->check(CLI::ExistingPath)
 		->type_name("PATH");
 
 	auto *const version =
-		app->add_flag_callback("--version", print_version, "Print version information and exit");
+		app->add_flag_callback("-V,--version", print_version, "Print version information and exit");
 
 	version->excludes(quiet);
 	version->excludes(verbose);

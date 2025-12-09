@@ -41,37 +41,61 @@ class TestLiveExtremeStress(LiveTestCase):
         num_messages = 500
 
         # Create a larger buffer to hold more tracepoints
-        clltk("tracebuffer", "--name", buffer_name, "--size", "256KB")
+        clltk("buffer", "--buffer", buffer_name, "--size", "256KB")
 
         # Write many tracepoints as fast as possible
         for i in range(num_messages):
             subprocess.run(
-                [str(clltk_path), 'tracepoint', '--tb', buffer_name, '--msg', f"highvol_{i:05d}"],
-                env=os.environ.copy(), capture_output=True
+                [
+                    str(clltk_path),
+                    "trace",
+                    "--buffer",
+                    buffer_name,
+                    "--message",
+                    f"highvol_{i:05d}",
+                ],
+                env=os.environ.copy(),
+                capture_output=True,
             )
 
         # Run decoder with summary enabled and small buffer to force drops
         result = subprocess.run(
-            ["timeout", "3", str(clltk_path), "live", self.trace_path,
-             "--summary", "--buffer-size", "100", "--order-delay", "10", "--poll-interval", "1"],
-            capture_output=True, env=os.environ.copy()
+            [
+                "timeout",
+                "3",
+                str(clltk_path),
+                "live",
+                self.trace_path,
+                "--summary",
+                "--buffer-size",
+                "100",
+                "--order-delay",
+                "10",
+                "--poll-interval",
+                "1",
+            ],
+            capture_output=True,
+            env=os.environ.copy(),
         )
 
-        stderr_text = result.stderr.decode('utf-8')
+        stderr_text = result.stderr.decode("utf-8")
 
         # Verify summary is present
-        self.assertIn("Live Decoder Summary", stderr_text,
-            f"Summary not found in stderr: {stderr_text}")
+        self.assertIn(
+            "Live Decoder Summary",
+            stderr_text,
+            f"Summary not found in stderr: {stderr_text}",
+        )
         self.assertIn("Tracepoints read:", stderr_text)
         self.assertIn("Tracepoints output:", stderr_text)
         self.assertIn("Tracepoints dropped:", stderr_text)
         self.assertIn("Buffer high water:", stderr_text)
 
         # Parse summary values
-        read_match = re.search(r'Tracepoints read:\s+(\d+)', stderr_text)
-        output_match = re.search(r'Tracepoints output:\s+(\d+)', stderr_text)
-        dropped_match = re.search(r'Tracepoints dropped:\s+(\d+)', stderr_text)
-        high_water_match = re.search(r'Buffer high water:\s+(\d+)', stderr_text)
+        read_match = re.search(r"Tracepoints read:\s+(\d+)", stderr_text)
+        output_match = re.search(r"Tracepoints output:\s+(\d+)", stderr_text)
+        dropped_match = re.search(r"Tracepoints dropped:\s+(\d+)", stderr_text)
+        high_water_match = re.search(r"Buffer high water:\s+(\d+)", stderr_text)
 
         self.assertIsNotNone(read_match, "Could not parse 'Tracepoints read'")
         self.assertIsNotNone(output_match, "Could not parse 'Tracepoints output'")
@@ -84,16 +108,25 @@ class TestLiveExtremeStress(LiveTestCase):
         high_water = int(high_water_match.group(1))
 
         # Verify invariants
-        self.assertEqual(read_count, output_count + dropped_count,
-            f"read ({read_count}) should equal output ({output_count}) + dropped ({dropped_count})")
-        
-        # High water should be at most buffer size (100) 
-        self.assertLessEqual(high_water, 100,
-            f"High water ({high_water}) should not exceed buffer size (100)")
-        
+        self.assertEqual(
+            read_count,
+            output_count + dropped_count,
+            f"read ({read_count}) should equal output ({output_count}) + dropped ({dropped_count})",
+        )
+
+        # High water should be at most buffer size (100)
+        self.assertLessEqual(
+            high_water,
+            100,
+            f"High water ({high_water}) should not exceed buffer size (100)",
+        )
+
         # We should have read all the messages we wrote
-        self.assertEqual(read_count, num_messages,
-            f"Expected to read {num_messages} tracepoints, got {read_count}")
+        self.assertEqual(
+            read_count,
+            num_messages,
+            f"Expected to read {num_messages} tracepoints, got {read_count}",
+        )
 
     def test_buffer_overflow_with_small_buffer(self):
         """
@@ -103,31 +136,57 @@ class TestLiveExtremeStress(LiveTestCase):
         clltk_path = get_clltk_path()
         num_messages = 200
 
-        clltk("tracebuffer", "--name", buffer_name, "--size", "64KB")
+        clltk("buffer", "--buffer", buffer_name, "--size", "64KB")
 
         # Write messages
         for i in range(num_messages):
             subprocess.run(
-                [str(clltk_path), 'tracepoint', '--tb', buffer_name, '--msg', f"overflow_{i:04d}"],
-                env=os.environ.copy(), capture_output=True
+                [
+                    str(clltk_path),
+                    "trace",
+                    "--buffer",
+                    buffer_name,
+                    "--message",
+                    f"overflow_{i:04d}",
+                ],
+                env=os.environ.copy(),
+                capture_output=True,
             )
 
         # Run with very small buffer to force drops
         result = subprocess.run(
-            ["timeout", "2", str(clltk_path), "live", self.trace_path,
-             "--summary", "--buffer-size", "10", "--order-delay", "5", "--poll-interval", "1"],
-            capture_output=True, env=os.environ.copy()
+            [
+                "timeout",
+                "2",
+                str(clltk_path),
+                "live",
+                self.trace_path,
+                "--summary",
+                "--buffer-size",
+                "10",
+                "--order-delay",
+                "5",
+                "--poll-interval",
+                "1",
+            ],
+            capture_output=True,
+            env=os.environ.copy(),
         )
 
-        stderr_text = result.stderr.decode('utf-8')
+        stderr_text = result.stderr.decode("utf-8")
 
         # Verify we got drops
-        dropped_match = re.search(r'Tracepoints dropped:\s+(\d+)', stderr_text)
-        self.assertIsNotNone(dropped_match, f"Could not parse dropped count: {stderr_text}")
-        
+        dropped_match = re.search(r"Tracepoints dropped:\s+(\d+)", stderr_text)
+        self.assertIsNotNone(
+            dropped_match, f"Could not parse dropped count: {stderr_text}"
+        )
+
         dropped_count = int(dropped_match.group(1))
-        self.assertGreater(dropped_count, 0,
-            f"Expected some drops with buffer size 10 and {num_messages} messages")
+        self.assertGreater(
+            dropped_count,
+            0,
+            f"Expected some drops with buffer size 10 and {num_messages} messages",
+        )
 
     def test_multiple_buffers_high_volume(self):
         """
@@ -140,7 +199,7 @@ class TestLiveExtremeStress(LiveTestCase):
 
         # Create all buffers
         for name in buffer_names:
-            clltk("tracebuffer", "--name", name, "--size", "64KB")
+            clltk("buffer", "--buffer", name, "--size", "64KB")
 
         all_messages = []
         errors = []
@@ -153,12 +212,22 @@ class TestLiveExtremeStress(LiveTestCase):
                     with lock:
                         all_messages.append(msg)
                     result = subprocess.run(
-                        [str(clltk_path), 'tracepoint', '--tb', buf_name, '--msg', msg],
-                        env=os.environ.copy(), capture_output=True
+                        [
+                            str(clltk_path),
+                            "trace",
+                            "--buffer",
+                            buf_name,
+                            "--message",
+                            msg,
+                        ],
+                        env=os.environ.copy(),
+                        capture_output=True,
                     )
                     if result.returncode != 0:
                         with lock:
-                            errors.append(f"Failed to write to {buf_name}: {result.stderr}")
+                            errors.append(
+                                f"Failed to write to {buf_name}: {result.stderr}"
+                            )
             except Exception as e:
                 with lock:
                     errors.append(str(e))
@@ -177,27 +246,42 @@ class TestLiveExtremeStress(LiveTestCase):
 
         # Run decoder with summary
         result = subprocess.run(
-            ["timeout", "5", str(clltk_path), "live", self.trace_path,
-             "--summary", "--buffer-size", "1000", "--order-delay", "20", "--poll-interval", "2"],
-            capture_output=True, env=os.environ.copy()
+            [
+                "timeout",
+                "5",
+                str(clltk_path),
+                "live",
+                self.trace_path,
+                "--summary",
+                "--buffer-size",
+                "1000",
+                "--order-delay",
+                "20",
+                "--poll-interval",
+                "2",
+            ],
+            capture_output=True,
+            env=os.environ.copy(),
         )
 
-        stdout_text = result.stdout.decode('utf-8')
-        stderr_text = result.stderr.decode('utf-8')
+        stdout_text = result.stdout.decode("utf-8")
+        stderr_text = result.stderr.decode("utf-8")
 
         # Verify all buffer names appear in output
         for name in buffer_names:
-            self.assertIn(name, stdout_text,
-                f"Buffer '{name}' not found in output")
+            self.assertIn(name, stdout_text, f"Buffer '{name}' not found in output")
 
         # Parse summary
-        read_match = re.search(r'Tracepoints read:\s+(\d+)', stderr_text)
+        read_match = re.search(r"Tracepoints read:\s+(\d+)", stderr_text)
         self.assertIsNotNone(read_match, f"Could not parse read count: {stderr_text}")
-        
+
         read_count = int(read_match.group(1))
         expected_total = num_buffers * messages_per_buffer
-        self.assertEqual(read_count, expected_total,
-            f"Expected {expected_total} tracepoints, got {read_count}")
+        self.assertEqual(
+            read_count,
+            expected_total,
+            f"Expected {expected_total} tracepoints, got {read_count}",
+        )
 
     def test_sustained_high_frequency_writes(self):
         """
@@ -206,15 +290,28 @@ class TestLiveExtremeStress(LiveTestCase):
         buffer_name = "SustainedBuffer"
         clltk_path = get_clltk_path()
         write_duration_seconds = 3
-        
-        clltk("tracebuffer", "--name", buffer_name, "--size", "512KB")
+
+        clltk("buffer", "--buffer", buffer_name, "--size", "512KB")
 
         # Start decoder
         decoder_proc = subprocess.Popen(
-            ["stdbuf", "-oL", str(clltk_path), "live", self.trace_path,
-             "--summary", "--buffer-size", "5000", "--order-delay", "15", "--poll-interval", "2"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            env=os.environ.copy()
+            [
+                "stdbuf",
+                "-oL",
+                str(clltk_path),
+                "live",
+                self.trace_path,
+                "--summary",
+                "--buffer-size",
+                "5000",
+                "--order-delay",
+                "15",
+                "--poll-interval",
+                "2",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=os.environ.copy(),
         )
 
         messages_written = []
@@ -230,8 +327,16 @@ class TestLiveExtremeStress(LiveTestCase):
                     msg = f"sustained_{msg_id:06d}"
                     messages_written.append(msg)
                     result = subprocess.run(
-                        [str(clltk_path), 'tracepoint', '--tb', buffer_name, '--msg', msg],
-                        env=os.environ.copy(), capture_output=True
+                        [
+                            str(clltk_path),
+                            "trace",
+                            "--buffer",
+                            buffer_name,
+                            "--message",
+                            msg,
+                        ],
+                        env=os.environ.copy(),
+                        capture_output=True,
                     )
                     if result.returncode != 0:
                         writer_error = f"Write failed: {result.stderr.decode()}"
@@ -248,7 +353,7 @@ class TestLiveExtremeStress(LiveTestCase):
             writer = threading.Thread(target=writer_thread)
             writer.start()
             writer.join(timeout=write_duration_seconds + 5)
-            
+
             self.assertIsNone(writer_error, f"Writer error: {writer_error}")
 
             time.sleep(1)
@@ -256,25 +361,31 @@ class TestLiveExtremeStress(LiveTestCase):
             decoder_proc.send_signal(signal.SIGINT)
             stdout, stderr = decoder_proc.communicate(timeout=5)
 
-            stderr_text = stderr.decode('utf-8')
+            stderr_text = stderr.decode("utf-8")
 
-            read_match = re.search(r'Tracepoints read:\s+(\d+)', stderr_text)
-            output_match = re.search(r'Tracepoints output:\s+(\d+)', stderr_text)
-            dropped_match = re.search(r'Tracepoints dropped:\s+(\d+)', stderr_text)
+            read_match = re.search(r"Tracepoints read:\s+(\d+)", stderr_text)
+            output_match = re.search(r"Tracepoints output:\s+(\d+)", stderr_text)
+            dropped_match = re.search(r"Tracepoints dropped:\s+(\d+)", stderr_text)
 
             self.assertIsNotNone(read_match, f"Could not parse read: {stderr_text}")
-            
+
             read_count = int(read_match.group(1))
             output_count = int(output_match.group(1)) if output_match else 0
             dropped_count = int(dropped_match.group(1)) if dropped_match else 0
 
             total_written = len(messages_written)
-            
-            self.assertEqual(read_count, total_written,
-                f"Expected to read {total_written}, got {read_count}")
-            
-            self.assertEqual(read_count, output_count + dropped_count,
-                f"read ({read_count}) != output ({output_count}) + dropped ({dropped_count})")
+
+            self.assertEqual(
+                read_count,
+                total_written,
+                f"Expected to read {total_written}, got {read_count}",
+            )
+
+            self.assertEqual(
+                read_count,
+                output_count + dropped_count,
+                f"read ({read_count}) != output ({output_count}) + dropped ({dropped_count})",
+            )
 
             print(f"\nSustained write test results:")
             print(f"  Duration: {write_duration_seconds}s")
@@ -300,28 +411,52 @@ class TestLiveExtremeStress(LiveTestCase):
         clltk_path = get_clltk_path()
         num_messages = 300
 
-        clltk("tracebuffer", "--name", buffer_name, "--size", "128KB")
+        clltk("buffer", "--buffer", buffer_name, "--size", "128KB")
 
         for i in range(num_messages):
             subprocess.run(
-                [str(clltk_path), 'tracepoint', '--tb', buffer_name, '--msg', f"unlimited_{i:04d}"],
-                env=os.environ.copy(), capture_output=True
+                [
+                    str(clltk_path),
+                    "trace",
+                    "--buffer",
+                    buffer_name,
+                    "--message",
+                    f"unlimited_{i:04d}",
+                ],
+                env=os.environ.copy(),
+                capture_output=True,
             )
 
         result = subprocess.run(
-            ["timeout", "3", str(clltk_path), "live", self.trace_path,
-             "--summary", "--buffer-size", "0", "--order-delay", "10", "--poll-interval", "1"],
-            capture_output=True, env=os.environ.copy()
+            [
+                "timeout",
+                "3",
+                str(clltk_path),
+                "live",
+                self.trace_path,
+                "--summary",
+                "--buffer-size",
+                "0",
+                "--order-delay",
+                "10",
+                "--poll-interval",
+                "1",
+            ],
+            capture_output=True,
+            env=os.environ.copy(),
         )
 
-        stderr_text = result.stderr.decode('utf-8')
+        stderr_text = result.stderr.decode("utf-8")
 
-        dropped_match = re.search(r'Tracepoints dropped:\s+(\d+)', stderr_text)
+        dropped_match = re.search(r"Tracepoints dropped:\s+(\d+)", stderr_text)
         self.assertIsNotNone(dropped_match, f"Could not parse dropped: {stderr_text}")
-        
+
         dropped_count = int(dropped_match.group(1))
-        self.assertEqual(dropped_count, 0,
-            f"Expected 0 drops with unlimited buffer, got {dropped_count}")
+        self.assertEqual(
+            dropped_count,
+            0,
+            f"Expected 0 drops with unlimited buffer, got {dropped_count}",
+        )
 
     def test_interleaved_multi_buffer_ordering(self):
         """
@@ -333,7 +468,7 @@ class TestLiveExtremeStress(LiveTestCase):
         buffer_names = [f"OrderBuf_{i}" for i in range(num_buffers)]
 
         for name in buffer_names:
-            clltk("tracebuffer", "--name", name, "--size", "32KB")
+            clltk("buffer", "--buffer", name, "--size", "32KB")
 
         messages_in_order = []
         for round_num in range(rounds):
@@ -341,15 +476,17 @@ class TestLiveExtremeStress(LiveTestCase):
                 msg = f"order_r{round_num:02d}_b{buf_idx}"
                 messages_in_order.append(msg)
                 subprocess.run(
-                    [str(clltk_path), 'tracepoint', '--tb', buf_name, '--msg', msg],
-                    env=os.environ.copy(), capture_output=True
+                    [str(clltk_path), "trace", "--buffer", buf_name, "--message", msg],
+                    env=os.environ.copy(),
+                    capture_output=True,
                 )
                 time.sleep(0.005)
 
-        result = run_live_with_timeout(self.trace_path, timeout_seconds=3,
-                                       order_delay=30, poll_interval=2)
+        result = run_live_with_timeout(
+            self.trace_path, timeout_seconds=3, order_delay=30, poll_interval=2
+        )
 
-        stdout_text = result.stdout.decode('utf-8')
+        stdout_text = result.stdout.decode("utf-8")
 
         for msg in messages_in_order:
             self.assertIn(msg, stdout_text, f"Message '{msg}' not found")
@@ -361,9 +498,12 @@ class TestLiveExtremeStress(LiveTestCase):
                 positions.append((msg, pos))
 
         for i in range(1, len(positions)):
-            self.assertLess(positions[i-1][1], positions[i][1],
-                f"Out of order: '{positions[i-1][0]}' at {positions[i-1][1]} "
-                f"should come before '{positions[i][0]}' at {positions[i][1]}")
+            self.assertLess(
+                positions[i - 1][1],
+                positions[i][1],
+                f"Out of order: '{positions[i - 1][0]}' at {positions[i - 1][1]} "
+                f"should come before '{positions[i][0]}' at {positions[i][1]}",
+            )
 
     def test_rapid_start_stop_cycles(self):
         """
@@ -373,29 +513,58 @@ class TestLiveExtremeStress(LiveTestCase):
         clltk_path = get_clltk_path()
         num_cycles = 10
 
-        clltk("tracebuffer", "--name", buffer_name, "--size", "16KB")
+        clltk("buffer", "--buffer", buffer_name, "--size", "16KB")
 
         for i in range(20):
             subprocess.run(
-                [str(clltk_path), 'tracepoint', '--tb', buffer_name, '--msg', f"cycle_init_{i}"],
-                env=os.environ.copy(), capture_output=True
+                [
+                    str(clltk_path),
+                    "trace",
+                    "--buffer",
+                    buffer_name,
+                    "--message",
+                    f"cycle_init_{i}",
+                ],
+                env=os.environ.copy(),
+                capture_output=True,
             )
 
         for cycle in range(num_cycles):
             cycle_msg = f"cycle_marker_{cycle:02d}"
             subprocess.run(
-                [str(clltk_path), 'tracepoint', '--tb', buffer_name, '--msg', cycle_msg],
-                env=os.environ.copy(), capture_output=True
+                [
+                    str(clltk_path),
+                    "trace",
+                    "--buffer",
+                    buffer_name,
+                    "--message",
+                    cycle_msg,
+                ],
+                env=os.environ.copy(),
+                capture_output=True,
             )
 
             result = subprocess.run(
-                ["timeout", "0.5", str(clltk_path), "live", self.trace_path,
-                 "--order-delay", "10", "--poll-interval", "2"],
-                capture_output=True, env=os.environ.copy()
+                [
+                    "timeout",
+                    "0.5",
+                    str(clltk_path),
+                    "live",
+                    self.trace_path,
+                    "--order-delay",
+                    "10",
+                    "--poll-interval",
+                    "2",
+                ],
+                capture_output=True,
+                env=os.environ.copy(),
             )
 
-            self.assertIn(result.returncode, [0, 124],
-                f"Cycle {cycle}: Unexpected return code {result.returncode}")
+            self.assertIn(
+                result.returncode,
+                [0, 124],
+                f"Cycle {cycle}: Unexpected return code {result.returncode}",
+            )
 
     def test_maximum_message_throughput(self):
         """
@@ -405,13 +574,24 @@ class TestLiveExtremeStress(LiveTestCase):
         clltk_path = get_clltk_path()
         test_duration = 2
 
-        clltk("tracebuffer", "--name", buffer_name, "--size", "1MB")
+        clltk("buffer", "--buffer", buffer_name, "--size", "1MB")
 
         decoder_proc = subprocess.Popen(
-            [str(clltk_path), "live", self.trace_path,
-             "--summary", "--buffer-size", "50000", "--order-delay", "5", "--poll-interval", "1"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            env=os.environ.copy()
+            [
+                str(clltk_path),
+                "live",
+                self.trace_path,
+                "--summary",
+                "--buffer-size",
+                "50000",
+                "--order-delay",
+                "5",
+                "--poll-interval",
+                "1",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=os.environ.copy(),
         )
 
         messages_written = 0
@@ -422,9 +602,16 @@ class TestLiveExtremeStress(LiveTestCase):
             start_time = time.time()
             while time.time() - start_time < test_duration:
                 result = subprocess.run(
-                    [str(clltk_path), 'tracepoint', '--tb', buffer_name, 
-                     '--msg', f"tp_{messages_written}"],
-                    env=os.environ.copy(), capture_output=True
+                    [
+                        str(clltk_path),
+                        "trace",
+                        "--buffer",
+                        buffer_name,
+                        "--message",
+                        f"tp_{messages_written}",
+                    ],
+                    env=os.environ.copy(),
+                    capture_output=True,
                 )
                 if result.returncode == 0:
                     messages_written += 1
@@ -441,11 +628,11 @@ class TestLiveExtremeStress(LiveTestCase):
 
             decoder_proc.send_signal(signal.SIGINT)
             stdout, stderr = decoder_proc.communicate(timeout=5)
-            stderr_text = stderr.decode('utf-8')
+            stderr_text = stderr.decode("utf-8")
 
-            read_match = re.search(r'Tracepoints read:\s+(\d+)', stderr_text)
-            output_match = re.search(r'Tracepoints output:\s+(\d+)', stderr_text)
-            dropped_match = re.search(r'Tracepoints dropped:\s+(\d+)', stderr_text)
+            read_match = re.search(r"Tracepoints read:\s+(\d+)", stderr_text)
+            output_match = re.search(r"Tracepoints output:\s+(\d+)", stderr_text)
+            dropped_match = re.search(r"Tracepoints dropped:\s+(\d+)", stderr_text)
 
             if read_match and output_match and dropped_match:
                 read_count = int(read_match.group(1))
@@ -462,10 +649,14 @@ class TestLiveExtremeStress(LiveTestCase):
                 print(f"  Output rate: {output_count / test_duration:.1f} msg/s")
                 print(f"  Drop rate: {100 * dropped_count / max(1, read_count):.1f}%")
 
-                self.assertEqual(read_count, messages_written,
-                    f"Read count ({read_count}) should match written ({messages_written})")
-                self.assertEqual(read_count, output_count + dropped_count,
-                    "Accounting mismatch")
+                self.assertEqual(
+                    read_count,
+                    messages_written,
+                    f"Read count ({read_count}) should match written ({messages_written})",
+                )
+                self.assertEqual(
+                    read_count, output_count + dropped_count, "Accounting mismatch"
+                )
 
         except subprocess.TimeoutExpired:
             decoder_proc.kill()
@@ -485,32 +676,47 @@ class TestLiveExtremeStress(LiveTestCase):
         clltk_path = get_clltk_path()
         num_messages = 200
 
-        clltk("tracebuffer", "--name", buffer_name, "--size", "512KB")
+        clltk("buffer", "--buffer", buffer_name, "--size", "512KB")
 
         sizes = [10, 50, 100, 200, 500]
         for i in range(num_messages):
             size = sizes[i % len(sizes)]
             msg = f"sz{size}_" + "X" * (size - 10)
             subprocess.run(
-                [str(clltk_path), 'tracepoint', '--tb', buffer_name, '--msg', msg],
-                env=os.environ.copy(), capture_output=True
+                [str(clltk_path), "trace", "--buffer", buffer_name, "--message", msg],
+                env=os.environ.copy(),
+                capture_output=True,
             )
 
         result = subprocess.run(
-            ["timeout", "3", str(clltk_path), "live", self.trace_path,
-             "--summary", "--buffer-size", "500", "--order-delay", "15", "--poll-interval", "2"],
-            capture_output=True, env=os.environ.copy()
+            [
+                "timeout",
+                "3",
+                str(clltk_path),
+                "live",
+                self.trace_path,
+                "--summary",
+                "--buffer-size",
+                "500",
+                "--order-delay",
+                "15",
+                "--poll-interval",
+                "2",
+            ],
+            capture_output=True,
+            env=os.environ.copy(),
         )
 
-        stderr_text = result.stderr.decode('utf-8')
+        stderr_text = result.stderr.decode("utf-8")
 
-        read_match = re.search(r'Tracepoints read:\s+(\d+)', stderr_text)
+        read_match = re.search(r"Tracepoints read:\s+(\d+)", stderr_text)
         self.assertIsNotNone(read_match, f"Could not parse summary: {stderr_text}")
-        
+
         read_count = int(read_match.group(1))
-        self.assertEqual(read_count, num_messages,
-            f"Expected {num_messages} reads, got {read_count}")
+        self.assertEqual(
+            read_count, num_messages, f"Expected {num_messages} reads, got {read_count}"
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

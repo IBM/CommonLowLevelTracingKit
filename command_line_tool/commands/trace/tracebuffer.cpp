@@ -3,8 +3,11 @@
 
 #include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "commands/interface.hpp"
+#include <filesystem>
+#include <regex>
 #include <stddef.h>
 #include <string>
+#include <vector>
 
 using namespace std::string_literals;
 
@@ -12,17 +15,17 @@ using namespace CommonLowLevelTracingKit::cmd::interface;
 
 static void add_create_tracebuffer_command(CLI::App &app)
 {
-	CLI::App *const command = app.add_subcommand("tb", "Create a new tracebuffer");
-	command->alias("tracebuffer");
+	CLI::App *const command = app.add_subcommand("buffer", "Create a new tracebuffer");
+	command->alias("tb");
 	command->description(
 		"Create a new userspace tracebuffer with a specified ring buffer size.\n"
-		"The tracebuffer is created at CLLTK_TRACING_PATH.\n"
+		"The tracebuffer is created at CLLTK_TRACING_PATH (or -P path, or current directory).\n"
 		"If the tracebuffer already exists, this command has no effect.\n"
 		"Note: This tool only creates userspace tracebuffers, not kernel tracebuffers.");
 
-	static std::string tracebuffer{};
+	static std::string buffer_name{};
 	command
-		->add_option("name,--name,-n", tracebuffer,
+		->add_option("buffer,-b,--buffer", buffer_name,
 					 "Unique name for this tracebuffer.\n"
 					 "Must start with a letter and contain only alphanumeric characters or "
 					 "underscores.\n"
@@ -33,33 +36,33 @@ static void add_create_tracebuffer_command(CLI::App &app)
 
 	static size_t size{512000};
 	command
-		->add_option("size,--size", size,
+		->add_option("-s,--size", size,
 					 "Ring buffer size in bytes.\n"
 					 "One basic tracepoint entry is approximately 32 bytes.\n"
 					 "Supports size suffixes: K (kilobytes), M (megabytes), G (gigabytes).\n"
 					 "Example: 512K, 1M, 2G")
 		->capture_default_str()
 		->transform(CLI::AsSizeValue{false})
-		->required()
 		->type_name("SIZE");
 
 	command->callback([]() {
-		clltk_dynamic_tracebuffer_creation(tracebuffer.c_str(), size);
-		log_verbose("Created tracebuffer '", tracebuffer, "' with size ", size, " bytes");
+		clltk_dynamic_tracebuffer_creation(buffer_name.c_str(), size);
+		log_verbose("Created tracebuffer '", buffer_name, "' with size ", size, " bytes");
 	});
 }
 
 static void add_clear_tracebuffer_command(CLI::App &app)
 {
 	CLI::App *const command = app.add_subcommand("clear", "Clear all entries from a tracebuffer");
+	command->alias("bx");
 	command->description(
 		"Clear all entries from an existing tracebuffer without deleting the file.\n"
 		"The tracebuffer file is preserved; only the ring buffer content is discarded.\n"
 		"Useful for resetting a tracebuffer to start fresh without recreating it.");
 
-	static std::string tracebuffer{};
+	static std::string buffer_name{};
 	command
-		->add_option("name,--name,-n", tracebuffer,
+		->add_option("name,-b,--buffer", buffer_name,
 					 "Name of the tracebuffer to clear.\n"
 					 "Must match an existing tracebuffer at CLLTK_TRACING_PATH")
 		->check(validator::TracebufferName{})
@@ -67,8 +70,88 @@ static void add_clear_tracebuffer_command(CLI::App &app)
 		->type_name("NAME");
 
 	command->callback([]() {
-		clltk_dynamic_tracebuffer_clear(tracebuffer.c_str());
-		log_verbose("Cleared tracebuffer '", tracebuffer, "'");
+		clltk_dynamic_tracebuffer_clear(buffer_name.c_str());
+		log_verbose("Cleared tracebuffer '", buffer_name, "'");
+	});
+}
+
+static void add_list_tracebuffer_command(CLI::App &app)
+{
+	CLI::App *const command = app.add_subcommand("list", "List tracebuffers in the tracing path");
+	command->alias("bl");
+	command->description(
+		"List all tracebuffers found at CLLTK_TRACING_PATH (or -P path, or current directory).\n"
+		"Shows tracebuffer names and file paths.");
+
+	static bool recursive = false;
+	command->add_flag("-r,--recursive", recursive, "Recurse into subdirectories");
+
+	static std::string filter_str = "^.*$";
+	command->add_option("-F,--filter", filter_str, "Filter tracebuffers by name using regex")
+		->capture_default_str()
+		->type_name("REGEX");
+
+	static bool json_output = false;
+	command->add_flag("-j,--json", json_output, "Output as JSON");
+
+	command->callback([]() {
+		const auto tracing_path = get_tracing_path();
+		const std::regex filter_regex{filter_str};
+
+		std::vector<std::filesystem::path> found_buffers;
+
+		auto scan_directory = [&](const std::filesystem::path &dir, bool recurse) {
+			if (!std::filesystem::exists(dir) || !std::filesystem::is_directory(dir)) {
+				log_error("Path does not exist or is not a directory: ", dir.string());
+				return;
+			}
+
+			auto process_entry = [&](const std::filesystem::directory_entry &entry) {
+				if (!entry.is_regular_file())
+					return;
+				const auto &path = entry.path();
+				const auto ext = path.extension().string();
+				if (ext == ".clltk_trace" || ext == ".clltk_ktrace") {
+					const auto name = path.stem().string();
+					if (std::regex_match(name, filter_regex)) {
+						found_buffers.push_back(path);
+					}
+				}
+			};
+
+			if (recurse) {
+				for (const auto &entry : std::filesystem::recursive_directory_iterator(dir)) {
+					process_entry(entry);
+				}
+			} else {
+				for (const auto &entry : std::filesystem::directory_iterator(dir)) {
+					process_entry(entry);
+				}
+			}
+		};
+
+		scan_directory(tracing_path, recursive);
+
+		if (json_output) {
+			std::cout << "[";
+			bool first = true;
+			for (const auto &path : found_buffers) {
+				if (!first)
+					std::cout << ",";
+				first = false;
+				std::cout << "\n  {\"name\": \"" << path.stem().string() << "\", \"path\": \""
+						  << path.string() << "\"}";
+			}
+			std::cout << "\n]" << std::endl;
+		} else {
+			if (found_buffers.empty()) {
+				log_info("No tracebuffers found in ", tracing_path.string());
+			} else {
+				for (const auto &path : found_buffers) {
+					std::cout << path.stem().string() << "\t" << path.string() << std::endl;
+				}
+			}
+		}
 	});
 }
 
@@ -77,5 +160,6 @@ static void init_function() noexcept
 	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
 	add_create_tracebuffer_command(app);
 	add_clear_tracebuffer_command(app);
+	add_list_tracebuffer_command(app);
 }
 COMMAND_INIT(init_function);
