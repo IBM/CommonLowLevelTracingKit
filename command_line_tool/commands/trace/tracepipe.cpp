@@ -8,8 +8,10 @@
 #include <iostream>
 #include <map>
 #include <memory>
-#include <nlohmann/json.hpp>
-#include <nlohmann/json_fwd.hpp>
+#include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include <stddef.h>
 #include <stdexcept>
 #include <stdint.h>
@@ -17,7 +19,7 @@
 #include <utility>
 #include <vector>
 
-using json = nlohmann::json;
+namespace rj = rapidjson;
 
 using namespace std::string_literals;
 
@@ -32,13 +34,38 @@ struct TracepipeEntry {
 	size_t line;
 };
 
-void from_json(const json &j, TracepipeEntry &p)
+void parse_json(const rj::Value &j, TracepipeEntry &p)
 {
-	p.pid = j.value("pid", 0);
-	p.tid = j.value("tid", 0);
-	p.message = j.at("message"); // only required value
-	p.file = j.value("file", "");
-	p.line = j.value("line", 0);
+	if (j.HasMember("pid") && j["pid"].IsUint()) {
+		p.pid = j["pid"].GetUint();
+	} else {
+		p.pid = 0;
+	}
+
+	if (j.HasMember("tid") && j["tid"].IsUint()) {
+		p.tid = j["tid"].GetUint();
+	} else {
+		p.tid = 0;
+	}
+
+	// Required field
+	if (j.HasMember("message") && j["message"].IsString()) {
+		p.message = j["message"].GetString();
+	} else {
+		throw std::runtime_error("Missing required 'message' field");
+	}
+
+	if (j.HasMember("file") && j["file"].IsString()) {
+		p.file = j["file"].GetString();
+	} else {
+		p.file = "";
+	}
+
+	if (j.HasMember("line") && j["line"].IsUint64()) {
+		p.line = j["line"].GetUint64();
+	} else {
+		p.line = 0;
+	}
 }
 
 class Command
@@ -104,15 +131,23 @@ class Command
 
 			if (cmd.try_json) {
 				try {
+					rj::Document doc;
+					doc.Parse(line.c_str());
 
-					auto data = json::parse(line);
-					auto entry = data.get<TracepipeEntry>();
-					clltk_dynamic_tracepoint_execution(cmd.buffer_name.c_str(), entry.file.c_str(),
-													   entry.line, entry.pid, entry.tid, "%s",
-													   entry.message.c_str());
-					continue;
-				} catch (const json::exception &e) {
-					log_error("no valid json: ", e.what());
+					if (doc.HasParseError()) {
+						log_error("JSON parse error: ", rj::GetParseError_En(doc.GetParseError()),
+								  " at offset ", doc.GetErrorOffset());
+						// continue with backup case
+					} else {
+						TracepipeEntry entry;
+						parse_json(doc, entry);
+						clltk_dynamic_tracepoint_execution(
+							cmd.buffer_name.c_str(), entry.file.c_str(), entry.line, entry.pid,
+							entry.tid, "%s", entry.message.c_str());
+						continue;
+					}
+				} catch (const std::exception &e) {
+					log_error("Invalid JSON: ", e.what());
 					// continue with backup case
 				}
 			}

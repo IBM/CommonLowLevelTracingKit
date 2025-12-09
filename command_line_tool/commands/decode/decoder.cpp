@@ -7,6 +7,9 @@
 #include <chrono>
 #include <functional>
 #include <iostream>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include <string>
 #include <vector>
 
@@ -59,10 +62,59 @@ void print_tracepoint(FILE *f, int tb_name_size, const Tracepoint &p)
 				file.data(), p.line());
 	}
 }
-void print_header(FILE *f, int tb_name_size)
+void print_tracepoint_json(FILE *f, const Tracepoint &p)
 {
-	fprintf(f, " %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n", "!timestamp", "time",
-			tb_name_size, "tracebuffer", "pid", "tid", "formatted", "file", "line");
+	rapidjson::Document doc;
+	doc.SetObject();
+	auto &allocator = doc.GetAllocator();
+
+	// Add all the tracepoint fields
+	doc.AddMember("timestamp_ns", rapidjson::Value(p.timestamp_ns), allocator);
+
+	rapidjson::Value timestamp;
+	timestamp.SetString(p.timestamp_str().c_str(), allocator);
+	doc.AddMember("timestamp", timestamp, allocator);
+
+	rapidjson::Value datetime;
+	datetime.SetString(p.date_and_time_str().c_str(), allocator);
+	doc.AddMember("datetime", datetime, allocator);
+
+	rapidjson::Value tracebuffer;
+	tracebuffer.SetString(p.tracebuffer().data(), p.tracebuffer().size(), allocator);
+	doc.AddMember("tracebuffer", tracebuffer, allocator);
+
+	doc.AddMember("pid", rapidjson::Value(p.pid()), allocator);
+	doc.AddMember("tid", rapidjson::Value(p.tid()), allocator);
+
+	rapidjson::Value message;
+	message.SetString(p.msg().data(), p.msg().size(), allocator);
+	doc.AddMember("message", message, allocator);
+
+	rapidjson::Value file;
+	file.SetString(p.file().data(), p.file().size(), allocator);
+	doc.AddMember("file", file, allocator);
+
+	doc.AddMember("line", rapidjson::Value(p.line()), allocator);
+	doc.AddMember("is_kernel", rapidjson::Value(p.is_kernel()), allocator);
+	doc.AddMember("source_type", rapidjson::Value(static_cast<int>(p.source_type)), allocator);
+	doc.AddMember("tracepoint_nr", rapidjson::Value(p.nr), allocator);
+
+	// Generate the JSON string
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	doc.Accept(writer);
+
+	// Output to the file
+	fprintf(f, "%s\n", buffer.GetString());
+}
+
+void print_header(FILE *f, int tb_name_size, bool json_mode = false)
+{
+	if (!json_mode) {
+		fprintf(f, " %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n", "!timestamp", "time",
+				tb_name_size, "tracebuffer", "pid", "tid", "formatted", "file", "line");
+	}
+	// No header for JSON mode - each object is self-describing
 }
 
 static void add_decode_command(CLI::App &app)
@@ -296,7 +348,7 @@ static void add_decode_command(CLI::App &app)
 		for (const auto &tb : tbs)
 			tb_name_size = std::max(tb_name_size, tb->name().size());
 
-		print_header(out, tb_name_size);
+		print_header(out, tb_name_size, json_output);
 		size_t tp_count = 0;
 		if (sorted) {
 			static constexpr auto comp = [](const TracepointPtr &a, const TracepointPtr &b) {
@@ -315,7 +367,11 @@ static void add_decode_command(CLI::App &app)
 			}
 			while (!tps.empty() && !is_interrupted()) {
 				const auto tp = tps.top().get();
-				print_tracepoint(out, tb_name_size, *tp);
+				if (json_output) {
+					print_tracepoint_json(out, *tp);
+				} else {
+					print_tracepoint(out, tb_name_size, *tp);
+				}
 				tps.pop();
 				++tp_count;
 			}
@@ -327,7 +383,11 @@ static void add_decode_command(CLI::App &app)
 					if (is_interrupted())
 						break;
 					if (tpFilter(*tp)) {
-						print_tracepoint(out, tb_name_size, *tp);
+						if (json_output) {
+							print_tracepoint_json(out, *tp);
+						} else {
+							print_tracepoint(out, tb_name_size, *tp);
+						}
 						++tp_count;
 					}
 				}

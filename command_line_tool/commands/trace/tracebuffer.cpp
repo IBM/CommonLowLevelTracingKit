@@ -4,6 +4,9 @@
 #include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "commands/interface.hpp"
 #include <filesystem>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include <regex>
 #include <stddef.h>
 #include <string>
@@ -133,16 +136,29 @@ static void add_list_tracebuffer_command(CLI::App &app)
 		scan_directory(tracing_path, recursive);
 
 		if (json_output) {
-			std::cout << "[";
-			bool first = true;
+			rapidjson::Document doc;
+			doc.SetArray();
+			auto &allocator = doc.GetAllocator();
+
 			for (const auto &path : found_buffers) {
-				if (!first)
-					std::cout << ",";
-				first = false;
-				std::cout << "\n  {\"name\": \"" << path.stem().string() << "\", \"path\": \""
-						  << path.string() << "\"}";
+				rapidjson::Value obj;
+				obj.SetObject();
+
+				rapidjson::Value name;
+				name.SetString(path.stem().string().c_str(), allocator);
+				obj.AddMember("name", name, allocator);
+
+				rapidjson::Value pathStr;
+				pathStr.SetString(path.string().c_str(), allocator);
+				obj.AddMember("path", pathStr, allocator);
+
+				doc.PushBack(obj, allocator);
 			}
-			std::cout << "\n]" << std::endl;
+
+			rapidjson::StringBuffer buffer;
+			rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+			doc.Accept(writer);
+			std::cout << buffer.GetString() << std::endl;
 		} else {
 			if (found_buffers.empty()) {
 				log_info("No tracebuffers found in ", tracing_path.string());

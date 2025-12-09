@@ -15,6 +15,9 @@
 #include <vector>
 
 #include <boost/regex.hpp>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 
 #include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
 #include "commands/interface.hpp"
@@ -71,6 +74,7 @@ class LiveDecoder
 		uint64_t order_delay_ms = 25;
 		uint64_t poll_interval_ms = 5;
 		bool show_summary = false;
+		bool json_output = false;
 		FILE *output = stdout;
 	};
 
@@ -288,7 +292,11 @@ class LiveDecoder
 			// Pop all ready tracepoints
 			auto ready = m_buffer.pop_all_ready();
 			for (auto &tp : ready) {
-				print_tracepoint(*tp);
+				if (m_config.json_output) {
+					print_tracepoint_json(*tp);
+				} else {
+					print_tracepoint(*tp);
+				}
 				++m_total_output;
 			}
 
@@ -304,9 +312,61 @@ class LiveDecoder
 
 	void print_header()
 	{
-		fprintf(m_config.output, " %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n",
-				"!timestamp", "time", static_cast<int>(m_tb_name_width), "tracebuffer", "pid",
-				"tid", "formatted", "file", "line");
+		if (!m_config.json_output) {
+			fprintf(m_config.output, " %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n",
+					"!timestamp", "time", static_cast<int>(m_tb_name_width), "tracebuffer", "pid",
+					"tid", "formatted", "file", "line");
+		}
+		// No header for JSON mode - each object is self-describing
+	}
+
+	void print_tracepoint_json(const Tracepoint &p)
+	{
+		rapidjson::Document doc;
+		doc.SetObject();
+		auto &allocator = doc.GetAllocator();
+
+		doc.AddMember("timestamp_ns", rapidjson::Value(p.timestamp_ns), allocator);
+
+		// Use stack buffers for timestamp formatting (no allocation)
+		char ts_buf[ToString::TIMESTAMP_NS_BUF_SIZE];
+		char dt_buf[ToString::DATE_AND_TIME_BUF_SIZE];
+
+		rapidjson::Value timestamp;
+		timestamp.SetString(ToString::timestamp_ns_to(ts_buf, p.timestamp_ns), allocator);
+		doc.AddMember("timestamp", timestamp, allocator);
+
+		rapidjson::Value datetime;
+		datetime.SetString(ToString::date_and_time_to(dt_buf, p.timestamp_ns), allocator);
+		doc.AddMember("datetime", datetime, allocator);
+
+		rapidjson::Value tracebuffer;
+		tracebuffer.SetString(p.tracebuffer().data(), p.tracebuffer().size(), allocator);
+		doc.AddMember("tracebuffer", tracebuffer, allocator);
+
+		doc.AddMember("pid", rapidjson::Value(p.pid()), allocator);
+		doc.AddMember("tid", rapidjson::Value(p.tid()), allocator);
+
+		rapidjson::Value message;
+		message.SetString(p.msg().data(), p.msg().size(), allocator);
+		doc.AddMember("message", message, allocator);
+
+		rapidjson::Value file;
+		file.SetString(p.file().data(), p.file().size(), allocator);
+		doc.AddMember("file", file, allocator);
+
+		doc.AddMember("line", rapidjson::Value(p.line()), allocator);
+		doc.AddMember("is_kernel", rapidjson::Value(p.is_kernel()), allocator);
+		doc.AddMember("source_type", rapidjson::Value(static_cast<int>(p.source_type)), allocator);
+		doc.AddMember("tracepoint_nr", rapidjson::Value(p.nr), allocator);
+
+		// Generate the JSON string
+		rapidjson::StringBuffer buffer;
+		rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+		doc.Accept(writer);
+
+		// Output to the file
+		fprintf(m_config.output, "%s\n", buffer.GetString());
 	}
 
 	void print_tracepoint(const Tracepoint &p)
@@ -386,6 +446,7 @@ static void add_live_command(CLI::App &app)
 	static uint64_t poll_interval_ms{};
 	static bool show_summary{};
 	static bool recursive{};
+	static bool json_output{};
 
 	// Default values (used for display and reset)
 	constexpr const char *default_filter = "^.*$";
@@ -434,6 +495,8 @@ static void add_live_command(CLI::App &app)
 	command->add_flag("-S,--summary", show_summary,
 					  "Show statistics summary on exit (read/output/dropped counts, buffer usage)");
 
+	command->add_flag("-j,--json", json_output, "Output as JSON (one object per line)");
+
 	command->callback([&]() {
 		// Reset global signal state (for multiple runs in same process)
 		reset_signal_state();
@@ -460,6 +523,7 @@ static void add_live_command(CLI::App &app)
 		config.order_delay_ms = order_delay_ms;
 		config.poll_interval_ms = poll_interval_ms;
 		config.show_summary = show_summary;
+		config.json_output = json_output;
 		config.output = stdout;
 
 		// Create and run decoder
@@ -484,8 +548,9 @@ static void add_live_command(CLI::App &app)
 		sigaction(SIGINT, &old_sigint, nullptr);
 		sigaction(SIGTERM, &old_sigterm, nullptr);
 
-		// Reset static variables for next run (show_summary is a flag, reset to false)
+		// Reset static variables for next run
 		show_summary = false;
+		json_output = false;
 	});
 }
 

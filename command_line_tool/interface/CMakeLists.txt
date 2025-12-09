@@ -3,7 +3,7 @@
 
 
 
-find_package(nlohmann_json REQUIRED)
+find_package(RapidJSON REQUIRED)
 find_package(CLI11 REQUIRED)
 
 add_library(clltk-cmd-interface INTERFACE)
@@ -16,5 +16,9 @@ target_include_directories(clltk-cmd-interface
 target_link_libraries(clltk-cmd-interface
     INTERFACE
         CLI11::CLI11
-        nlohmann_json::nlohmann_json
+)
+
+target_include_directories(clltk-cmd-interface
+    INTERFACE
+        ${RAPIDJSON_INCLUDE_DIRS}
 )
