@@ -10,16 +10,13 @@ file(GLOB CPP_FILES "*.cpp")
 
 add_executable(cmd_tests
     ${CPP_FILES}
-    # Include the implementation source files directly
-    ../../command_line_tool/commands/decode/timespec.cpp
-    ../../command_line_tool/commands/decode/filter.cpp
-    ../../command_line_tool/commands/live/ordered_buffer.cpp
 )
 
 target_link_libraries(cmd_tests
     GTest::gtest_main
     gmock
     clltk_decoder_object
+    clltk-cmd-interface
     ${Boost_LIBRARIES}
 )
 

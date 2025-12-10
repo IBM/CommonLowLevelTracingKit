@@ -22,8 +22,6 @@ list(APPEND CPP_FILES ${CMAKE_CURRENT_BINARY_DIR}/format_cpp.tests.cpp)
 add_executable(decoder_tests
     ${CPP_FILES}
     $<TARGET_OBJECTS:clltk_tracing_abstraction>
-    # Include implementation source files for header-based tests
-    ../../command_line_tool/commands/decode/timespec.cpp
 )
 
 target_link_libraries(decoder_tests
@@ -33,6 +31,7 @@ target_link_libraries(decoder_tests
     clltk_snapshot_static
     clltk_decoder_object # use the object lib as static and shared have limited exported symbols
     clltk_tracing_abstraction
+    clltk-cmd-interface
 )
 target_compile_definitions(decoder_tests
     PRIVATE

@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <string_view>
 
-namespace CommonLowLevelTracingKit::cmd::decode
+namespace CommonLowLevelTracingKit::cmd::interface
 {
 
 /**
@@ -63,6 +63,6 @@ struct TimeSpec {
 	static uint64_t parse_datetime_ns(std::string_view input);
 };
 
-} // namespace CommonLowLevelTracingKit::cmd::decode
+} // namespace CommonLowLevelTracingKit::cmd::interface
 
 #endif // CLLTK_CMD_DECODE_TIMESPEC_HPP

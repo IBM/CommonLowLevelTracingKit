@@ -5,7 +5,6 @@ set(TARGET_NAME "clltk-cmd-live")
 
 add_library(${TARGET_NAME} OBJECT
     live.cpp
-    ordered_buffer.cpp
 )
 
 target_include_directories(${TARGET_NAME}

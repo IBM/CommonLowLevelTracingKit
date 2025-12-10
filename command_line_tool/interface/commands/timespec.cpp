@@ -1,13 +1,13 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "timespec.hpp"
+#include "commands/timespec.hpp"
 
 #include <ctime>
 #include <stdexcept>
 #include <string>
 
-namespace CommonLowLevelTracingKit::cmd::decode
+namespace CommonLowLevelTracingKit::cmd::interface
 {
 
 bool TimeSpec::needs_trace_bounds() const noexcept
@@ -290,4 +290,4 @@ uint64_t TimeSpec::resolve(uint64_t now_ns, uint64_t min_ns, uint64_t max_ns) co
 	return static_cast<uint64_t>(result);
 }
 
-} // namespace CommonLowLevelTracingKit::cmd::decode
+} // namespace CommonLowLevelTracingKit::cmd::interface

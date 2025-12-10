@@ -5,11 +5,11 @@
 #include <string>
 #include <string_view>
 
-#include "filter.hpp"
+#include "commands/filter.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace CommonLowLevelTracingKit::cmd::decode;
+using namespace CommonLowLevelTracingKit::cmd::interface;
 
 // =============================================================================
 // Mock Tracepoint for Testing

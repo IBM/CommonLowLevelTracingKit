@@ -9,11 +9,8 @@ find_package(Boost REQUIRED COMPONENTS regex)
 
 set(INTERFACE_SOURCES
     commands/filter.cpp
-)
-
-set(INTERFACE_HEADERS
-    commands/filter.hpp
-    commands/interface.hpp
+    commands/ordered_buffer.cpp
+    commands/timespec.cpp
 )
 
 add_library(clltk-cmd-interface STATIC ${INTERFACE_SOURCES})
@@ -27,6 +24,7 @@ target_link_libraries(clltk-cmd-interface
     PUBLIC
         CLI11::CLI11
         Boost::regex
+        clltk_decoder_static
 )
 
 target_include_directories(clltk-cmd-interface

@@ -16,12 +16,11 @@
 #include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
 #include "commands/filter.hpp"
 #include "commands/interface.hpp"
-#include "timespec.hpp"
+#include "commands/timespec.hpp"
 
 using namespace std::string_literals;
 
 using namespace CommonLowLevelTracingKit::cmd::interface;
-namespace decode = CommonLowLevelTracingKit::cmd::decode;
 using Tracebuffer = CommonLowLevelTracingKit::decoder::Tracebuffer;
 using SnapTracebuffer = CommonLowLevelTracingKit::decoder::SnapTracebuffer;
 using SourceType = CommonLowLevelTracingKit::decoder::SourceType;
@@ -284,13 +283,13 @@ static void add_decode_command(CLI::App &app)
 		};
 
 		// Parse time specifications
-		decode::TimeSpec time_min_spec, time_max_spec;
-		time_max_spec.anchor = decode::TimeSpec::Anchor::Absolute;
+		TimeSpec time_min_spec, time_max_spec;
+		time_max_spec.anchor = TimeSpec::Anchor::Absolute;
 		time_max_spec.absolute_ns = UINT64_MAX;
 
 		if (!filter_time_min_str.empty()) {
 			try {
-				time_min_spec = decode::TimeSpec::parse(filter_time_min_str);
+				time_min_spec = TimeSpec::parse(filter_time_min_str);
 			} catch (const std::invalid_argument &e) {
 				std::cerr << "Invalid --time-min: " << e.what() << std::endl;
 				return 1;
@@ -298,7 +297,7 @@ static void add_decode_command(CLI::App &app)
 		}
 		if (!filter_time_max_str.empty()) {
 			try {
-				time_max_spec = decode::TimeSpec::parse(filter_time_max_str);
+				time_max_spec = TimeSpec::parse(filter_time_max_str);
 			} catch (const std::invalid_argument &e) {
 				std::cerr << "Invalid --time-max: " << e.what() << std::endl;
 				return 1;
@@ -306,17 +305,9 @@ static void add_decode_command(CLI::App &app)
 		}
 
 		// Build tracepoint filter (without time initially if we need bounds)
-		decode::TracepointFilter tpFilter;
-		tpFilter.pids.insert(filter_pids.begin(), filter_pids.end());
-		tpFilter.tids.insert(filter_tids.begin(), filter_tids.end());
-		if (!filter_msg_regex.empty())
-			tpFilter.set_msg_filter(filter_msg_regex, true);
-		else if (!filter_msg.empty())
-			tpFilter.set_msg_filter(filter_msg, false);
-		if (!filter_file_regex.empty())
-			tpFilter.set_file_filter(filter_file_regex, true);
-		else if (!filter_file.empty())
-			tpFilter.set_file_filter(filter_file, false);
+		TracepointFilter tpFilter;
+		configure_tracepoint_filter(tpFilter, filter_pids, filter_tids, filter_msg,
+									filter_msg_regex, filter_file, filter_file_regex);
 
 		// Collect tracebuffers (without time filter for now)
 		// Note: recursive flag affects directory traversal in collect()

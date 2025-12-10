@@ -22,7 +22,7 @@
 #include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
 #include "commands/filter.hpp"
 #include "commands/interface.hpp"
-#include "ordered_buffer.hpp"
+#include "commands/ordered_buffer.hpp"
 
 // Include pool header for TracepointPool (from decoder_tool source)
 #include "pool.hpp"
@@ -31,7 +31,6 @@
 using namespace std::chrono_literals;
 
 using namespace CommonLowLevelTracingKit::cmd::interface;
-namespace live = CommonLowLevelTracingKit::cmd::live;
 using SyncTracebuffer = CommonLowLevelTracingKit::decoder::SyncTracebuffer;
 using SyncTracebufferPtr = CommonLowLevelTracingKit::decoder::SyncTracebufferPtr;
 using Tracepoint = CommonLowLevelTracingKit::decoder::Tracepoint;
@@ -78,6 +77,8 @@ class LiveDecoder
 		bool show_summary = false;
 		bool json_output = false;
 		FILE *output = stdout;
+		// Add filter for individual tracepoints
+		TracepointFilter tracepoint_filter;
 	};
 
 	explicit LiveDecoder(Config config)
@@ -230,8 +231,18 @@ class LiveDecoder
 						max_seen_ts = ts;
 					}
 
-					m_buffer.push(std::move(tp));
-					++m_total_read;
+					// Apply tracepoint filter if configured
+					if (m_config.tracepoint_filter.has_any_filter) {
+						// Only push tracepoints that pass the filter
+						if (m_config.tracepoint_filter(*tp)) {
+							m_buffer.push(std::move(tp));
+							++m_total_read;
+						}
+					} else {
+						// No filter, push all tracepoints
+						m_buffer.push(std::move(tp));
+						++m_total_read;
+					}
 
 					// Check for stop signal periodically
 					if (g_stop_requested.load(std::memory_order_acquire)) {
@@ -413,7 +424,7 @@ class LiveDecoder
 	}
 
 	Config m_config;
-	live::OrderedBuffer m_buffer;
+	OrderedBuffer m_buffer;
 	TracepointPool m_pool;
 
 	std::vector<SyncTracebufferPtr> m_tracebuffers;
@@ -452,6 +463,14 @@ static void add_live_command(CLI::App &app)
 	static bool show_summary{};
 	static bool recursive{};
 	static bool json_output{};
+
+	// Tracepoint filter options (similar to decode command)
+	static std::vector<uint32_t> filter_pids;
+	static std::vector<uint32_t> filter_tids;
+	static std::string filter_msg;
+	static std::string filter_msg_regex;
+	static std::string filter_file;
+	static std::string filter_file_regex;
 
 	// Default values (used for display and reset)
 	constexpr size_t default_buffer_size = 100000;
@@ -497,6 +516,10 @@ static void add_live_command(CLI::App &app)
 
 	command->add_flag("-j,--json", json_output, "Output as JSON (one object per line)");
 
+	// Add tracepoint filter options (same as decoder command)
+	add_tracepoint_filter_options(command, filter_pids, filter_tids, filter_msg, filter_msg_regex,
+								  filter_file, filter_file_regex);
+
 	command->callback([&]() {
 		// Reset global signal state (for multiple runs in same process)
 		reset_signal_state();
@@ -526,6 +549,10 @@ static void add_live_command(CLI::App &app)
 		config.json_output = json_output;
 		config.output = stdout;
 
+		// Configure tracepoint filter
+		configure_tracepoint_filter(config.tracepoint_filter, filter_pids, filter_tids, filter_msg,
+									filter_msg_regex, filter_file, filter_file_regex);
+
 		// Create and run decoder
 		LiveDecoder decoder(config);
 
@@ -551,6 +578,12 @@ static void add_live_command(CLI::App &app)
 		// Reset static variables for next run
 		show_summary = false;
 		json_output = false;
+		filter_pids.clear();
+		filter_tids.clear();
+		filter_msg.clear();
+		filter_msg_regex.clear();
+		filter_file.clear();
+		filter_file_regex.clear();
 	});
 }
 

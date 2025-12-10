@@ -10,10 +10,10 @@
 #include <thread>
 #include <vector>
 
-#include "ordered_buffer.hpp"
+#include "commands/ordered_buffer.hpp"
 #include "gtest/gtest.h"
 
-using namespace CommonLowLevelTracingKit::cmd::live;
+using namespace CommonLowLevelTracingKit::cmd::interface;
 using namespace CommonLowLevelTracingKit::decoder;
 using namespace std::chrono_literals;
 
