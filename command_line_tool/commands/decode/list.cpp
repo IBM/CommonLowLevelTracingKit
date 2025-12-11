@@ -63,23 +63,25 @@ static std::string format_time_iso(const std::filesystem::file_time_type &time)
 	return oss.str();
 }
 
-static void print_table_header(FILE *f)
+static void print_table_header(FILE *f, size_t name_width)
 {
-	fprintf(f, "%-16s %-6s %12s %12s %5s %10s %10s %8s %-19s %s\n", "NAME", "SOURCE", "CAPACITY",
-			"USED", "FILL", "ENTRIES", "DROPPED", "WRAPPED", "MODIFIED", "PATH");
+	fprintf(f, "%-*s %-6s %12s %12s %5s %10s %10s %8s %-19s %s\n", static_cast<int>(name_width),
+			"NAME", "SOURCE", "CAPACITY", "USED", "FILL", "ENTRIES", "DROPPED", "WRAPPED",
+			"MODIFIED", "PATH");
 }
 
-static void print_table_row(FILE *f, const TraceBufferInfo &info)
+static void print_table_row(FILE *f, const TraceBufferInfo &info, size_t name_width)
 {
 	if (info.valid()) {
-		fprintf(f, "%-16s %-6s %12lu %12lu %4.0f%% %10lu %10lu %8lu %-19s %s\n", info.name.c_str(),
+		fprintf(f, "%-*s %-6s %12lu %12lu %4.0f%% %10lu %10lu %8lu %-19s %s\n",
+				static_cast<int>(name_width), info.name.c_str(),
 				source_type_to_string(info.source_type).c_str(), info.capacity, info.used,
 				info.fill_percent, info.entries, info.dropped, info.wrapped,
 				format_time(info.modified).c_str(), info.path.string().c_str());
 	} else {
-		fprintf(f, "%-16s %-6s %12s %12s %5s %10s %10s %8s %-19s %s\n", info.name.c_str(), "?", "?",
-				"?", "?", "?", "?", "?", format_time(info.modified).c_str(),
-				info.path.string().c_str());
+		fprintf(f, "%-*s %-6s %12s %12s %5s %10s %10s %8s %-19s %s\n", static_cast<int>(name_width),
+				info.name.c_str(), "?", "?", "?", "?", "?", "?", "?",
+				format_time(info.modified).c_str(), info.path.string().c_str());
 	}
 }
 
@@ -178,9 +180,15 @@ static void add_list_command(CLI::App &app)
 			if (infos.empty()) {
 				log_info("No tracebuffers found in ", resolved_input);
 			} else {
-				print_table_header(stdout);
+				// Calculate max name width for alignment
+				size_t name_width = 4; // minimum width for "NAME" header
 				for (const auto &info : infos) {
-					print_table_row(stdout, info);
+					name_width = std::max(name_width, info.name.size());
+				}
+
+				print_table_header(stdout, name_width);
+				for (const auto &info : infos) {
+					print_table_row(stdout, info, name_width);
 				}
 			}
 		}
