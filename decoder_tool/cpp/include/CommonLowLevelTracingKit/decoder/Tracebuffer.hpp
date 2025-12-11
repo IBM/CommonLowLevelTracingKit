@@ -1,8 +1,10 @@
 #ifndef DECODER_TOOL_TRACEBUFFER_HEADER
 #define DECODER_TOOL_TRACEBUFFER_HEADER
+#include <chrono>
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
@@ -141,6 +143,31 @@ namespace CommonLowLevelTracingKit::decoder {
 		const std::string m_name;
 		const uint64_t m_size;
 	};
+
+	// Information about a tracebuffer for listing purposes
+	struct EXPORT TraceBufferInfo {
+		std::string name;
+		std::filesystem::path path;
+		SourceType source_type = SourceType::Unknown;
+		uint64_t capacity = 0;
+		uint64_t used = 0;
+		uint64_t available = 0;
+		double fill_percent = 0.0;
+		uint64_t entries = 0;
+		uint64_t dropped = 0;
+		uint64_t wrapped = 0;
+		std::filesystem::file_time_type modified{};
+		std::optional<std::string> error;
+
+		bool valid() const noexcept { return !error.has_value(); }
+	};
+
+	using TraceBufferInfoCollection = std::vector<TraceBufferInfo>;
+
+	// List all tracebuffers in a directory with their statistics
+	EXPORT TraceBufferInfoCollection
+	listTraceBuffers(const std::filesystem::path &path, bool recursive = false,
+					 const std::function<bool(const std::string &)> &filter = {});
 
 } // namespace CommonLowLevelTracingKit::decoder
 

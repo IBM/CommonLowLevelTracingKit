@@ -227,6 +227,6 @@ static void init_function() noexcept
 	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
 	add_create_tracebuffer_command(app);
 	add_clear_tracebuffer_command(app);
-	add_list_tracebuffer_command(app);
+	// Note: list command moved to decoder module (list.cpp) with enhanced statistics
 }
 COMMAND_INIT(init_function);

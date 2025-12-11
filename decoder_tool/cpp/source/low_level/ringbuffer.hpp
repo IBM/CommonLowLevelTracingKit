@@ -93,6 +93,12 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		INLINE uint64_t getWrapped() const noexcept { return capture().wrapped; }
 		INLINE uint64_t getDropped() const noexcept { return capture().dropped; }
 		INLINE uint64_t getEntryCount() const noexcept { return capture().entries; }
+		INLINE uint64_t getUsed() const noexcept {
+			const auto c = capture();
+			if (c.wrapped == 0) { return c.next_free; }
+			return getSize();
+		}
+		INLINE uint64_t getAvailable() const noexcept { return getSize() - getUsed(); }
 		INLINE const HeadPart capture() const noexcept {
 			return m_headpart->load(std::memory_order_relaxed);
 		}
