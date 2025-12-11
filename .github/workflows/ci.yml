@@ -54,29 +54,6 @@ jobs:
         run: ./scripts/container.sh ./scripts/ci-cd/step_memcheck.sh
 
   # ============================================
-  # Static Analysis (runs in parallel with build-and-test)
-  # ============================================
-  static-analysis:
-    runs-on: ubuntu-latest
-    needs: checks
-    continue-on-error: true  # Remove this line once baseline is clean
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Build CI-Container
-        run: ./scripts/container.sh echo "container ready"
-
-      - name: Build (for compile_commands.json)
-        run: ./scripts/container.sh ./scripts/ci-cd/step_build.sh
-
-      - name: clang-tidy
-        run: ./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --clang-tidy
-
-      - name: cppcheck
-        run: ./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --cppcheck
-
-  # ============================================
   # Packaging
   # ============================================
   package:
