@@ -85,6 +85,13 @@ echo "filter:     ${FILTER:-<none>}"
 echo ""
 
 # Check prerequisites
+# Directories and patterns excluded from static analysis:
+# - build/              : Build artifacts
+# - build_kernel/       : Kernel build artifacts  
+# - _deps/              : CMake FetchContent dependencies (e.g., googletest)
+# - /usr/*              : System includes
+# - boost/              : Boost library headers
+
 check_prerequisites() {
     if [[ ! -f "$COMPILE_COMMANDS" ]]; then
         echo "compile_commands.json not found. Building first..."
@@ -115,6 +122,11 @@ get_source_files() {
     jq -r '.[].file' "$COMPILE_COMMANDS" | while read -r file; do
         # Skip build directory files
         [[ "$file" == *"/build/"* ]] && continue
+        [[ "$file" == *"/build_kernel/"* ]] && continue
+        # Skip external dependencies (boost, system includes, etc.)
+        [[ "$file" == *"/boost/"* ]] && continue
+        [[ "$file" == /usr/* ]] && continue
+        [[ "$file" == *"_deps/"* ]] && continue
         # Apply filter if specified
         if [[ -n "$FILTER" && "$file" != *"$FILTER"* ]]; then
             continue
@@ -193,8 +205,13 @@ run_cppcheck() {
         cppcheck_args+=("--error-exitcode=1")
     fi
 
-    # Exclude build directory
+    # Exclude build directory and external dependencies
     cppcheck_args+=("-i${ROOT_PATH}/build")
+    cppcheck_args+=("-i${ROOT_PATH}/build_kernel")
+    # Suppress boost-related warnings
+    cppcheck_args+=("--suppress=*:*boost*")
+    cppcheck_args+=("--suppress=*:/usr/include/*")
+    cppcheck_args+=("--suppress=*:/usr/local/include/*")
 
     if ! cppcheck "${cppcheck_args[@]}" 2>&1; then
         echo "cppcheck: FAILED"
