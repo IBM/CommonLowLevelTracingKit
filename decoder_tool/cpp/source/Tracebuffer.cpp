@@ -300,6 +300,7 @@ static TraceBufferInfo getTraceBufferInfo(const fs::path &path) {
 				: 0.0;
 		info.entries = rb.getEntryCount();
 		info.dropped = rb.getDropped();
+		info.pending = info.entries - info.dropped;
 		info.wrapped = rb.getWrapped();
 
 	} catch (const std::exception &e) { info.error = e.what(); } catch (...) {

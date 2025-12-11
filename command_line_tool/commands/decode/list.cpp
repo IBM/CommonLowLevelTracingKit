@@ -65,23 +65,23 @@ static std::string format_time_iso(const std::filesystem::file_time_type &time)
 
 static void print_table_header(FILE *f, size_t name_width)
 {
-	fprintf(f, "%-*s %-6s %12s %12s %5s %10s %10s %8s %-19s %s\n", static_cast<int>(name_width),
-			"NAME", "SOURCE", "CAPACITY", "USED", "FILL", "ENTRIES", "DROPPED", "WRAPPED",
-			"MODIFIED", "PATH");
+	fprintf(f, "%-*s %-6s %12s %12s %5s %10s %10s %10s %8s %-19s %s\n",
+			static_cast<int>(name_width), "NAME", "SOURCE", "CAPACITY", "USED", "FILL", "ENTRIES",
+			"PENDING", "DROPPED", "WRAPPED", "MODIFIED", "PATH");
 }
 
 static void print_table_row(FILE *f, const TraceBufferInfo &info, size_t name_width)
 {
 	if (info.valid()) {
-		fprintf(f, "%-*s %-6s %12lu %12lu %4.0f%% %10lu %10lu %8lu %-19s %s\n",
+		fprintf(f, "%-*s %-6s %12lu %12lu %4.0f%% %10lu %10lu %10lu %8lu %-19s %s\n",
 				static_cast<int>(name_width), info.name.c_str(),
 				source_type_to_string(info.source_type).c_str(), info.capacity, info.used,
-				info.fill_percent, info.entries, info.dropped, info.wrapped,
+				info.fill_percent, info.entries, info.pending, info.dropped, info.wrapped,
 				format_time(info.modified).c_str(), info.path.string().c_str());
 	} else {
-		fprintf(f, "%-*s %-6s %12s %12s %5s %10s %10s %8s %-19s %s\n", static_cast<int>(name_width),
-				info.name.c_str(), "?", "?", "?", "?", "?", "?", "?",
-				format_time(info.modified).c_str(), info.path.string().c_str());
+		fprintf(f, "%-*s %-6s %12s %12s %5s %10s %10s %10s %8s %-19s %s\n",
+				static_cast<int>(name_width), info.name.c_str(), "?", "?", "?", "?", "?", "?", "?",
+				"?", format_time(info.modified).c_str(), info.path.string().c_str());
 	}
 }
 
@@ -113,6 +113,7 @@ static void print_json_output(FILE *f, const TraceBufferInfoCollection &infos)
 			obj.AddMember("available", rapidjson::Value(info.available), allocator);
 			obj.AddMember("fill_percent", rapidjson::Value(info.fill_percent), allocator);
 			obj.AddMember("entries", rapidjson::Value(info.entries), allocator);
+			obj.AddMember("pending", rapidjson::Value(info.pending), allocator);
 			obj.AddMember("dropped", rapidjson::Value(info.dropped), allocator);
 			obj.AddMember("wrapped", rapidjson::Value(info.wrapped), allocator);
 

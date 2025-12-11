@@ -160,7 +160,8 @@ namespace CommonLowLevelTracingKit::decoder {
 		uint64_t used = 0;
 		uint64_t available = 0;
 		double fill_percent = 0.0;
-		uint64_t entries = 0;
+		uint64_t entries = 0; // total entries ever written
+		uint64_t pending = 0; // current entries in buffer (entries - dropped)
 		uint64_t dropped = 0;
 		uint64_t wrapped = 0;
 		std::filesystem::file_time_type modified{};
