@@ -52,10 +52,8 @@ class TestLiveExtremeStress(LiveTestCase):
             )
 
         # Run decoder with summary enabled and small buffer to force drops
-        result = subprocess.run(
+        proc = subprocess.Popen(
             [
-                "timeout",
-                "3",
                 str(clltk_path),
                 "live",
                 self.trace_path,
@@ -67,11 +65,18 @@ class TestLiveExtremeStress(LiveTestCase):
                 "--poll-interval",
                 "1",
             ],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             env=os.environ.copy(),
         )
 
-        stderr_text = result.stderr.decode("utf-8")
+        # Give it time to read the tracepoints
+        time.sleep(3)
+
+        # Send SIGINT for graceful shutdown with summary
+        proc.send_signal(signal.SIGINT)
+        stdout, stderr = proc.communicate(timeout=5)
+        stderr_text = stderr.decode("utf-8")
 
         # Verify summary is present
         self.assertIn(
