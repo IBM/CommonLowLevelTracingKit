@@ -17,7 +17,7 @@ namespace CommonLowLevelTracingKit::cmd::decode
 using Tracepoint = CommonLowLevelTracingKit::decoder::Tracepoint;
 
 struct TracepointFilter {
-	// Pre-computed flags (set via configure())
+	// flags set by configure()
 	bool has_any_filter = false;
 	bool has_time_filter = false;
 	bool has_pid_filter = false;
@@ -41,16 +41,10 @@ struct TracepointFilter {
 	bool msg_use_regex = false;
 	bool file_use_regex = false;
 
-	// Call after setting filter values to compute flags
 	void configure() noexcept;
-
-	// Set message filter (substring or regex)
 	void set_msg_filter(const std::string &pattern, bool use_regex);
-
-	// Set file filter (substring or regex)
 	void set_file_filter(const std::string &pattern, bool use_regex);
 
-	// Main filter function - optimized for hot path
 	[[gnu::hot]] bool operator()(const Tracepoint &tp) const;
 };
 

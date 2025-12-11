@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "CommonLowLevelTracingKit/tracing/tracing.h"
+#include <atomic>
 #include <gtest/gtest.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -75,4 +76,30 @@ TEST(arguments, flex)
 	EXPECT_EQ(_CLLTK_ARG_TYPES_ARE_FLEX('C'), false);
 	EXPECT_EQ(_CLLTK_ARG_TYPES_ARE_FLEX('C', "A"), true);
 	EXPECT_EQ(_CLLTK_ARG_TYPES_ARE_FLEX('C', "A", nullptr), true);
+}
+
+TEST(arguments, atomic_types)
+{
+	// Test std::atomic types map to their underlying types
+	std::atomic<bool> atomic_bool{true};
+	std::atomic<char> atomic_char{1};
+	std::atomic<uint8_t> atomic_uint8{1};
+	std::atomic<int8_t> atomic_int8{1};
+	std::atomic<uint16_t> atomic_uint16{1};
+	std::atomic<int16_t> atomic_int16{1};
+	std::atomic<uint32_t> atomic_uint32{1};
+	std::atomic<int32_t> atomic_int32{1};
+	std::atomic<uint64_t> atomic_uint64{1};
+	std::atomic<int64_t> atomic_int64{1};
+
+	EXPECT_EQ(_CLLTK_TYPE_TO_TYPE(0, atomic_bool), _clltk_argument_uint8);
+	EXPECT_EQ(_CLLTK_TYPE_TO_TYPE(0, atomic_char), _clltk_argument_sint8);
+	EXPECT_EQ(_CLLTK_TYPE_TO_TYPE(0, atomic_uint8), _clltk_argument_uint8);
+	EXPECT_EQ(_CLLTK_TYPE_TO_TYPE(0, atomic_int8), _clltk_argument_sint8);
+	EXPECT_EQ(_CLLTK_TYPE_TO_TYPE(0, atomic_uint16), _clltk_argument_uint16);
+	EXPECT_EQ(_CLLTK_TYPE_TO_TYPE(0, atomic_int16), _clltk_argument_sint16);
+	EXPECT_EQ(_CLLTK_TYPE_TO_TYPE(0, atomic_uint32), _clltk_argument_uint32);
+	EXPECT_EQ(_CLLTK_TYPE_TO_TYPE(0, atomic_int32), _clltk_argument_sint32);
+	EXPECT_EQ(_CLLTK_TYPE_TO_TYPE(0, atomic_uint64), _clltk_argument_uint64);
+	EXPECT_EQ(_CLLTK_TYPE_TO_TYPE(0, atomic_int64), _clltk_argument_sint64);
 }

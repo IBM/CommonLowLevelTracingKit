@@ -15,10 +15,6 @@ using namespace std::string_literals;
 namespace CommonLowLevelTracingKit::cmd::interface
 {
 
-// ============================================================================
-// Path Resolution Implementation
-// ============================================================================
-
 static std::string g_path_option{};
 
 const std::string &get_path_option(void)
@@ -31,10 +27,6 @@ void set_path_option(const std::string &path)
 	g_path_option = path;
 }
 
-// ============================================================================
-// Verbosity Control Implementation
-// ============================================================================
-
 static Verbosity g_verbosity = Verbosity::normal;
 
 Verbosity get_verbosity(void)
@@ -46,10 +38,6 @@ void set_verbosity(Verbosity level)
 {
 	g_verbosity = level;
 }
-
-// ============================================================================
-// Signal Handling Implementation
-// ============================================================================
 
 static std::atomic<bool> g_interrupted{false};
 static std::string g_current_output_file{};
@@ -94,10 +82,6 @@ void clear_current_output_file(void)
 {
 	g_current_output_file.clear();
 }
-
-// ============================================================================
-// Validators Implementation
-// ============================================================================
 
 namespace validator
 {

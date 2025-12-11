@@ -100,11 +100,23 @@ struct _clltk_argument_types_t {
 #endif
 
 #else // else for c++
+#include <atomic>
 #include <type_traits>
+
+// Helper to detect if a type is std::atomic
+template <typename T> struct _is_atomic : std::false_type {
+};
+template <typename T> struct _is_atomic<std::atomic<T>> : std::true_type {
+};
+
 template <typename T> static CONST_INLINE constexpr _clltk_argument_t _CLLTK_TYPE_TO_TYPE_TEMP(void)
 {
 	using real_type = std::remove_cv_t<std::remove_reference_t<T>>;
-	if constexpr (std::is_same<real_type, bool>::value)
+
+	// Handle std::atomic types by extracting their value_type
+	if constexpr (_is_atomic<real_type>::value) {
+		return _CLLTK_TYPE_TO_TYPE_TEMP<typename real_type::value_type>();
+	} else if constexpr (std::is_same<real_type, bool>::value)
 		return _clltk_argument_uint8;
 	else if constexpr (std::is_same<real_type, char>::value)
 		return _clltk_argument_sint8;

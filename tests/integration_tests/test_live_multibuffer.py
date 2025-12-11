@@ -41,15 +41,14 @@ class TestLiveMultiBufferScenarios(LiveTestCase):
         # Create all buffers and write pre-existing tracepoints
         for buf_name in buffer_names:
             clltk("buffer", "--buffer", buf_name, "--size", "4KB")
-
+            
             pre_msgs = [f"{buf_name}_pre_{i}" for i in range(2)]
             all_pre_messages[buf_name] = pre_msgs
 
             for msg in pre_msgs:
                 result = subprocess.run(
-                    [str(clltk_path), "trace", "--buffer", buf_name, "--message", msg],
-                    env=os.environ.copy(),
-                    capture_output=True,
+                    [str(clltk_path), 'trace', '-b', buf_name, msg],
+                    env=os.environ.copy(), capture_output=True
                 )
                 self.assertEqual(result.returncode, 0)
 
@@ -87,9 +86,8 @@ class TestLiveMultiBufferScenarios(LiveTestCase):
             messages_in_order.append(msg)
 
             subprocess.run(
-                [str(clltk_path), "trace", "--buffer", buf, "--message", msg],
-                env=os.environ.copy(),
-                capture_output=True,
+                [str(clltk_path), 'trace', '-b', buf, msg],
+                env=os.environ.copy(), capture_output=True
             )
             time.sleep(0.03)  # Ensure distinct timestamps
 
@@ -157,16 +155,8 @@ class TestLiveMultiBufferScenarios(LiveTestCase):
             test_messages = [f"delayed_write_{i}" for i in range(3)]
             for msg in test_messages:
                 subprocess.run(
-                    [
-                        str(clltk_path),
-                        "trace",
-                        "--buffer",
-                        buffer_name,
-                        "--message",
-                        msg,
-                    ],
-                    env=os.environ.copy(),
-                    capture_output=True,
+                    [str(clltk_path), 'trace', '-b', buffer_name, msg],
+                    env=os.environ.copy(), capture_output=True
                 )
                 time.sleep(0.05)
 

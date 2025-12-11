@@ -29,17 +29,10 @@ namespace CommonLowLevelTracingKit::cmd::interface
 using MainAppHandle = std::pair<CLI::App &, std::unique_lock<std::mutex>>;
 MainAppHandle acquireMainApp(void);
 
-// ============================================================================
-// Path Resolution
-// ============================================================================
-
-/// Get the tracing path set via -P/--path option (empty if not set)
 const std::string &get_path_option(void);
-
-/// Set the tracing path via -P/--path option
 void set_path_option(const std::string &path);
 
-/// Resolve the tracing path with priority: -P option > CLLTK_TRACING_PATH env > "."
+// Priority: -P option > CLLTK_TRACING_PATH env > "."
 inline std::filesystem::path get_tracing_path(void)
 {
 	// 1. Check -P/--path option
@@ -58,75 +51,49 @@ inline std::filesystem::path get_tracing_path(void)
 	return ".";
 }
 
-// ============================================================================
-// Verbosity Control
-// ============================================================================
-
 enum class Verbosity { quiet, normal, verbose };
 
-/// Get the current verbosity level
 Verbosity get_verbosity(void);
-
-/// Set the verbosity level (called by main.cpp during flag parsing)
 void set_verbosity(Verbosity level);
 
-/// Check if verbose mode is enabled
 inline bool is_verbose(void)
 {
 	return get_verbosity() == Verbosity::verbose;
 }
 
-/// Check if quiet mode is enabled
 inline bool is_quiet(void)
 {
 	return get_verbosity() == Verbosity::quiet;
 }
 
-/// Log an info message (shown in normal and verbose mode, hidden in quiet mode)
-template <typename... Args> void log_info(Args &&...args)
+template <typename... Args> void log_info(Args &&...args) // hidden in quiet mode
 {
 	if (!is_quiet()) {
 		(std::cout << ... << std::forward<Args>(args)) << std::endl;
 	}
 }
 
-/// Log a verbose message (only shown in verbose mode)
-template <typename... Args> void log_verbose(Args &&...args)
+template <typename... Args> void log_verbose(Args &&...args) // only in verbose mode
 {
 	if (is_verbose()) {
 		(std::cout << ... << std::forward<Args>(args)) << std::endl;
 	}
 }
 
-/// Log an error message (always shown, even in quiet mode)
-template <typename... Args> void log_error(Args &&...args)
+template <typename... Args> void log_error(Args &&...args) // always shown
 {
 	(std::cerr << ... << std::forward<Args>(args)) << std::endl;
 }
 
-// ============================================================================
-// Signal Handling
-// ============================================================================
-
-/// Check if an interrupt signal (SIGINT/SIGTERM) has been received
 bool is_interrupted(void);
-
-/// Reset the interrupt flag (useful for cleanup before exit)
 void reset_interrupt(void);
-
-/// Install signal handlers for SIGINT and SIGTERM
 void install_signal_handlers(void);
 
-/// Get the path of the current output file being written (for cleanup on interrupt)
 const std::string &get_current_output_file(void);
-
-/// Set the current output file path (for cleanup on interrupt)
 void set_current_output_file(const std::string &path);
-
-/// Clear the current output file path
 void clear_current_output_file(void);
 
-/// RAII guard for managing output file cleanup on interrupt
+// RAII guard for output file cleanup on interrupt
 class OutputFileGuard
 {
   public:
@@ -137,17 +104,12 @@ class OutputFileGuard
 	OutputFileGuard &operator=(const OutputFileGuard &) = delete;
 };
 
-// ============================================================================
-// Validators
-// ============================================================================
-
 namespace validator
 {
 struct TracebufferName : public CLI::Validator {
 	TracebufferName(void);
 };
 
-/// Validator for paths that must exist (file or directory)
 struct ExistingTracePath : public CLI::Validator {
 	ExistingTracePath(void);
 };

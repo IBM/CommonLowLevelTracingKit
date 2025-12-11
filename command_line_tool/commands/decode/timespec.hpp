@@ -47,34 +47,19 @@ struct TimeSpec {
 	enum class Anchor { Absolute, Now, Min, Max, RelativeToMax };
 
 	Anchor anchor = Anchor::Absolute;
-	int64_t offset_ns = 0;	  // Offset from anchor (can be negative)
-	uint64_t absolute_ns = 0; // Used when anchor == Absolute
+	int64_t offset_ns = 0;
+	uint64_t absolute_ns = 0;
 
-	// Parse a time specification string
-	// Throws std::invalid_argument on parse error
-	static TimeSpec parse(std::string_view input);
+	static TimeSpec parse(std::string_view input); // throws on error
 
-	// Resolve to absolute nanoseconds given trace bounds
-	// now_ns: current time in nanoseconds (Unix epoch)
-	// min_ns: minimum timestamp in trace
-	// max_ns: maximum timestamp in trace
 	[[nodiscard]] uint64_t resolve(uint64_t now_ns, uint64_t min_ns, uint64_t max_ns) const;
-
-	// Check if this TimeSpec requires trace bounds to resolve
 	[[nodiscard]] bool needs_trace_bounds() const noexcept;
-
-	// Check if this is the default (unset) value
 	[[nodiscard]] bool is_default_min() const noexcept;
 	[[nodiscard]] bool is_default_max() const noexcept;
 
   private:
-	// Parse duration with suffix (e.g., "30s", "5m", "1h")
 	static int64_t parse_duration_ns(std::string_view input);
-
-	// Parse float seconds to nanoseconds
 	static uint64_t parse_float_seconds_ns(std::string_view input);
-
-	// Parse ISO datetime to nanoseconds
 	static uint64_t parse_datetime_ns(std::string_view input);
 };
 

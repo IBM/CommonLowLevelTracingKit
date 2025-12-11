@@ -49,7 +49,7 @@ class TestLiveRealTimeOutput(LiveTestCase):
 
         # Step 1: Create tracebuffer and write tracepoints BEFORE starting live
         clltk("buffer", "--buffer", buffer_name, "--size", "4KB")
-        clltk("trace", "--buffer", buffer_name, "--message", test_msg)
+        clltk("trace", "-b", buffer_name, test_msg)
 
         # Step 2: Run live with timeout
         result = run_live_with_timeout(
@@ -82,7 +82,7 @@ class TestLiveRealTimeOutput(LiveTestCase):
 
             # Write a tracepoint
             test_msg = "streaming_realtime_test_xyz"
-            clltk("trace", "--buffer", buffer_name, "--message", test_msg)
+            clltk("trace", "-b", buffer_name, test_msg)
 
             # Wait for it to be processed and output (order_delay + processing)
             time.sleep(0.3)
@@ -129,7 +129,7 @@ clltk = '{clltk_path}'
 
 messages = {test_messages!r}
 for msg in messages:
-    subprocess.run([clltk, 'trace', '--buffer', '{buffer_name}', '--message', msg],
+    subprocess.run([clltk, 'trace', '-b', '{buffer_name}', msg],
                    env=os.environ, check=True)
     time.sleep(0.05)
 """
@@ -179,7 +179,7 @@ for msg in messages:
         # Step 2: Write some tracepoints BEFORE decoder starts
         for msg in pre_messages:
             result = subprocess.run(
-                [str(clltk_path), "trace", "--buffer", buffer_name, "--message", msg],
+                [str(clltk_path), 'trace', '-b', buffer_name, msg],
                 env=os.environ.copy(),
                 capture_output=True,
             )
@@ -219,14 +219,7 @@ for msg in messages:
             # Step 4: Write MORE tracepoints AFTER decoder has started
             for msg in post_messages:
                 result = subprocess.run(
-                    [
-                        str(clltk_path),
-                        "trace",
-                        "--buffer",
-                        buffer_name,
-                        "--message",
-                        msg,
-                    ],
+                    [str(clltk_path), 'trace', '-b', buffer_name, msg],
                     env=os.environ.copy(),
                     capture_output=True,
                 )
@@ -305,7 +298,7 @@ for msg in messages:
         """
         buffer_name = "ConcurrentTestBuffer"
         num_messages = 20
-
+        
         clltk("buffer", "--buffer", buffer_name, "--size", "16KB")
 
         clltk_path = get_clltk_path()
@@ -336,14 +329,7 @@ for msg in messages:
                     msg = f"concurrent_msg_{i:04d}"
                     messages_written.append(msg)
                     result = subprocess.run(
-                        [
-                            str(clltk_path),
-                            "trace",
-                            "--buffer",
-                            buffer_name,
-                            "--message",
-                            msg,
-                        ],
+                        [str(clltk_path), 'trace', '-b', buffer_name, msg],
                         env=os.environ.copy(),
                         capture_output=True,
                     )

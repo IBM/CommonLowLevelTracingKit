@@ -49,16 +49,8 @@ class TestLiveEdgeCases(LiveTestCase):
                     with lock:
                         all_messages.append(msg)
                     result = subprocess.run(
-                        [
-                            str(clltk_path),
-                            "trace",
-                            "--buffer",
-                            buffer_name,
-                            "--message",
-                            msg,
-                        ],
-                        env=os.environ.copy(),
-                        capture_output=True,
+                        [str(clltk_path), 'trace', '-b', buffer_name, msg],
+                        env=os.environ.copy(), capture_output=True
                     )
                     if result.returncode != 0:
                         with lock:
@@ -117,9 +109,8 @@ class TestLiveEdgeCases(LiveTestCase):
         for name, content in test_cases:
             msg = f"{name}:{content}"
             subprocess.run(
-                [str(clltk_path), "trace", "--buffer", buffer_name, "--message", msg],
-                env=os.environ.copy(),
-                capture_output=True,
+                [str(clltk_path), 'trace', '-b', buffer_name, msg],
+                env=os.environ.copy(), capture_output=True
             )
             time.sleep(0.02)
 
@@ -152,9 +143,8 @@ class TestLiveEdgeCases(LiveTestCase):
 
         for msg in test_messages:
             subprocess.run(
-                [str(clltk_path), "trace", "--buffer", buffer_name, "--message", msg],
-                env=os.environ.copy(),
-                capture_output=True,
+                [str(clltk_path), 'trace', '-b', buffer_name, msg],
+                env=os.environ.copy(), capture_output=True
             )
 
         result = run_live_with_timeout(

@@ -91,7 +91,8 @@ Checks: >
 # Don't treat warnings as errors by default (use --warnings-as-errors=* flag for CI)
 WarningsAsErrors: ''
 
-# Only check project headers, not system headers
+# Only check project headers, not system headers or external libraries
+# Excludes: boost, system headers, build directory, external dependencies
 HeaderFilterRegex: '.*/CommonLowLevelTracingKit/.*\.(h|hpp)$'
 
 CheckOptions:
