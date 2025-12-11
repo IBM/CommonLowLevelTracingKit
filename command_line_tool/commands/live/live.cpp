@@ -23,6 +23,7 @@
 #include "commands/filter.hpp"
 #include "commands/interface.hpp"
 #include "commands/ordered_buffer.hpp"
+#include "commands/timespec.hpp"
 
 // Include pool header for TracepointPool (from decoder_tool source)
 #include "pool.hpp"
@@ -74,8 +75,10 @@ class LiveDecoder
 		size_t buffer_size = 100000;
 		uint64_t order_delay_ms = 25;
 		uint64_t poll_interval_ms = 5;
+		uint64_t timeout_ms = 0; // 0 = no timeout; stop if no tracepoint for this duration
 		bool show_summary = false;
 		bool json_output = false;
+		bool start_from_now = false; // Skip existing data, only show new tracepoints
 		FILE *output = stdout;
 		// Add filter for individual tracepoints
 		TracepointFilter tracepoint_filter;
@@ -111,6 +114,13 @@ class LiveDecoder
 
 		for (const auto &tb : m_tracebuffers) {
 			m_tb_name_width = std::max(m_tb_name_width, tb->name().size());
+		}
+
+		// Skip to end if --now flag is set
+		if (m_config.start_from_now) {
+			for (auto &tb : m_tracebuffers) {
+				tb->skipToEnd();
+			}
 		}
 
 		print_header();
@@ -197,6 +207,9 @@ class LiveDecoder
 	{
 		const auto poll_interval = std::chrono::milliseconds(m_config.poll_interval_ms);
 		const uint64_t order_delay_ns = m_config.order_delay_ms * 1'000'000;
+		const bool timeout_enabled = m_config.timeout_ms > 0;
+		const auto timeout_duration = std::chrono::milliseconds(m_config.timeout_ms);
+		auto last_activity_time = std::chrono::steady_clock::now();
 
 		while (!m_stop_reader.load(std::memory_order_acquire) &&
 			   !g_stop_requested.load(std::memory_order_acquire)) {
@@ -237,11 +250,19 @@ class LiveDecoder
 						if (m_config.tracepoint_filter(*tp)) {
 							m_buffer.push(std::move(tp));
 							++m_total_read;
+							// Reset timeout on activity
+							if (timeout_enabled) {
+								last_activity_time = std::chrono::steady_clock::now();
+							}
 						}
 					} else {
 						// No filter, push all tracepoints
 						m_buffer.push(std::move(tp));
 						++m_total_read;
+						// Reset timeout on activity
+						if (timeout_enabled) {
+							last_activity_time = std::chrono::steady_clock::now();
+						}
 					}
 
 					// Check for stop signal periodically
@@ -283,6 +304,17 @@ class LiveDecoder
 												   : UINT64_MAX;
 					m_buffer.update_watermark(watermark);
 				}
+
+				// Check idle timeout
+				if (timeout_enabled) {
+					auto now = std::chrono::steady_clock::now();
+					if (now - last_activity_time > timeout_duration) {
+						std::cerr << "Timeout: no tracepoints for " << m_config.timeout_ms << "ms"
+								  << std::endl;
+						break;
+					}
+				}
+
 				std::this_thread::sleep_for(poll_interval);
 			} else {
 				// Have pending tracepoints - set watermark to max seen so far.
@@ -472,6 +504,12 @@ static void add_live_command(CLI::App &app)
 	static std::string filter_file;
 	static std::string filter_file_regex;
 
+	// Time range and timeout options
+	static std::string filter_since_str;
+	static std::string filter_until_str;
+	static std::string timeout_str;
+	static bool start_from_now{};
+
 	// Default values (used for display and reset)
 	constexpr size_t default_buffer_size = 100000;
 	constexpr uint64_t default_order_delay_ms = 25;
@@ -520,6 +558,18 @@ static void add_live_command(CLI::App &app)
 	add_tracepoint_filter_options(command, filter_pids, filter_tids, filter_msg, filter_msg_regex,
 								  filter_file, filter_file_regex);
 
+	// Add time range options (shared with decode command)
+	add_time_range_options(command, filter_since_str, filter_until_str);
+
+	command->add_flag("-n,--now", start_from_now,
+					  "Skip existing buffered data, only show new tracepoints");
+
+	command
+		->add_option("--timeout", timeout_str,
+					 "Stop if no tracepoint received for this duration.\n"
+					 "Formats: 10s, 1m, 500ms")
+		->type_name("TIME");
+
 	command->callback([&]() {
 		// Reset global signal state (for multiple runs in same process)
 		reset_signal_state();
@@ -547,11 +597,59 @@ static void add_live_command(CLI::App &app)
 		config.poll_interval_ms = poll_interval_ms;
 		config.show_summary = show_summary;
 		config.json_output = json_output;
+		config.start_from_now = start_from_now;
 		config.output = stdout;
+
+		// Parse timeout if specified
+		if (!timeout_str.empty()) {
+			try {
+				// Parse as duration (reuse TimeSpec's duration parser via parse with now anchor)
+				auto ts = TimeSpec::parse("now+" + timeout_str);
+				// Extract the offset which is the duration in ns
+				config.timeout_ms = static_cast<uint64_t>(ts.offset_ns / 1'000'000);
+			} catch (const std::invalid_argument &e) {
+				std::cerr << "Invalid --timeout: " << e.what() << std::endl;
+				sigaction(SIGINT, &old_sigint, nullptr);
+				sigaction(SIGTERM, &old_sigterm, nullptr);
+				return;
+			}
+		}
 
 		// Configure tracepoint filter
 		configure_tracepoint_filter(config.tracepoint_filter, filter_pids, filter_tids, filter_msg,
 									filter_msg_regex, filter_file, filter_file_regex);
+
+		// Parse and apply time range filters
+		auto now = std::chrono::system_clock::now();
+		uint64_t now_ns = static_cast<uint64_t>(
+			std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count());
+
+		if (!filter_since_str.empty()) {
+			try {
+				auto since_spec = TimeSpec::parse(filter_since_str);
+				// For live, min/max anchors don't make sense, only now-based
+				config.tracepoint_filter.time_min = since_spec.resolve(now_ns, 0, UINT64_MAX);
+			} catch (const std::invalid_argument &e) {
+				std::cerr << "Invalid --since: " << e.what() << std::endl;
+				sigaction(SIGINT, &old_sigint, nullptr);
+				sigaction(SIGTERM, &old_sigterm, nullptr);
+				return;
+			}
+		}
+
+		if (!filter_until_str.empty()) {
+			try {
+				auto until_spec = TimeSpec::parse(filter_until_str);
+				config.tracepoint_filter.time_max = until_spec.resolve(now_ns, 0, UINT64_MAX);
+			} catch (const std::invalid_argument &e) {
+				std::cerr << "Invalid --until: " << e.what() << std::endl;
+				sigaction(SIGINT, &old_sigint, nullptr);
+				sigaction(SIGTERM, &old_sigterm, nullptr);
+				return;
+			}
+		}
+
+		config.tracepoint_filter.configure();
 
 		// Create and run decoder
 		LiveDecoder decoder(config);
@@ -578,12 +676,16 @@ static void add_live_command(CLI::App &app)
 		// Reset static variables for next run
 		show_summary = false;
 		json_output = false;
+		start_from_now = false;
 		filter_pids.clear();
 		filter_tids.clear();
 		filter_msg.clear();
 		filter_msg_regex.clear();
 		filter_file.clear();
 		filter_file_regex.clear();
+		filter_since_str.clear();
+		filter_until_str.clear();
+		timeout_str.clear();
 	});
 }
 

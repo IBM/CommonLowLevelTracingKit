@@ -136,6 +136,19 @@ void configure_tracepoint_filter(TracepointFilter &filter, const std::vector<uin
 								 const std::string &filter_file,
 								 const std::string &filter_file_regex);
 
+/**
+ * @brief Add --since and --until time filter options to a command
+ *
+ * Adds standard time range options for filtering tracepoints by timestamp.
+ * Supports various time formats including relative (e.g., -5m, now-1h),
+ * anchored (min, max), and absolute (Unix timestamp, ISO datetime).
+ *
+ * @param command The CLI command to add options to
+ * @param since_str Reference to store --since value
+ * @param until_str Reference to store --until value
+ */
+void add_time_range_options(CLI::App *command, std::string &since_str, std::string &until_str);
+
 } // namespace CommonLowLevelTracingKit::cmd::interface
 
 #endif // _clltk_cmd_filter_HEADER__

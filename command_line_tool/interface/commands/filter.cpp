@@ -150,4 +150,25 @@ void configure_tracepoint_filter(TracepointFilter &filter, const std::vector<uin
 	filter.configure();
 }
 
+void add_time_range_options(CLI::App *command, std::string &since_str, std::string &until_str)
+{
+	command
+		->add_option("--since", since_str,
+					 "Show tracepoints from this time onwards.\n"
+					 "Formats:\n"
+					 "  -5m, +30s       - relative to now\n"
+					 "  now, now-1m     - explicit now anchor\n"
+					 "  min, min+1h     - relative to trace start\n"
+					 "  max, max-5m     - relative to trace end\n"
+					 "  1234567890.5    - Unix timestamp\n"
+					 "  2025-12-11T10:00:00 - ISO datetime")
+		->type_name("TIME");
+
+	command
+		->add_option("--until", until_str,
+					 "Show tracepoints up to this time.\n"
+					 "(same formats as --since)")
+		->type_name("TIME");
+}
+
 } // namespace CommonLowLevelTracingKit::cmd::interface

@@ -20,6 +20,10 @@ namespace CommonLowLevelTracingKit::cmd::interface
  *   - ISO 8601 datetime: "2025-11-25T21:46:29"
  *   - Extended datetime: "2025-11-25 21:46:29.5"
  *
+ * Relative to now (shorthand):
+ *   - -5m          - 5 minutes ago (now - 5m)
+ *   - +30s         - 30 seconds from now (now + 30s)
+ *
  * Anchored with optional offset:
  *   - now          - current system time
  *   - now-1m       - 1 minute ago
@@ -28,10 +32,6 @@ namespace CommonLowLevelTracingKit::cmd::interface
  *   - min+1h       - 1 hour after trace start
  *   - max          - maximum timestamp in trace
  *   - max-5m       - 5 minutes before trace end
- *
- * Relative (Python-style, from trace end):
- *   - -30s         - 30 seconds before trace end
- *   - -5m          - 5 minutes before trace end
  *
  * Duration suffixes:
  *   - ns  - nanoseconds
@@ -44,7 +44,7 @@ namespace CommonLowLevelTracingKit::cmd::interface
 
 struct TimeSpec {
 	// Anchor points for time resolution
-	enum class Anchor { Absolute, Now, Min, Max, RelativeToMax };
+	enum class Anchor { Absolute, Now, Min, Max };
 
 	Anchor anchor = Anchor::Absolute;
 	int64_t offset_ns = 0;

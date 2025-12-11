@@ -91,6 +91,13 @@ namespace CommonLowLevelTracingKit::decoder {
 		virtual uint64_t current_top_entries_nr() const noexcept = 0;
 
 		/**
+		 * @brief Skip to current buffer end, discarding pending entries
+		 *
+		 * After calling, next() only returns tracepoints written after this call.
+		 */
+		virtual void skipToEnd() noexcept = 0;
+
+		/**
 		 * @brief Get next tracepoint using heap allocation
 		 */
 		[[nodiscard]] virtual TracepointPtr

@@ -177,8 +177,8 @@ static void add_decode_command(CLI::App &app)
 	static std::string filter_msg_regex;
 	static std::string filter_file;
 	static std::string filter_file_regex;
-	static std::string filter_time_min_str;
-	static std::string filter_time_max_str;
+	static std::string filter_since_str;
+	static std::string filter_until_str;
 
 	command
 		->add_option("--pid", filter_pids,
@@ -202,20 +202,8 @@ static void add_decode_command(CLI::App &app)
 		->add_option("--file-regex", filter_file_regex,
 					 "Filter tracepoints by source file path using ECMAScript regex")
 		->type_name("REGEX");
-	command
-		->add_option("--time-min", filter_time_min_str,
-					 "Minimum time filter. Formats:\n"
-					 "  1234567890.5    - Unix timestamp (seconds)\n"
-					 "  2025-11-25T21:46:29 - ISO 8601 datetime\n"
-					 "  now, now-1m     - relative to current time\n"
-					 "  min, min+1h     - relative to trace start\n"
-					 "  -30s            - relative to trace end\n"
-					 "Duration suffixes: ns, us, ms, s, m, h")
-		->type_name("TIME");
-	command
-		->add_option("--time-max", filter_time_max_str,
-					 "Maximum time filter (same formats as --time-min)")
-		->type_name("TIME");
+
+	add_time_range_options(command, filter_since_str, filter_until_str);
 
 	command->callback([&]() {
 		// Resolve input path: use provided path, or fall back to tracing path
@@ -283,23 +271,23 @@ static void add_decode_command(CLI::App &app)
 		};
 
 		// Parse time specifications
-		TimeSpec time_min_spec, time_max_spec;
-		time_max_spec.anchor = TimeSpec::Anchor::Absolute;
-		time_max_spec.absolute_ns = UINT64_MAX;
+		TimeSpec since_spec, until_spec;
+		until_spec.anchor = TimeSpec::Anchor::Absolute;
+		until_spec.absolute_ns = UINT64_MAX;
 
-		if (!filter_time_min_str.empty()) {
+		if (!filter_since_str.empty()) {
 			try {
-				time_min_spec = TimeSpec::parse(filter_time_min_str);
+				since_spec = TimeSpec::parse(filter_since_str);
 			} catch (const std::invalid_argument &e) {
-				std::cerr << "Invalid --time-min: " << e.what() << std::endl;
+				std::cerr << "Invalid --since: " << e.what() << std::endl;
 				return 1;
 			}
 		}
-		if (!filter_time_max_str.empty()) {
+		if (!filter_until_str.empty()) {
 			try {
-				time_max_spec = TimeSpec::parse(filter_time_max_str);
+				until_spec = TimeSpec::parse(filter_until_str);
 			} catch (const std::invalid_argument &e) {
-				std::cerr << "Invalid --time-max: " << e.what() << std::endl;
+				std::cerr << "Invalid --until: " << e.what() << std::endl;
 				return 1;
 			}
 		}
@@ -329,8 +317,8 @@ static void add_decode_command(CLI::App &app)
 			std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count());
 
 		// Resolve time specifications
-		tpFilter.time_min = time_min_spec.resolve(now_ns, trace_min_ns, trace_max_ns);
-		tpFilter.time_max = time_max_spec.resolve(now_ns, trace_min_ns, trace_max_ns);
+		tpFilter.time_min = since_spec.resolve(now_ns, trace_min_ns, trace_max_ns);
+		tpFilter.time_max = until_spec.resolve(now_ns, trace_min_ns, trace_max_ns);
 		tpFilter.configure();
 
 		size_t tb_name_size = 0;

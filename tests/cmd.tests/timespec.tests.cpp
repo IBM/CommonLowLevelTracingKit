@@ -242,40 +242,67 @@ TEST_F(TimeSpecTest, ResolveMax_Minus5Minutes)
 }
 
 // ============================================================================
-// Relative (Python-style) tests: -30s means 30s before max
+// Relative shorthand tests: -30s means now - 30s, +30s means now + 30s
 // ============================================================================
 
-TEST_F(TimeSpecTest, ParseRelative_Seconds)
+TEST_F(TimeSpecTest, ParseRelative_MinusSeconds)
 {
 	auto ts = TimeSpec::parse("-30s");
-	EXPECT_EQ(ts.anchor, TimeSpec::Anchor::RelativeToMax);
+	EXPECT_EQ(ts.anchor, TimeSpec::Anchor::Now);
 	EXPECT_EQ(ts.offset_ns, -30LL * NS_PER_SEC);
 }
 
-TEST_F(TimeSpecTest, ParseRelative_Minutes)
+TEST_F(TimeSpecTest, ParseRelative_MinusMinutes)
 {
 	auto ts = TimeSpec::parse("-5m");
-	EXPECT_EQ(ts.anchor, TimeSpec::Anchor::RelativeToMax);
+	EXPECT_EQ(ts.anchor, TimeSpec::Anchor::Now);
 	EXPECT_EQ(ts.offset_ns, -5LL * NS_PER_MIN);
 }
 
-TEST_F(TimeSpecTest, ParseRelative_Hours)
+TEST_F(TimeSpecTest, ParseRelative_MinusHours)
 {
 	auto ts = TimeSpec::parse("-2h");
-	EXPECT_EQ(ts.anchor, TimeSpec::Anchor::RelativeToMax);
+	EXPECT_EQ(ts.anchor, TimeSpec::Anchor::Now);
 	EXPECT_EQ(ts.offset_ns, -2LL * NS_PER_HOUR);
 }
 
-TEST_F(TimeSpecTest, ResolveRelative_30Seconds)
+TEST_F(TimeSpecTest, ParseRelative_PlusSeconds)
 {
-	auto ts = TimeSpec::parse("-30s");
-	EXPECT_EQ(ts.resolve(now_ns, min_ns, max_ns), max_ns - 30 * NS_PER_SEC);
+	auto ts = TimeSpec::parse("+30s");
+	EXPECT_EQ(ts.anchor, TimeSpec::Anchor::Now);
+	EXPECT_EQ(ts.offset_ns, 30LL * NS_PER_SEC);
 }
 
-TEST_F(TimeSpecTest, ResolveRelative_5Minutes)
+TEST_F(TimeSpecTest, ParseRelative_PlusMinutes)
+{
+	auto ts = TimeSpec::parse("+5m");
+	EXPECT_EQ(ts.anchor, TimeSpec::Anchor::Now);
+	EXPECT_EQ(ts.offset_ns, 5LL * NS_PER_MIN);
+}
+
+TEST_F(TimeSpecTest, ParseRelative_PlusHours)
+{
+	auto ts = TimeSpec::parse("+2h");
+	EXPECT_EQ(ts.anchor, TimeSpec::Anchor::Now);
+	EXPECT_EQ(ts.offset_ns, 2LL * NS_PER_HOUR);
+}
+
+TEST_F(TimeSpecTest, ResolveRelative_Minus30Seconds)
+{
+	auto ts = TimeSpec::parse("-30s");
+	EXPECT_EQ(ts.resolve(now_ns, min_ns, max_ns), now_ns - 30 * NS_PER_SEC);
+}
+
+TEST_F(TimeSpecTest, ResolveRelative_Minus5Minutes)
 {
 	auto ts = TimeSpec::parse("-5m");
-	EXPECT_EQ(ts.resolve(now_ns, min_ns, max_ns), max_ns - 5 * NS_PER_MIN);
+	EXPECT_EQ(ts.resolve(now_ns, min_ns, max_ns), now_ns - 5 * NS_PER_MIN);
+}
+
+TEST_F(TimeSpecTest, ResolveRelative_Plus30Seconds)
+{
+	auto ts = TimeSpec::parse("+30s");
+	EXPECT_EQ(ts.resolve(now_ns, min_ns, max_ns), now_ns + 30 * NS_PER_SEC);
 }
 
 // ============================================================================
@@ -504,10 +531,10 @@ TEST_F(TimeSpecTest, NeedsTraceBounds_Max)
 	EXPECT_TRUE(ts.needs_trace_bounds());
 }
 
-TEST_F(TimeSpecTest, NeedsTraceBounds_Relative)
+TEST_F(TimeSpecTest, NeedsTraceBounds_RelativeToNow)
 {
 	auto ts = TimeSpec::parse("-30s");
-	EXPECT_TRUE(ts.needs_trace_bounds());
+	EXPECT_FALSE(ts.needs_trace_bounds()); // Now anchored to 'now', not trace bounds
 }
 
 // ============================================================================
@@ -579,7 +606,8 @@ TEST_F(TimeSpecTest, Resolve_LargePositiveOffset)
 
 TEST_F(TimeSpecTest, Scenario_Last30SecondsOfTrace)
 {
-	auto ts_min = TimeSpec::parse("-30s");
+	// Use max-30s for trace-relative, not -30s (which is now-relative)
+	auto ts_min = TimeSpec::parse("max-30s");
 	auto ts_max = TimeSpec::parse("max");
 
 	uint64_t resolved_min = ts_min.resolve(now_ns, min_ns, max_ns);

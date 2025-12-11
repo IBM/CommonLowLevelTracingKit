@@ -76,6 +76,12 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 			INLINE size_t next_entry_nr() noexcept { return m_entire_count++; }
 
+			INLINE void skipToEnd(const HeadPart &c) noexcept {
+				m_position = c.next_free_abs();
+				m_old_position = m_position;
+				m_entire_count = c.entries;
+			}
+
 		  private:
 			__uint128_t m_position;
 			__uint128_t m_old_position;
@@ -104,6 +110,8 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		}
 
 		INLINE void reset() noexcept { m_read.reset(capture()); }
+		INLINE void skipToEnd() noexcept { m_read.skipToEnd(capture()); }
+
 		INLINE size_t pendingBytes() noexcept { return pendingBytes(capture()); }
 		INLINE size_t pendingBytes(const HeadPart &c) const noexcept {
 			const auto &r = m_read;

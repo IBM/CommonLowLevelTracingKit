@@ -76,6 +76,7 @@ class SyncTbInternal : public SyncTracebuffer {
 							  const TracepointFilterFunc &filter) noexcept override;
 	uint64_t pending() noexcept override;
 	uint64_t current_top_entries_nr() const noexcept override;
+	void skipToEnd() noexcept override;
 
   private:
 	TracebufferFile m_tracebuffer_file;
@@ -179,6 +180,10 @@ TracepointPtr SyncTbInternal::next_pooled(TracepointPool &pool,
 
 uint64_t SyncTbInternal::pending() noexcept {
 	return m_tracebuffer_file.getRingbuffer().pendingBytes();
+}
+
+void SyncTbInternal::skipToEnd() noexcept {
+	m_tracebuffer_file.getRingbuffer().skipToEnd();
 }
 
 bool Tracebuffer::is_tracebuffer(const fs::path &path) {
