@@ -1,0 +1,15 @@
+name: 'Load CI Container'
+description: 'Downloads and loads the CI container from artifacts'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download container
+      uses: actions/download-artifact@v4
+      with:
+        name: ci-container
+        path: /tmp
+
+    - name: Load container
+      shell: bash
+      run: docker load -i /tmp/ci-container.tar
