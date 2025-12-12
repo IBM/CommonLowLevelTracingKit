@@ -46,8 +46,36 @@ static struct {
 	.files = SLIST_HEAD_INITIALIZER()		 //
 };
 
+// Path set via clltk_set_tracing_path() API - takes priority over environment variable
+static char api_root_path[PATH_MAX] = {0};
+static pthread_mutex_t api_root_path_lock = PTHREAD_MUTEX_INITIALIZER;
+
+void clltk_set_tracing_path(const char *path)
+{
+	if (path == NULL || path[0] == '\0') {
+		return;
+	}
+
+	if (pthread_mutex_lock(&api_root_path_lock) != 0) {
+		ERROR_AND_EXIT("failed to acquire api_root_path lock");
+	}
+
+	strncpy(api_root_path, path, PATH_MAX - 1);
+	api_root_path[PATH_MAX - 1] = '\0';
+
+	if (pthread_mutex_unlock(&api_root_path_lock) != 0) {
+		ERROR_AND_EXIT("failed to release api_root_path lock");
+	}
+}
+
 static const char *get_root_path(void)
 {
+	// 1. Check if path was set via API (highest priority)
+	if (api_root_path[0] != '\0') {
+		return api_root_path;
+	}
+
+	// 2. Check environment variable or fall back to cwd (cached)
 	static char *root_path = NULL;
 	if (root_path)
 		return root_path;

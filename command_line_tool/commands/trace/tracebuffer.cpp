@@ -43,9 +43,21 @@ static void add_create_tracebuffer_command(CLI::App &app)
 					 "Example: 512K, 1M, 2G")
 		->capture_default_str()
 		->transform(CLI::AsSizeValue{false})
+		->check([](const std::string &val) -> std::string {
+			try {
+				size_t parsed = std::stoull(val);
+				if (parsed == 0) {
+					return "size must be greater than zero";
+				}
+			} catch (...) {
+				// Let CLI11 handle parsing errors
+			}
+			return "";
+		})
 		->type_name("SIZE");
 
 	command->callback([]() {
+		CommonLowLevelTracingKit::cmd::interface::sync_path_to_library();
 		clltk_dynamic_tracebuffer_creation(buffer_name.c_str(), size);
 		log_verbose("Created tracebuffer '", buffer_name, "' with size ", size, " bytes");
 	});
@@ -54,6 +66,7 @@ static void add_create_tracebuffer_command(CLI::App &app)
 static void add_clear_tracebuffer_command(CLI::App &app)
 {
 	CLI::App *const command = app.add_subcommand("clear", "Clear all entries from a tracebuffer");
+	command->alias("bx");
 	command->description(
 		"Clear all entries from an existing tracebuffer without deleting the file.\n"
 		"The tracebuffer file is preserved; only the ring buffer content is discarded.\n"
@@ -84,9 +97,29 @@ static void add_clear_tracebuffer_command(CLI::App &app)
 	command->require_option(1, 2);
 
 	command->callback([]() {
+		CommonLowLevelTracingKit::cmd::interface::sync_path_to_library();
+		const auto tracing_path = get_tracing_path();
+
+		// Helper to check file writability
+		auto check_writable = [&tracing_path](const std::string &name) -> std::filesystem::path {
+			// Try both userspace and kernel trace file extensions
+			for (const auto &ext : {".clltk_trace", ".clltk_ktrace"}) {
+				auto path = tracing_path / (name + ext);
+				if (std::filesystem::exists(path)) {
+					// Check if file is writable
+					auto perms = std::filesystem::status(path).permissions();
+					if ((perms & std::filesystem::perms::owner_write) ==
+						std::filesystem::perms::none) {
+						throw CLI::RuntimeError("Cannot clear readonly tracebuffer: " + name, 1);
+					}
+					return path;
+				}
+			}
+			throw CLI::RuntimeError("Tracebuffer not found: " + name, 1);
+		};
+
 		if (all_buffers) {
 			// Clear all tracebuffers matching the filter
-			const auto tracing_path = get_tracing_path();
 			const boost::regex filter_regex{filter_str};
 
 			size_t cleared_count = 0;
@@ -104,6 +137,13 @@ static void add_clear_tracebuffer_command(CLI::App &app)
 
 					if (CommonLowLevelTracingKit::cmd::interface::match_tracebuffer_filter(
 							name, filter_regex)) {
+						// Check if file is writable
+						auto perms = std::filesystem::status(path).permissions();
+						if ((perms & std::filesystem::perms::owner_write) ==
+							std::filesystem::perms::none) {
+							log_error("Skipping readonly tracebuffer: ", name);
+							continue;
+						}
 						clltk_dynamic_tracebuffer_clear(name.c_str());
 						log_verbose("Cleared tracebuffer '", name, "'");
 						cleared_count++;
@@ -117,7 +157,8 @@ static void add_clear_tracebuffer_command(CLI::App &app)
 				log_info("No tracebuffers found matching filter");
 			}
 		} else {
-			// Clear a single tracebuffer
+			// Clear a single tracebuffer - check it exists and is writable
+			check_writable(buffer_name);
 			clltk_dynamic_tracebuffer_clear(buffer_name.c_str());
 			log_verbose("Cleared tracebuffer '", buffer_name, "'");
 		}

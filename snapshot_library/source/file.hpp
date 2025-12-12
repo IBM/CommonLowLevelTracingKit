@@ -42,6 +42,9 @@ struct RegularFile : public File {
 	RegularFile(const std::filesystem::directory_entry &entry,
 				const std::filesystem::path &root_path);
 
+	// Constructor for explicit file path
+	explicit RegularFile(const std::filesystem::path &file_path);
+
 	~RegularFile() override;
 
   private:

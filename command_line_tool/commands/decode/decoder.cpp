@@ -214,7 +214,7 @@ static void add_decode_command(CLI::App &app)
 		FILE *out = use_stdout ? stdout : std::fopen(output_path.c_str(), "w+");
 		if (!use_stdout && !out) {
 			log_error("Cannot open output file: ", output_path);
-			return 1;
+			throw CLI::RuntimeError(1);
 		}
 
 		// Register output file for cleanup on interrupt
@@ -280,7 +280,7 @@ static void add_decode_command(CLI::App &app)
 				since_spec = TimeSpec::parse(filter_since_str);
 			} catch (const std::invalid_argument &e) {
 				std::cerr << "Invalid --since: " << e.what() << std::endl;
-				return 1;
+				throw CLI::RuntimeError(1);
 			}
 		}
 		if (!filter_until_str.empty()) {
@@ -288,7 +288,7 @@ static void add_decode_command(CLI::App &app)
 				until_spec = TimeSpec::parse(filter_until_str);
 			} catch (const std::invalid_argument &e) {
 				std::cerr << "Invalid --until: " << e.what() << std::endl;
-				return 1;
+				throw CLI::RuntimeError(1);
 			}
 		}
 
@@ -298,8 +298,7 @@ static void add_decode_command(CLI::App &app)
 									filter_msg_regex, filter_file, filter_file_regex);
 
 		// Collect tracebuffers (without time filter for now)
-		// Note: recursive flag affects directory traversal in collect()
-		auto tbs = SnapTracebuffer::collect(resolved_input, tbFilter);
+		auto tbs = SnapTracebuffer::collect(resolved_input, tbFilter, {}, recursive);
 
 		// Find trace time bounds
 		uint64_t trace_min_ns = UINT64_MAX;

@@ -13,30 +13,48 @@ from typing import Optional, Union, List
 @dataclass
 class CommandResult:
     """Result of a command execution."""
+
     returncode: int
     stdout: str
     stderr: str
 
 
+# Cache the repo root at module load time (before tests may change directories)
+_cached_repo_root: Optional[pathlib.Path] = None
+
+
 def get_repo_root() -> pathlib.Path:
     """Get the repository root path."""
-    result = subprocess.run(
-        ['git', 'rev-parse', '--show-toplevel'],
-        capture_output=True, text=True, check=True
-    )
-    return pathlib.Path(result.stdout.strip())
+    global _cached_repo_root
+    if _cached_repo_root is None:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        _cached_repo_root = pathlib.Path(result.stdout.strip())
+    return _cached_repo_root
 
 
 def get_build_dir() -> pathlib.Path:
     """Get the build directory path."""
-    return pathlib.Path(os.environ.get('BUILD_DIR', './build/')).resolve()
+    build_dir = os.environ.get("BUILD_DIR")
+    if build_dir:
+        return pathlib.Path(build_dir).resolve()
+    # Default to <repo_root>/build if BUILD_DIR not set
+    try:
+        return get_repo_root() / "build"
+    except subprocess.CalledProcessError:
+        # Fallback if not in a git repo
+        return pathlib.Path("./build/").resolve()
 
 
 def run_command(
     command: Union[str, List[str]],
     cwd: Optional[pathlib.Path] = None,
     env: Optional[dict] = None,
-    check: bool = True
+    check: bool = True,
 ) -> CommandResult:
     """
     Execute a shell command and return results.
@@ -54,11 +72,11 @@ def run_command(
         cwd = get_repo_root()
 
     use_shell = isinstance(command, str)
-    
+
     if use_shell:
         # Escape parentheses for shell
-        command = command.replace('(', '\\(')
-        command = command.replace(')', '\\)')
+        command = command.replace("(", "\\(")
+        command = command.replace(")", "\\)")
 
     out = subprocess.run(
         command,
@@ -66,7 +84,7 @@ def run_command(
         stderr=subprocess.PIPE,
         cwd=cwd,
         env=env,
-        shell=use_shell
+        shell=use_shell,
     )
 
     stdout = out.stdout.decode() if out.stdout else ""

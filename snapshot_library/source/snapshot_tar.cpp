@@ -135,3 +135,71 @@ std::optional<size_t> CommonLowLevelTracingKit::snapshot::take_snapshot(
 	// archive will be automatically freed by custom deleter in unique_ptr
 	return ctx.written_counter;
 }
+
+// Take a snapshot of specific files (not scanning CLLTK_TRACING_PATH)
+std::optional<size_t> CommonLowLevelTracingKit::snapshot::take_snapshot_files(
+	write_function_t func, const std::vector<std::string> &file_paths,
+	const std::vector<std::string> &additional_tracepoints, const bool compress,
+	const size_t bucket_size, const verbose_function_t &verbose)
+{
+	if (compress) {
+		return take_snapshot_files_compressed(func, file_paths, additional_tracepoints, bucket_size,
+											  verbose);
+	}
+
+	// Open all specified files
+	std::vector<std::unique_ptr<File>> files;
+	for (const auto &path : file_paths) {
+		files.push_back(std::make_unique<RegularFile>(std::filesystem::path(path)));
+	}
+	files.push_back(std::make_unique<VirtualFile>(additional_tracepoints));
+
+	// Create context for write callback
+	archive_write_context ctx{.write_func = func, .written_counter = 0};
+
+	// add custom deleter to automatically free archive struct in any case
+	using archive_ptr = std::unique_ptr<struct archive, decltype(&archive_write_free)>;
+	archive_ptr a = archive_ptr(nullptr, archive_write_free);
+	{
+		// Open a new tar archive using libarchive
+		struct archive *raw_archive = archive_write_new();
+		if (raw_archive == nullptr) {
+			return {}; // Return an empty optional if the archive failed to create
+		}
+
+		// Set format to GNU tar for compatibility
+		if (archive_write_set_format_gnutar(raw_archive) != ARCHIVE_OK) {
+			archive_write_free(raw_archive);
+			return {};
+		}
+
+		// Open archive with custom write callback
+		if (archive_write_open(raw_archive, &ctx, nullptr, clltk_archive_write_callback, nullptr) !=
+			ARCHIVE_OK) {
+			archive_write_free(raw_archive);
+			return {};
+		}
+
+		a = archive_ptr(raw_archive, archive_write_free);
+	}
+
+	// add all files
+	for (const auto &file : files) {
+		if (verbose) {
+			verbose(file->to_string(), {});
+		}
+		if (add_file_to_archive(a.get(), file.get()) != ReturnCode::Success) {
+			if (verbose)
+				verbose({}, "failed to add file " + file->getFilepath());
+			return {};
+		}
+	}
+
+	// Close the archive (writes end-of-archive marker)
+	if (archive_write_close(a.get()) != ARCHIVE_OK) {
+		return {}; // Return an empty optional if the archive could not be closed
+	}
+
+	// archive will be automatically freed by custom deleter in unique_ptr
+	return ctx.written_counter;
+}

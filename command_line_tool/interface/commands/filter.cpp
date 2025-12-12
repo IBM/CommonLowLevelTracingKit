@@ -21,8 +21,9 @@ void add_filter_option(CLI::App *command, std::string &filter_str)
 
 bool match_tracebuffer_filter(std::string_view name, const boost::regex &filter_regex)
 {
-	// Use boost::regex_match to check if the name matches the filter
-	return boost::regex_match(name.begin(), name.end(), filter_regex);
+	// Use boost::regex_search to allow partial matches (more intuitive for users)
+	// This enables patterns like "^Test" to match "TestAlpha", "TestBeta", etc.
+	return boost::regex_search(name.begin(), name.end(), filter_regex);
 }
 
 void TracepointFilter::configure() noexcept

@@ -125,7 +125,7 @@ namespace CommonLowLevelTracingKit::decoder {
 	struct EXPORT SnapTracebuffer : Tracebuffer {
 		static SnapTracebufferCollection
 		collect(const std::filesystem::path &, const TracebufferFilterFunc &tracebufferFilter = {},
-				const TracepointFilterFunc &tracepointFilter = {});
+				const TracepointFilterFunc &tracepointFilter = {}, bool recursive = true);
 		static SnapTracebufferPtr make(const std::filesystem::path &,
 									   const TracepointFilterFunc &tracepointFilter = {});
 

@@ -166,12 +166,16 @@ class Command
 
 	static void run(std::shared_ptr<Command> cmd)
 	{
+		CommonLowLevelTracingKit::cmd::interface::sync_path_to_library();
 		clltk_dynamic_tracebuffer_creation(cmd->buffer_name.c_str(), cmd->buffer_size);
 
 		if (cmd->input_file.empty() || cmd->input_file == "-") {
 			handle_line(*cmd, std::cin);
 		} else {
 			std::ifstream infile(cmd->input_file);
+			if (!infile.is_open()) {
+				throw CLI::RuntimeError("Failed to open input file: " + cmd->input_file, 1);
+			}
 			handle_line(*cmd, infile);
 			infile.close();
 		}

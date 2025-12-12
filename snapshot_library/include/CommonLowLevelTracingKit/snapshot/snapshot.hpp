@@ -16,15 +16,44 @@ namespace CommonLowLevelTracingKit::snapshot
 using write_function_t = std::function<std::optional<size_t>(const void *, size_t)>;
 using verbose_function_t = std::function<void(const std::string &, const std::string &)>;
 
-std::optional<size_t> take_snapshot(write_function_t,
+/**
+ * Take a snapshot of all trace files from CLLTK_TRACING_PATH (or current directory).
+ * @param func Write function to output the snapshot data
+ * @param additional_tracepoints Additional trace messages to include (stored as JSON)
+ * @param compress If true, compress the output with gzip
+ * @param bucket_size Internal bucket size for tar packaging
+ * @param verbose Optional verbose output function
+ */
+std::optional<size_t> take_snapshot(write_function_t func,
 									const std::vector<std::string> &additional_tracepoints = {},
 									const bool compress = false, const size_t bucket_size = 4096,
 									const verbose_function_t &verbose = {});
+
+/**
+ * Take a snapshot of specific trace files.
+ * @param func Write function to output the snapshot data
+ * @param file_paths List of explicit file paths to include in the snapshot
+ * @param additional_tracepoints Additional trace messages to include (stored as JSON)
+ * @param compress If true, compress the output with gzip
+ * @param bucket_size Internal bucket size for tar packaging
+ * @param verbose Optional verbose output function
+ */
+std::optional<size_t>
+take_snapshot_files(write_function_t func, const std::vector<std::string> &file_paths,
+					const std::vector<std::string> &additional_tracepoints = {},
+					const bool compress = false, const size_t bucket_size = 4096,
+					const verbose_function_t &verbose = {});
 
 std::optional<size_t>
 take_snapshot_compressed(write_function_t,
 						 const std::vector<std::string> &additional_tracepoints = {},
 						 const size_t bucket_size = 4096, const verbose_function_t &verbose = {});
+
+std::optional<size_t>
+take_snapshot_files_compressed(write_function_t func, const std::vector<std::string> &file_paths,
+							   const std::vector<std::string> &additional_tracepoints = {},
+							   const size_t bucket_size = 4096,
+							   const verbose_function_t &verbose = {});
 
 } // namespace CommonLowLevelTracingKit::snapshot
 

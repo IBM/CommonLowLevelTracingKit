@@ -10,12 +10,16 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #endif
 
 __attribute__((noreturn)) void default_unrecoverbale_error_callback(const char *const message)
 {
 	fprintf(stderr, "%s", message);
-	exit(EXIT_FAILURE);
+	// Use _exit() instead of exit() to avoid deadlock with destructors.
+	// The destructor _clltk_terminate() acquires SYNC_GLOBAL_LOCK, which may
+	// already be held if the error occurred during tracebuffer initialization.
+	_exit(EXIT_FAILURE);
 }
 
 void clltk_unrecoverbale_error_callback(const char *const)

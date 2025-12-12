@@ -78,14 +78,12 @@ static void take_snapshot(const std::string &filename, const std::vector<std::st
 			}
 		}
 
-		// Add other paths from tracepoints parameter
-		filtered_tracebuffers.insert(filtered_tracebuffers.end(), tracepoints.begin(),
-									 tracepoints.end());
-
-		CommonLowLevelTracingKit::snapshot::take_snapshot(write_func, filtered_tracebuffers,
-														  compress, bucket_size, verbose);
+		// Use take_snapshot_files to only include the filtered files (not all from
+		// CLLTK_TRACING_PATH)
+		CommonLowLevelTracingKit::snapshot::take_snapshot_files(
+			write_func, filtered_tracebuffers, tracepoints, compress, bucket_size, verbose);
 	} else {
-		// No filter, use all provided tracepoints
+		// No filter, use all tracebuffers from CLLTK_TRACING_PATH
 		CommonLowLevelTracingKit::snapshot::take_snapshot(write_func, tracepoints, compress,
 														  bucket_size, verbose);
 	}
