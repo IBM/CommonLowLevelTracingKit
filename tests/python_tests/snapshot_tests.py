@@ -294,7 +294,7 @@ class snapshot_compressed_tests(unittest.TestCase):
                     tar_content.write(static_cast<const char *>(data), static_cast<std::streamsize>(size));
                     return size;
                 };
-                assert(CommonLowLevelTracingKit::snapshot::take_snapshot_compressed(func).has_value());
+                assert(CommonLowLevelTracingKit::snapshot::take_snapshot(func, {}, true).has_value());
   
 
                 auto tar_file_path = std::string(argv[1]) + "/trace.clltk_traces";
@@ -332,7 +332,7 @@ class snapshot_compressed_tests(unittest.TestCase):
                     tar_content.write(static_cast<const char *>(data), static_cast<std::streamsize>(size));
                     return size;
                 };
-                assert(CommonLowLevelTracingKit::snapshot::take_snapshot_compressed(func).has_value());
+                assert(CommonLowLevelTracingKit::snapshot::take_snapshot(func, {}, true).has_value());
   
                 auto tar_file_path = std::string(argv[1]) + "/trace.clltk_traces";
                 std::ofstream tar_file(tar_file_path);
@@ -375,7 +375,7 @@ class snapshot_compressed_tests(unittest.TestCase):
                 };
                 std::vector<std::string> tracepoints = {};
                 tracepoints.push_back("additional infos");
-                assert(CommonLowLevelTracingKit::snapshot::take_snapshot_compressed(func, tracepoints).has_value());
+                assert(CommonLowLevelTracingKit::snapshot::take_snapshot(func, tracepoints, true).has_value());
                 const std::string data = "dummy";
                 func(data.data(), data.size());
   

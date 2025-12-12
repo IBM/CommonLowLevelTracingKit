@@ -23,6 +23,7 @@
 #include "commands/filter.hpp"
 #include "commands/interface.hpp"
 #include "commands/ordered_buffer.hpp"
+#include "commands/output.hpp"
 #include "commands/timespec.hpp"
 
 // Include pool and ToString from decoder public API
@@ -108,8 +109,9 @@ class LiveDecoder
 		uint64_t timeout_ms = 0; // 0 = no timeout; stop if no tracepoint for this duration
 		bool show_summary = false;
 		bool json_output = false;
+		bool compress_output = false;
 		bool start_from_now = false; // Skip existing data, only show new tracepoints
-		FILE *output = stdout;
+		std::string output_path;	 // Output path ("" or "-" for stdout)
 		// Add filter for individual tracepoints
 		TracepointFilter tracepoint_filter;
 	};
@@ -119,6 +121,11 @@ class LiveDecoder
 		  m_buffer(m_config.buffer_size, m_config.order_delay_ms * 1'000'000),
 		  m_pool(4) // Start with 4 blocks = 4096 tracepoint slots
 	{
+		// Create output (compressed or uncompressed)
+		m_output = create_output(m_config.output_path, m_config.compress_output);
+		if (!m_output) {
+			throw std::runtime_error("Failed to open output");
+		}
 	}
 
 	~LiveDecoder() { stop(); }
@@ -384,7 +391,7 @@ class LiveDecoder
 
 			// Flush after processing a batch, not after each tracepoint
 			if (!ready.empty()) {
-				fflush(m_config.output);
+				flush_output();
 			} else {
 				// If nothing ready, wait a bit
 				std::this_thread::sleep_for(10ms);
@@ -392,12 +399,22 @@ class LiveDecoder
 		}
 	}
 
+	/**
+	 * @brief Write formatted output using the Output abstraction
+	 */
+	template <typename... Args> void write_output(const char *format, Args... args)
+	{
+		m_output->printf(format, args...);
+	}
+
+	void flush_output() { m_output->flush(); }
+
 	void print_header()
 	{
 		if (!m_config.json_output) {
-			fprintf(m_config.output, " %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n",
-					"!timestamp", "time", static_cast<int>(m_tb_name_width), "tracebuffer", "pid",
-					"tid", "formatted", "file", "line");
+			write_output(" %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n", "!timestamp",
+						 "time", static_cast<int>(m_tb_name_width), "tracebuffer", "pid", "tid",
+						 "formatted", "file", "line");
 		}
 		// No header for JSON mode - each object is self-describing
 	}
@@ -448,7 +465,7 @@ class LiveDecoder
 		doc.Accept(writer);
 
 		// Output to the file
-		fprintf(m_config.output, "%s\n", buffer.GetString());
+		write_output("%s\n", buffer.GetString());
 	}
 
 	void print_tracepoint(const Tracepoint &p)
@@ -466,13 +483,15 @@ class LiveDecoder
 
 		// Add '*' prefix for kernel traces
 		if (p.is_kernel()) {
-			fprintf(m_config.output, " %s | %s | *%-*.*s | %5d | %5d | %s | %s | %ld\n", ts_str,
-					dt_str, tb_width - 1, tb_size, tb, p.pid(), p.tid(), p.msg().data(),
-					p.file().data(), p.line());
+			write_output(" %s | %s | *%-*.*s | %5d | %5d | %.*s | %.*s | %ld\n", ts_str, dt_str,
+						 tb_width - 1, tb_size, tb, p.pid(), p.tid(),
+						 static_cast<int>(p.msg().size()), p.msg().data(),
+						 static_cast<int>(p.file().size()), p.file().data(), p.line());
 		} else {
-			fprintf(m_config.output, " %s | %s | %-*.*s | %5d | %5d | %s | %s | %ld\n", ts_str,
-					dt_str, tb_width, tb_size, tb, p.pid(), p.tid(), p.msg().data(),
-					p.file().data(), p.line());
+			write_output(" %s | %s | %-*.*s | %5d | %5d | %.*s | %.*s | %ld\n", ts_str, dt_str,
+						 tb_width, tb_size, tb, p.pid(), p.tid(), static_cast<int>(p.msg().size()),
+						 p.msg().data(), static_cast<int>(p.file().size()), p.file().data(),
+						 p.line());
 		}
 		// Note: fflush is now done in output_loop after processing a batch
 	}
@@ -492,6 +511,7 @@ class LiveDecoder
 	Config m_config;
 	OrderedBuffer m_buffer;
 	TracepointPool m_pool;
+	std::unique_ptr<Output> m_output;
 
 	std::vector<SyncTracebufferPtr> m_tracebuffers;
 	size_t m_tb_name_width{11}; // "tracebuffer"
@@ -522,6 +542,7 @@ static void add_live_command(CLI::App &app)
 
 	// Use static variables for CLI option storage, but reset defaults in callback
 	static std::string input_path{};
+	static std::string output_path{};
 	static std::string tracebuffer_filter_str{};
 	static size_t buffer_size{};
 	static uint64_t order_delay_ms{};
@@ -554,6 +575,11 @@ static void add_live_command(CLI::App &app)
 					 "Path to tracebuffer file or directory to monitor\n"
 					 "(default: CLLTK_TRACING_PATH or current directory)")
 		->type_name("PATH");
+
+	command
+		->add_option("-o,--output", output_path,
+					 "Output file path (default: stdout, use - for stdout)")
+		->type_name("FILE");
 
 	command->add_flag("-r,--recursive,!--no-recursive", recursive,
 					  "Recurse into subdirectories (default: yes)");
@@ -588,6 +614,9 @@ static void add_live_command(CLI::App &app)
 
 	command->add_flag("-j,--json", json_output, "Output as JSON (one object per line)");
 
+	static bool compress_output{};
+	command->add_flag("-z,--compress", compress_output, "Compress output with gzip");
+
 	// Add tracepoint filter options (same as decoder command)
 	add_tracepoint_filter_options(command, filter_pids, filter_tids, filter_msg, filter_msg_regex,
 								  filter_file, filter_file_regex);
@@ -614,6 +643,9 @@ static void add_live_command(CLI::App &app)
 		// Install signal handlers (RAII - automatically restored on scope exit)
 		SignalGuard signal_guard;
 
+		// Determine output destination
+		bool use_stdout = output_path.empty() || output_path == "-";
+
 		// Configure decoder
 		LiveDecoder::Config config;
 		config.input_path = resolved_input;
@@ -623,8 +655,9 @@ static void add_live_command(CLI::App &app)
 		config.poll_interval_ms = poll_interval_ms;
 		config.show_summary = show_summary;
 		config.json_output = json_output;
+		config.compress_output = compress_output;
 		config.start_from_now = start_from_now;
-		config.output = stdout;
+		config.output_path = use_stdout ? "-" : output_path;
 
 		// Parse timeout if specified
 		if (!timeout_str.empty()) {
@@ -688,11 +721,14 @@ static void add_live_command(CLI::App &app)
 		decoder.stop();
 
 		// Signal handlers automatically restored by SignalGuard destructor
+		// Output is automatically closed by LiveDecoder destructor
 
 		// Reset static variables for next run
 		show_summary = false;
 		json_output = false;
+		compress_output = false;
 		start_from_now = false;
+		output_path.clear();
 		filter_pids.clear();
 		filter_tids.clear();
 		filter_msg.clear();

@@ -539,7 +539,7 @@ class TestClltkClear(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Clear using 'bx' alias
-        result = clltk("bx", "--buffer", "AliasBuffer")
+        result = clltk("bx", "--buffer", "AliasBuffer", "-y")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Verify tracebuffer file still exists

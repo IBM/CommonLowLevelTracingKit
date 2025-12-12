@@ -8,6 +8,7 @@ CLLTK decode command tests.
 Tests for the 'clltk decode' subcommand that decodes and formats trace files.
 """
 
+import gzip
 import json
 import os
 import pathlib
@@ -756,6 +757,181 @@ class TestDecodeEdgeCases(DecodeTestCase):
         result = clltk("de", self.tmp_dir.name)
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("AliasTest", result.stdout)
+
+
+class TestDecodeCompression(DecodeTestCase):
+    """
+    Decode command compression tests.
+
+    Tests gzip compression option for output.
+    """
+
+    def test_compress_help_shows_option(self):
+        """Test that --compress option is shown in help."""
+        result = clltk("decode", "--help")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("--compress", result.stdout)
+        self.assertIn("-z", result.stdout)
+
+    def test_compress_output_to_file(self):
+        """Test --compress writes valid gzip file."""
+        self._create_tracebuffer("CompressFile")
+
+        output_file = pathlib.Path(self.tmp_dir.name) / "output.gz"
+        result = clltk("decode", self.tmp_dir.name, "-z", "-o", str(output_file))
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertTrue(output_file.exists())
+
+        # Verify it's a valid gzip file by decompressing
+        with gzip.open(output_file, "rt") as f:
+            content = f.read()
+
+        self.assertIn("CompressFile", content)
+        self.assertIn("test message 42", content)
+
+    def test_compress_smaller_than_uncompressed(self):
+        """Test that compressed output is smaller than uncompressed."""
+        # Create multiple tracepoints to have meaningful compression
+        self._create_tracebuffer_with_messages(
+            "CompressSize",
+            ["message " + str(i) * 50 for i in range(20)],
+            size="8KB",
+        )
+
+        uncompressed_file = pathlib.Path(self.tmp_dir.name) / "uncompressed.txt"
+        compressed_file = pathlib.Path(self.tmp_dir.name) / "compressed.gz"
+
+        # Write uncompressed
+        result = clltk("decode", self.tmp_dir.name, "-o", str(uncompressed_file))
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        # Write compressed
+        result = clltk("decode", self.tmp_dir.name, "-z", "-o", str(compressed_file))
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        # Compare sizes
+        uncompressed_size = uncompressed_file.stat().st_size
+        compressed_size = compressed_file.stat().st_size
+
+        self.assertGreater(uncompressed_size, 0)
+        self.assertGreater(compressed_size, 0)
+        self.assertLess(
+            compressed_size,
+            uncompressed_size,
+            f"Compressed ({compressed_size}) should be smaller than uncompressed ({uncompressed_size})",
+        )
+
+    def test_compress_with_json(self):
+        """Test --compress works with --json output."""
+        self._create_tracebuffer("CompressJson")
+
+        output_file = pathlib.Path(self.tmp_dir.name) / "output.json.gz"
+        result = clltk("decode", self.tmp_dir.name, "-z", "-j", "-o", str(output_file))
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertTrue(output_file.exists())
+
+        # Decompress and verify JSON
+        with gzip.open(output_file, "rt") as f:
+            content = f.read()
+
+        lines = [line for line in content.strip().split("\n") if line]
+        self.assertGreater(len(lines), 0)
+
+        # Each line should be valid JSON
+        for line in lines:
+            data = json.loads(line)
+            self.assertIsInstance(data, dict)
+
+    def test_compress_stdout(self):
+        """Test --compress to stdout produces gzip data."""
+        import subprocess
+
+        self._create_tracebuffer("CompressStdout")
+
+        # Run directly with subprocess to get raw binary output
+        from helpers.base import get_build_dir
+
+        clltk_path = get_build_dir() / "command_line_tool" / "clltk"
+        result = subprocess.run(
+            [str(clltk_path), "decode", self.tmp_dir.name, "-z"],
+            capture_output=True,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr.decode())
+
+        # stdout should contain gzip data (binary)
+        # Verify gzip magic number (1f 8b)
+        self.assertGreater(len(result.stdout), 2)
+        self.assertEqual(result.stdout[0], 0x1F, "First byte should be gzip magic 0x1f")
+        self.assertEqual(
+            result.stdout[1], 0x8B, "Second byte should be gzip magic 0x8b"
+        )
+
+        # Decompress and verify content
+        decompressed = gzip.decompress(result.stdout).decode("utf-8")
+        self.assertIn("CompressStdout", decompressed)
+        self.assertIn("test message 42", decompressed)
+
+    def test_compress_with_filter(self):
+        """Test --compress works with --filter option."""
+        self._create_tracebuffer("CompressFilterA")
+        self._create_tracebuffer("CompressFilterB")
+
+        output_file = pathlib.Path(self.tmp_dir.name) / "filtered.gz"
+        result = clltk(
+            "decode",
+            self.tmp_dir.name,
+            "-z",
+            "-o",
+            str(output_file),
+            "--filter",
+            "CompressFilterA",
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        with gzip.open(output_file, "rt") as f:
+            content = f.read()
+
+        self.assertIn("CompressFilterA", content)
+        self.assertNotIn("CompressFilterB", content)
+
+    def test_compress_empty_directory(self):
+        """Test --compress on empty directory produces valid empty gzip."""
+        # Use a fresh empty directory
+        empty_dir = pathlib.Path(self.tmp_dir.name) / "empty_subdir"
+        empty_dir.mkdir()
+
+        output_file = pathlib.Path(self.tmp_dir.name) / "empty.gz"
+        result = clltk("decode", str(empty_dir), "-z", "-o", str(output_file))
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertTrue(output_file.exists())
+
+        # Should be valid gzip (may just have header)
+        with gzip.open(output_file, "rt") as f:
+            content = f.read()
+        # Content may be empty or just header, that's fine
+
+    def test_compress_large_output(self):
+        """Test --compress handles large output correctly."""
+        # Create many tracepoints
+        messages = [f"large_message_{i}_" + "x" * 100 for i in range(50)]
+        self._create_tracebuffer_with_messages("CompressLarge", messages, size="64KB")
+
+        output_file = pathlib.Path(self.tmp_dir.name) / "large.gz"
+        result = clltk("decode", self.tmp_dir.name, "-z", "-o", str(output_file))
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        # Decompress and verify all messages are present
+        with gzip.open(output_file, "rt") as f:
+            content = f.read()
+
+        for i in range(50):
+            self.assertIn(f"large_message_{i}_", content)
 
 
 if __name__ == "__main__":

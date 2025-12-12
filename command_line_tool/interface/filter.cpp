@@ -1,7 +1,7 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "filter.hpp"
+#include "commands/filter.hpp"
 #include <CLI/App.hpp>
 
 namespace CommonLowLevelTracingKit::cmd::interface

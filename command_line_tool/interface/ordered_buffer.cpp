@@ -1,7 +1,7 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "ordered_buffer.hpp"
+#include "commands/ordered_buffer.hpp"
 
 #include <algorithm>
 

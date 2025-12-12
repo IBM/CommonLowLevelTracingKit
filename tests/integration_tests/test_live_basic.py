@@ -8,6 +8,7 @@ CLLTK Live Command Basic Tests.
 Basic CLI tests and streaming functionality tests.
 """
 
+import gzip
 import os
 import pathlib
 import signal
@@ -161,6 +162,110 @@ class TestLiveStreaming(LiveTestCase):
                     positions[j][1],
                     f"Messages not in order: {positions[j - 1]} should come before {positions[j]}",
                 )
+
+
+class TestLiveCompression(LiveTestCase):
+    """Test compression option for live command."""
+
+    def test_compress_help_shows_option(self):
+        """Test that --compress option is shown in help."""
+        result = clltk("live", "--help")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("--compress", result.stdout)
+        self.assertIn("-z", result.stdout)
+
+    def test_compress_output_shows_option(self):
+        """Test that --output option is shown in help."""
+        result = clltk("live", "--help")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("--output", result.stdout)
+        self.assertIn("-o", result.stdout)
+
+    def test_compress_output_to_file(self):
+        """Test --compress writes valid gzip file with live output."""
+        buffer_name = "LiveCompressTest"
+        test_messages = ["compress_msg_001", "compress_msg_002", "compress_msg_003"]
+
+        # Create tracebuffer
+        result = clltk("buffer", "--buffer", buffer_name, "--size", "4KB")
+        self.assertEqual(
+            result.returncode, 0, f"Failed to create tracebuffer: {result.stderr}"
+        )
+
+        output_file = pathlib.Path(self.trace_path) / "live_output.gz"
+
+        with live_process(
+            self.trace_path,
+            order_delay=50,
+            poll_interval=5,
+            extra_args=["-z", "-o", str(output_file)],
+        ) as live_proc:
+            # Give live process time to start
+            time.sleep(0.3)
+
+            # Write tracepoints
+            for msg in test_messages:
+                result = clltk("trace", "-b", buffer_name, msg)
+                self.assertEqual(
+                    result.returncode, 0, f"Failed to write tracepoint: {result.stderr}"
+                )
+                time.sleep(0.05)
+
+            # Give live time to process and write
+            time.sleep(0.5)
+
+            # Stop live process
+            live_proc.send_signal(signal.SIGINT)
+            live_proc.communicate(timeout=5)
+
+        # Verify the file exists and is valid gzip
+        self.assertTrue(output_file.exists(), "Compressed output file was not created")
+
+        # Decompress and verify content
+        with gzip.open(output_file, "rt") as f:
+            content = f.read()
+
+        self.assertIn(buffer_name, content)
+        for msg in test_messages:
+            self.assertIn(
+                msg, content, f"Message '{msg}' not found in compressed output"
+            )
+
+    def test_compress_with_json(self):
+        """Test --compress works with --json for live output."""
+        buffer_name = "LiveCompressJson"
+
+        # Create tracebuffer
+        result = clltk("buffer", "--buffer", buffer_name, "--size", "4KB")
+        self.assertEqual(result.returncode, 0)
+
+        output_file = pathlib.Path(self.trace_path) / "live_json.gz"
+
+        with live_process(
+            self.trace_path,
+            order_delay=50,
+            poll_interval=5,
+            extra_args=["-z", "-j", "-o", str(output_file)],
+        ) as live_proc:
+            time.sleep(0.3)
+
+            result = clltk("trace", "-b", buffer_name, "json_compress_test")
+            self.assertEqual(result.returncode, 0)
+
+            time.sleep(0.5)
+
+            live_proc.send_signal(signal.SIGINT)
+            live_proc.communicate(timeout=5)
+
+        # Verify JSON output in compressed file
+        self.assertTrue(output_file.exists())
+
+        with gzip.open(output_file, "rt") as f:
+            content = f.read()
+
+        # Should contain JSON with tracebuffer field
+        self.assertIn('"tracebuffer"', content)
+        self.assertIn(buffer_name, content)
 
 
 if __name__ == "__main__":
