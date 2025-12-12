@@ -22,7 +22,7 @@ namespace fs = std::filesystem;
 static void take_snapshot(const std::string &filename, const std::vector<std::string> &tracepoints,
 						  const bool compress, const size_t bucket_size,
 						  const CommonLowLevelTracingKit::snapshot::verbose_function_t &verbose,
-						  const boost::regex *filter_regex = nullptr)
+						  const boost::regex *filter_regex = nullptr, bool recursive = false)
 {
 	// Register output file for cleanup on interrupt
 	OutputFileGuard output_guard(filename);
@@ -49,10 +49,10 @@ static void take_snapshot(const std::string &filename, const std::vector<std::st
 		// Get the tracing path
 		const auto tracing_path = get_tracing_path();
 
-		// Scan directory for tracebuffers
-		for (const auto &entry : std::filesystem::directory_iterator(tracing_path)) {
+		// Helper to process a directory entry
+		auto process_entry = [&](const fs::directory_entry &entry) {
 			if (!entry.is_regular_file())
-				continue;
+				return;
 
 			const auto &path = entry.path();
 			const auto ext = path.extension().string();
@@ -64,6 +64,17 @@ static void take_snapshot(const std::string &filename, const std::vector<std::st
 						name, *filter_regex)) {
 					filtered_tracebuffers.push_back(path.string());
 				}
+			}
+		};
+
+		// Scan directory for tracebuffers (with optional recursion)
+		if (recursive) {
+			for (const auto &entry : fs::recursive_directory_iterator(tracing_path)) {
+				process_entry(entry);
+			}
+		} else {
+			for (const auto &entry : fs::directory_iterator(tracing_path)) {
+				process_entry(entry);
 			}
 		}
 
@@ -128,6 +139,9 @@ static void add_snapshot_command(CLI::App &app)
 		CommonLowLevelTracingKit::cmd::interface::default_filter_pattern;
 	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, filter_str);
 
+	static bool recursive = false;
+	command->add_flag("-r,--recursive", recursive, "Recurse into subdirectories");
+
 	static uint64_t bucket_size{4096};
 	command
 		->add_option("--bucket-size", bucket_size,
@@ -143,7 +157,7 @@ static void add_snapshot_command(CLI::App &app)
 		if (filter_str != CommonLowLevelTracingKit::cmd::interface::default_filter_pattern) {
 			const boost::regex filter_regex{filter_str};
 			take_snapshot(output_file_name, include_paths, compress, bucket_size, verbose_fn,
-						  &filter_regex);
+						  &filter_regex, recursive);
 		} else {
 			take_snapshot(output_file_name, include_paths, compress, bucket_size, verbose_fn);
 		}

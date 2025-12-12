@@ -11,6 +11,8 @@ set(TARGET_SOURCES
     source/low_level/meta_parser.cpp
     source/low_level/stack_section.cpp
     source/low_level/elf_reader.cpp
+    source/Pool.cpp
+    source/ToString.cpp
     source/Tracepoint.cpp
     source/Tracebuffer.cpp
     source/Meta.cpp
@@ -126,7 +128,10 @@ endforeach()
 
 set(PUBLIC_HEADERS 
         include/CommonLowLevelTracingKit/decoder/Common.hpp
+        include/CommonLowLevelTracingKit/decoder/Inline.hpp
         include/CommonLowLevelTracingKit/decoder/Meta.hpp
+        include/CommonLowLevelTracingKit/decoder/Pool.hpp
+        include/CommonLowLevelTracingKit/decoder/ToString.hpp
         include/CommonLowLevelTracingKit/decoder/Tracebuffer.hpp
         include/CommonLowLevelTracingKit/decoder/Tracepoint.hpp
 )

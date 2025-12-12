@@ -13,8 +13,8 @@
 #include <sys/stat.h> // fstat
 #include <unistd.h>	  // close
 
+#include "CommonLowLevelTracingKit/decoder/Inline.hpp"
 #include "crc8.hpp"
-#include "inline.hpp"
 
 namespace source = CommonLowLevelTracingKit::decoder::source;
 namespace internal = CommonLowLevelTracingKit::decoder::source::internal;

@@ -1,6 +1,8 @@
+// Copyright (c) 2024, International Business Machines
+// SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#ifndef DECODER_TOOL_SOURCE_INLINE_HEADER
-#define DECODER_TOOL_SOURCE_INLINE_HEADER
+#ifndef COMMONLOWLEVELTRACINGKIT_DECODER_INLINE_HPP
+#define COMMONLOWLEVELTRACINGKIT_DECODER_INLINE_HPP
 
 #include <cstdint>
 #include <limits>

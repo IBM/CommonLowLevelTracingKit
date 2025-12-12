@@ -1,9 +1,9 @@
 #ifndef DECODER_TOOL_SOURCE_TRACEPOINT_INTERNAL_HEADER
 #define DECODER_TOOL_SOURCE_TRACEPOINT_INTERNAL_HEADER
+#include "CommonLowLevelTracingKit/decoder/Inline.hpp"
+#include "CommonLowLevelTracingKit/decoder/Pool.hpp"
 #include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 #include "file.hpp"
-#include "inline.hpp"
-#include "pool.hpp"
 #include "ringbuffer.hpp"
 #include <new>
 #include <ranges>

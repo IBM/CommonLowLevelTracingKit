@@ -1,8 +1,8 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#ifndef DECODER_TOOL_SOURCE_POOL_HEADER
-#define DECODER_TOOL_SOURCE_POOL_HEADER
+#ifndef COMMONLOWLEVELTRACINGKIT_DECODER_POOL_HPP
+#define COMMONLOWLEVELTRACINGKIT_DECODER_POOL_HPP
 
 #include <atomic>
 #include <cstddef>
@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-#include "inline.hpp"
+#include "CommonLowLevelTracingKit/decoder/Inline.hpp"
 
 namespace CommonLowLevelTracingKit::decoder::source {
 
@@ -43,9 +43,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			for (size_t i = 0; i < initial_blocks; ++i) { grow_locked(); }
 		}
 
-		~MemoryPool() {
-			// Blocks are freed automatically via unique_ptr in m_blocks
-		}
+		~MemoryPool() = default;
 
 		// Non-copyable, non-movable
 		MemoryPool(const MemoryPool &) = delete;
@@ -281,99 +279,23 @@ namespace CommonLowLevelTracingKit::decoder::source {
 	class PooledString {
 	  public:
 		PooledString() noexcept = default;
+		PooledString(StringPool *pool, std::string_view str);
+		PooledString(StringPool *pool, std::string &&str);
+		~PooledString();
 
-		PooledString(StringPool *pool, std::string_view str)
-			: m_pool(pool) {
-			assign(str);
-		}
-
-		PooledString(StringPool *pool, std::string &&str)
-			: m_pool(pool) {
-			assign(std::move(str));
-		}
-
-		~PooledString() { clear(); }
-
-		// Move constructor
-		PooledString(PooledString &&other) noexcept
-			: m_pool(other.m_pool)
-			, m_data(other.m_data)
-			, m_size(other.m_size)
-			, m_uses_pool(other.m_uses_pool) {
-			other.m_data = nullptr;
-			other.m_size = 0;
-			other.m_uses_pool = false;
-		}
-
-		// Move assignment
-		PooledString &operator=(PooledString &&other) noexcept {
-			if (this != &other) {
-				clear();
-				m_pool = other.m_pool;
-				m_data = other.m_data;
-				m_size = other.m_size;
-				m_uses_pool = other.m_uses_pool;
-				other.m_data = nullptr;
-				other.m_size = 0;
-				other.m_uses_pool = false;
-			}
-			return *this;
-		}
+		// Move constructor and assignment
+		PooledString(PooledString &&other) noexcept;
+		PooledString &operator=(PooledString &&other) noexcept;
 
 		// No copy
 		PooledString(const PooledString &) = delete;
 		PooledString &operator=(const PooledString &) = delete;
 
-		void assign(std::string_view str) {
-			clear();
-			if (str.empty()) return;
+		void assign(std::string_view str);
+		void clear() noexcept;
 
-			m_size = str.size();
-			if (m_pool != nullptr && str.size() < STRING_SLOT_SIZE) {
-				// Use pool
-				m_data = static_cast<char *>(m_pool->allocate());
-				if (m_data != nullptr) {
-					std::memcpy(m_data, str.data(), str.size());
-					m_data[str.size()] = '\0';
-					m_uses_pool = true;
-					return;
-				}
-			}
-			// Fall back to heap
-			m_data = new char[str.size() + 1];
-			std::memcpy(m_data, str.data(), str.size());
-			m_data[str.size()] = '\0';
-			m_uses_pool = false;
-		}
-
-		void assign(std::string &&str) {
-			// For rvalue strings, just copy (we can't steal std::string's buffer easily)
-			assign(std::string_view{str});
-		}
-
-		void clear() noexcept {
-			if (m_data != nullptr) {
-				if (m_uses_pool && m_pool != nullptr) {
-					m_pool->deallocate(m_data);
-				} else {
-					delete[] m_data;
-				}
-				m_data = nullptr;
-				m_size = 0;
-				m_uses_pool = false;
-			}
-		}
-
-		[[nodiscard]] std::string_view view() const noexcept {
-			if (m_data == nullptr) return {};
-			return {m_data, m_size};
-		}
-
-		[[nodiscard]] const char *c_str() const noexcept {
-			if (m_data == nullptr) return "";
-			return m_data;
-		}
-
+		[[nodiscard]] std::string_view view() const noexcept;
+		[[nodiscard]] const char *c_str() const noexcept;
 		[[nodiscard]] size_t size() const noexcept { return m_size; }
 		[[nodiscard]] bool empty() const noexcept { return m_size == 0; }
 		[[nodiscard]] bool uses_pool() const noexcept { return m_uses_pool; }
@@ -394,13 +316,8 @@ namespace CommonLowLevelTracingKit::decoder::source {
 	 */
 	class GlobalStringPool {
 	  public:
-		static StringPool &instance() {
-			static StringPool pool{4}; // Start with 4 blocks = 8192 string slots
-			return pool;
-		}
-
-		// Convenience method to create a pooled string
-		static PooledString make(std::string_view str) { return PooledString{&instance(), str}; }
+		static StringPool &instance();
+		static PooledString make(std::string_view str);
 
 	  private:
 		GlobalStringPool() = delete;

@@ -27,8 +27,10 @@ bool OrderedBuffer::push(TracepointPtr tp)
 	std::lock_guard lock(m_mutex);
 
 	if (m_max_size > 0 && m_heap.size() >= m_max_size) {
-		std::pop_heap(m_heap.begin(), m_heap.end(), TimestampCompare{});
-		m_heap.pop_back();
+		// Drop the oldest tracepoint (smallest timestamp) to make room for new one.
+		// Since TimestampCompare uses > for min-heap, the front element is the oldest.
+		// pop_front_locked() removes and returns the front element.
+		pop_front_locked();
 		++m_stats.total_dropped;
 	}
 

@@ -4,8 +4,8 @@
 #ifndef DECODER_TOOL_SOURCE_META_PARSER_HEADER
 #define DECODER_TOOL_SOURCE_META_PARSER_HEADER
 
+#include "CommonLowLevelTracingKit/decoder/Inline.hpp"
 #include "CommonLowLevelTracingKit/decoder/Meta.hpp"
-#include "inline.hpp"
 
 #include <cstdint>
 #include <span>

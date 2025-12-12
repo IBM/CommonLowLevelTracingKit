@@ -5,10 +5,10 @@
 #include <string>
 #include <tuple>
 
+#include "CommonLowLevelTracingKit/decoder/Inline.hpp"
 #include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 #include "definition.hpp"
 #include "file.hpp"
-#include "inline.hpp"
 #include "ringbuffer.hpp"
 
 namespace CommonLowLevelTracingKit::decoder::source {

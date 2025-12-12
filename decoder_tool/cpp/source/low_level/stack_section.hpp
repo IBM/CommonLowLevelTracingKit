@@ -4,9 +4,9 @@
 #ifndef DECODER_TOOL_SOURCE_STACK_SECTION_HEADER
 #define DECODER_TOOL_SOURCE_STACK_SECTION_HEADER
 
+#include "CommonLowLevelTracingKit/decoder/Inline.hpp"
 #include "CommonLowLevelTracingKit/decoder/Meta.hpp"
 #include "file.hpp"
-#include "inline.hpp"
 
 #include <array>
 #include <cstdint>

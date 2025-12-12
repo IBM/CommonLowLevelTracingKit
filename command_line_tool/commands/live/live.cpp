@@ -25,9 +25,9 @@
 #include "commands/ordered_buffer.hpp"
 #include "commands/timespec.hpp"
 
-// Include pool header for TracepointPool (from decoder_tool source)
-#include "pool.hpp"
-#include "to_string.hpp"
+// Include pool and ToString from decoder public API
+#include "CommonLowLevelTracingKit/decoder/Pool.hpp"
+#include "CommonLowLevelTracingKit/decoder/ToString.hpp"
 
 using namespace std::chrono_literals;
 
@@ -60,6 +60,36 @@ void reset_signal_state()
 	g_signal_count.store(0, std::memory_order_release);
 	g_stop_requested.store(false, std::memory_order_release);
 }
+
+/**
+ * @brief RAII guard for signal handler installation/restoration
+ */
+class SignalGuard
+{
+  public:
+	SignalGuard()
+	{
+		struct sigaction sa{};
+		sa.sa_handler = signal_handler;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = 0;
+		sigaction(SIGINT, &sa, &m_old_sigint);
+		sigaction(SIGTERM, &sa, &m_old_sigterm);
+	}
+
+	~SignalGuard()
+	{
+		sigaction(SIGINT, &m_old_sigint, nullptr);
+		sigaction(SIGTERM, &m_old_sigterm, nullptr);
+	}
+
+	SignalGuard(const SignalGuard &) = delete;
+	SignalGuard &operator=(const SignalGuard &) = delete;
+
+  private:
+	struct sigaction m_old_sigint{};
+	struct sigaction m_old_sigterm{};
+};
 
 /**
  * Live streaming decoder for real-time tracepoint monitoring.
@@ -237,7 +267,11 @@ class LiveDecoder
 			for (const auto &[pending, idx] : pending_counts) {
 				auto &tb = m_tracebuffers[idx];
 
-				// Read all pending tracepoints from this buffer
+				// Read all pending tracepoints from this buffer.
+				// This inner loop intentionally drains the buffer completely before moving
+				// to the next one. This ensures we don't starve high-throughput buffers and
+				// maintains timestamp ordering as much as possible within each buffer.
+				// The outer loop handles signal checking between buffers.
 				while (auto tp = tb->next_pooled(m_pool)) {
 					uint64_t ts = tp->timestamp_ns;
 					if (ts > max_seen_ts) {
@@ -577,16 +611,8 @@ static void add_live_command(CLI::App &app)
 		// Resolve input path: use provided path, or fall back to tracing path
 		std::string resolved_input = input_path.empty() ? get_tracing_path().string() : input_path;
 
-		// Save previous signal handlers to restore later
-		struct sigaction old_sigint{}, old_sigterm{};
-
-		// Install signal handlers
-		struct sigaction sa{};
-		sa.sa_handler = signal_handler;
-		sigemptyset(&sa.sa_mask);
-		sa.sa_flags = 0;
-		sigaction(SIGINT, &sa, &old_sigint);
-		sigaction(SIGTERM, &sa, &old_sigterm);
+		// Install signal handlers (RAII - automatically restored on scope exit)
+		SignalGuard signal_guard;
 
 		// Configure decoder
 		LiveDecoder::Config config;
@@ -609,8 +635,6 @@ static void add_live_command(CLI::App &app)
 				config.timeout_ms = static_cast<uint64_t>(ts.offset_ns / 1'000'000);
 			} catch (const std::invalid_argument &e) {
 				std::cerr << "Invalid --timeout: " << e.what() << std::endl;
-				sigaction(SIGINT, &old_sigint, nullptr);
-				sigaction(SIGTERM, &old_sigterm, nullptr);
 				return;
 			}
 		}
@@ -631,8 +655,6 @@ static void add_live_command(CLI::App &app)
 				config.tracepoint_filter.time_min = since_spec.resolve(now_ns, 0, UINT64_MAX);
 			} catch (const std::invalid_argument &e) {
 				std::cerr << "Invalid --since: " << e.what() << std::endl;
-				sigaction(SIGINT, &old_sigint, nullptr);
-				sigaction(SIGTERM, &old_sigterm, nullptr);
 				return;
 			}
 		}
@@ -643,8 +665,6 @@ static void add_live_command(CLI::App &app)
 				config.tracepoint_filter.time_max = until_spec.resolve(now_ns, 0, UINT64_MAX);
 			} catch (const std::invalid_argument &e) {
 				std::cerr << "Invalid --until: " << e.what() << std::endl;
-				sigaction(SIGINT, &old_sigint, nullptr);
-				sigaction(SIGTERM, &old_sigterm, nullptr);
 				return;
 			}
 		}
@@ -655,8 +675,6 @@ static void add_live_command(CLI::App &app)
 		LiveDecoder decoder(config);
 
 		if (!decoder.start()) {
-			sigaction(SIGINT, &old_sigint, nullptr);
-			sigaction(SIGTERM, &old_sigterm, nullptr);
 			show_summary = false;
 			return;
 		}
@@ -669,9 +687,7 @@ static void add_live_command(CLI::App &app)
 		// Stop decoder (handles graceful shutdown)
 		decoder.stop();
 
-		// Restore previous signal handlers
-		sigaction(SIGINT, &old_sigint, nullptr);
-		sigaction(SIGTERM, &old_sigterm, nullptr);
+		// Signal handlers automatically restored by SignalGuard destructor
 
 		// Reset static variables for next run
 		show_summary = false;
