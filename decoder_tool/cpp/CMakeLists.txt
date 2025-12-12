@@ -8,8 +8,12 @@ set(TARGET_SOURCES
     source/low_level/tracebufferfile.cpp
     source/low_level/formatter.cpp
     source/low_level/archive.cpp
+    source/low_level/meta_parser.cpp
+    source/low_level/stack_section.cpp
+    source/low_level/elf_reader.cpp
     source/Tracepoint.cpp
     source/Tracebuffer.cpp
+    source/Meta.cpp
 )
 add_library(clltk_decoder_object OBJECT
     ${TARGET_SOURCES}
@@ -75,6 +79,7 @@ set_target_properties(clltk_decoder_object PROPERTIES
 )
 set(PUBLIC_HEADERS 
         include/CommonLowLevelTracingKit/decoder/Common.hpp
+        include/CommonLowLevelTracingKit/decoder/Meta.hpp
         include/CommonLowLevelTracingKit/decoder/Tracebuffer.hpp
         include/CommonLowLevelTracingKit/decoder/Tracepoint.hpp
 )
@@ -121,6 +126,7 @@ endforeach()
 
 set(PUBLIC_HEADERS 
         include/CommonLowLevelTracingKit/decoder/Common.hpp
+        include/CommonLowLevelTracingKit/decoder/Meta.hpp
         include/CommonLowLevelTracingKit/decoder/Tracebuffer.hpp
         include/CommonLowLevelTracingKit/decoder/Tracepoint.hpp
 )
