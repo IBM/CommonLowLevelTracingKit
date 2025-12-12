@@ -40,9 +40,10 @@ int main(int argc, const char **argv)
 	if (not CommonLowLevelTracingKit::snapshot::take_snapshot(tar_write, tracepoints).has_value()) {
 		std::cerr << "take_snapshot failed" << std::endl;
 	}
-	if (not CommonLowLevelTracingKit::snapshot::take_snapshot_compressed(comp_write, tracepoints)
+	// take_snapshot with compress=true for compressed output
+	if (not CommonLowLevelTracingKit::snapshot::take_snapshot(comp_write, tracepoints, true)
 				.has_value()) {
-		std::cerr << "take_snapshot_compressed failed" << std::endl;
+		std::cerr << "take_snapshot (compressed) failed" << std::endl;
 	}
 
 	tar.close();

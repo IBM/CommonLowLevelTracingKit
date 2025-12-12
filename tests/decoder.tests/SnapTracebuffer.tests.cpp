@@ -216,7 +216,7 @@ TEST_F(decoder_SnapTracebuffer, compressed_archive)
 			file.write(std::bit_cast<char *>(d), static_cast<std::streamsize>(s));
 			return s;
 		};
-		take_snapshot_compressed(func);
+		take_snapshot(func, {}, true); // compress=true
 	}
 	EXPECT_TRUE(SnapTracebuffer::is_formattable(archive_name));
 	auto tbs = SnapTracebuffer::collect(archive_name);

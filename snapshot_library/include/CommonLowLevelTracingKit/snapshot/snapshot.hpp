@@ -44,17 +44,6 @@ take_snapshot_files(write_function_t func, const std::vector<std::string> &file_
 					const bool compress = false, const size_t bucket_size = 4096,
 					const verbose_function_t &verbose = {});
 
-std::optional<size_t>
-take_snapshot_compressed(write_function_t,
-						 const std::vector<std::string> &additional_tracepoints = {},
-						 const size_t bucket_size = 4096, const verbose_function_t &verbose = {});
-
-std::optional<size_t>
-take_snapshot_files_compressed(write_function_t func, const std::vector<std::string> &file_paths,
-							   const std::vector<std::string> &additional_tracepoints = {},
-							   const size_t bucket_size = 4096,
-							   const verbose_function_t &verbose = {});
-
 } // namespace CommonLowLevelTracingKit::snapshot
 
 #endif
