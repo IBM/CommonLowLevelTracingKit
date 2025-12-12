@@ -6,8 +6,11 @@
 #include "commands/interface.hpp"
 #include <boost/regex.hpp>
 #include <filesystem>
+#include <iostream>
+#include <optional>
 #include <stddef.h>
 #include <string>
+#include <vector>
 
 using namespace std::string_literals;
 
@@ -70,12 +73,18 @@ static void add_clear_tracebuffer_command(CLI::App &app)
 	command->description(
 		"Clear all entries from an existing tracebuffer without deleting the file.\n"
 		"The tracebuffer file is preserved; only the ring buffer content is discarded.\n"
-		"Useful for resetting a tracebuffer to start fresh without recreating it.");
+		"Useful for resetting a tracebuffer to start fresh without recreating it.\n\n"
+		"Options:\n"
+		"  -b/--buffer  Clear a specific buffer by name\n"
+		"  -F/--filter  Clear buffers matching a regex pattern\n"
+		"  -a/--all     Clear all buffers (optionally filtered by -F)\n\n"
+		"All operations prompt for confirmation unless -y/--yes is specified.");
 
 	static std::string buffer_name{};
-	static bool all_buffers = false;
 	static std::string filter_str =
 		CommonLowLevelTracingKit::cmd::interface::default_filter_pattern;
+	static bool all_flag = false;
+	static bool yes_flag = false;
 
 	auto buffer_opt = command
 						  ->add_option("name,-b,--buffer", buffer_name,
@@ -84,47 +93,56 @@ static void add_clear_tracebuffer_command(CLI::App &app)
 						  ->check(validator::TracebufferName{})
 						  ->type_name("NAME");
 
-	auto all_opt =
-		command->add_flag("-a,--all", all_buffers, "Clear all tracebuffers matching the filter");
-
 	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, filter_str);
 
-	// Make --buffer and --all mutually exclusive
+	auto all_opt = command->add_flag("-a,--all", all_flag,
+									 "Clear all tracebuffers (optionally filtered by -F)");
+
+	command->add_flag("-y,--yes", yes_flag, "Skip confirmation prompt");
+
+	// Make --buffer mutually exclusive with --all
 	buffer_opt->excludes(all_opt);
 	all_opt->excludes(buffer_opt);
-
-	// Require one of them
-	command->require_option(1, 2);
 
 	command->callback([]() {
 		CommonLowLevelTracingKit::cmd::interface::sync_path_to_library();
 		const auto tracing_path = get_tracing_path();
 
-		// Helper to check file writability
-		auto check_writable = [&tracing_path](const std::string &name) -> std::filesystem::path {
-			// Try both userspace and kernel trace file extensions
+		// Helper to prompt for confirmation
+		auto confirm = [](const std::string &prompt) -> bool {
+			std::cout << prompt << " [y/N] ";
+			std::cout.flush();
+			std::string response;
+			std::getline(std::cin, response);
+			return !response.empty() && (response[0] == 'y' || response[0] == 'Y');
+		};
+
+		// Helper to find tracebuffer file path
+		auto find_tracebuffer =
+			[&tracing_path](const std::string &name) -> std::optional<std::filesystem::path> {
 			for (const auto &ext : {".clltk_trace", ".clltk_ktrace"}) {
 				auto path = tracing_path / (name + ext);
 				if (std::filesystem::exists(path)) {
-					// Check if file is writable
-					auto perms = std::filesystem::status(path).permissions();
-					if ((perms & std::filesystem::perms::owner_write) ==
-						std::filesystem::perms::none) {
-						throw CLI::RuntimeError("Cannot clear readonly tracebuffer: " + name, 1);
-					}
 					return path;
 				}
 			}
-			throw CLI::RuntimeError("Tracebuffer not found: " + name, 1);
+			return std::nullopt;
 		};
 
-		if (all_buffers) {
-			// Clear all tracebuffers matching the filter
+		// Helper to check file writability
+		auto is_writable = [](const std::filesystem::path &path) -> bool {
+			auto perms = std::filesystem::status(path).permissions();
+			return (perms & std::filesystem::perms::owner_write) != std::filesystem::perms::none;
+		};
+
+		// Mode: clear by filter or all
+		if (all_flag ||
+			filter_str != CommonLowLevelTracingKit::cmd::interface::default_filter_pattern) {
 			const boost::regex filter_regex{filter_str};
 
-			size_t cleared_count = 0;
+			// Collect all matching buffers
+			std::vector<std::pair<std::string, std::filesystem::path>> to_clear;
 
-			// Scan directory for tracebuffers
 			for (const auto &entry : std::filesystem::directory_iterator(tracing_path)) {
 				if (!entry.is_regular_file())
 					continue;
@@ -137,28 +155,60 @@ static void add_clear_tracebuffer_command(CLI::App &app)
 
 					if (CommonLowLevelTracingKit::cmd::interface::match_tracebuffer_filter(
 							name, filter_regex)) {
-						// Check if file is writable
-						auto perms = std::filesystem::status(path).permissions();
-						if ((perms & std::filesystem::perms::owner_write) ==
-							std::filesystem::perms::none) {
+						if (!is_writable(path)) {
 							log_error("Skipping readonly tracebuffer: ", name);
 							continue;
 						}
-						clltk_dynamic_tracebuffer_clear(name.c_str());
-						log_verbose("Cleared tracebuffer '", name, "'");
-						cleared_count++;
+						to_clear.emplace_back(name, path);
 					}
 				}
 			}
 
-			if (cleared_count > 0) {
-				log_info("Cleared ", cleared_count, " tracebuffer(s)");
-			} else {
+			if (to_clear.empty()) {
 				log_info("No tracebuffers found matching filter");
+				return;
 			}
+
+			// Prompt for confirmation
+			if (!yes_flag) {
+				std::cout << "The following tracebuffer(s) will be cleared:\n";
+				for (const auto &[name, path] : to_clear) {
+					std::cout << "  - " << name << " (" << path.string() << ")\n";
+				}
+				std::cout << "\nClear " << to_clear.size() << " tracebuffer(s)?";
+				if (!confirm("")) {
+					log_info("Aborted");
+					return;
+				}
+			}
+
+			// Clear all matching buffers
+			for (const auto &[name, path] : to_clear) {
+				clltk_dynamic_tracebuffer_clear(name.c_str());
+				log_verbose("Cleared tracebuffer '", name, "'");
+			}
+			log_info("Cleared ", to_clear.size(), " tracebuffer(s)");
+
 		} else {
-			// Clear a single tracebuffer - check it exists and is writable
-			check_writable(buffer_name);
+			// Mode: clear single buffer by name
+			auto path_opt = find_tracebuffer(buffer_name);
+			if (!path_opt) {
+				throw CLI::RuntimeError("Tracebuffer not found: " + buffer_name, 1);
+			}
+			if (!is_writable(*path_opt)) {
+				throw CLI::RuntimeError("Cannot clear readonly tracebuffer: " + buffer_name, 1);
+			}
+
+			// Prompt for confirmation
+			if (!yes_flag) {
+				std::cout << "Clear tracebuffer '" << buffer_name << "' (" << path_opt->string()
+						  << ")?";
+				if (!confirm("")) {
+					log_info("Aborted");
+					return;
+				}
+			}
+
 			clltk_dynamic_tracebuffer_clear(buffer_name.c_str());
 			log_verbose("Cleared tracebuffer '", buffer_name, "'");
 		}

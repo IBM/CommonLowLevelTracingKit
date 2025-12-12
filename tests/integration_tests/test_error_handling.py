@@ -484,7 +484,7 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
         trace_file.chmod(stat.S_IRUSR)
 
         try:
-            result = clltk("clear", "-b", "ClearReadonly", check=False)
+            result = clltk("clear", "-b", "ClearReadonly", "-y", check=False)
             # Should fail because file is readonly
             self.assertNotEqual(result.returncode, 0)
         finally:
@@ -634,7 +634,7 @@ class TestConcurrentAccess(ErrorHandlingTestCase):
         def clear_buffer(thread_id: int):
             for _ in range(3):
                 try:
-                    result = clltk("clear", "-b", buffer_name, check=False)
+                    result = clltk("clear", "-b", buffer_name, "-y", check=False)
                     if result.returncode != 0:
                         errors.append(
                             f"Thread {thread_id} clear failed: {result.stderr}"

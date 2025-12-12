@@ -476,7 +476,7 @@ class TestClltkClear(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Clear the tracebuffer
-        result = clltk("clear", "--buffer", "TestBuffer")
+        result = clltk("clear", "--buffer", "TestBuffer", "-y")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Verify tracebuffer file still exists
@@ -491,7 +491,7 @@ class TestClltkClear(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Clear with short option
-        result = clltk("clear", "-b", "ShortOptBuffer")
+        result = clltk("clear", "-b", "ShortOptBuffer", "-y")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
     def test_clear_with_positional_name(self):
@@ -501,7 +501,7 @@ class TestClltkClear(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Clear with positional name
-        result = clltk("clear", "PosBuffer")
+        result = clltk("clear", "PosBuffer", "-y")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
     def test_clear_nonexistent_tracebuffer(self):
@@ -547,8 +547,8 @@ class TestClltkClear(unittest.TestCase):
         self.assertEqual(len(files), 1)
         self.assertEqual(files[0].name, "AliasBuffer.clltk_trace")
 
-    def test_clear_all_option(self):
-        """Test --all clears all tracebuffers."""
+    def test_clear_all_with_filter(self):
+        """Test -F/--filter clears all matching tracebuffers."""
         # Create multiple tracebuffers
         for name in ["Buffer1", "Buffer2", "Buffer3"]:
             result = clltk("buffer", "--buffer", name, "--size", "1KB")
@@ -562,16 +562,16 @@ class TestClltkClear(unittest.TestCase):
         files = self._list_trace_files()
         self.assertEqual(len(files), 3)
 
-        # Clear all tracebuffers
-        result = clltk("clear", "--all")
+        # Clear all tracebuffers using filter (with -y to skip confirmation)
+        result = clltk("clear", "-F", ".*", "-y")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Verify all tracebuffer files still exist (clear doesn't delete files)
         files = self._list_trace_files()
         self.assertEqual(len(files), 3)
 
-    def test_clear_all_with_filter(self):
-        """Test --all with --filter clears only matching tracebuffers."""
+    def test_clear_filter_selective(self):
+        """Test --filter clears only matching tracebuffers."""
         # Create multiple tracebuffers with different naming patterns
         buffers_alpha = ["Alpha1", "Alpha2"]
         buffers_beta = ["Beta1", "Beta2"]
@@ -588,10 +588,9 @@ class TestClltkClear(unittest.TestCase):
         files = self._list_trace_files()
         self.assertEqual(len(files), 4)
 
-        # Clear only Alpha buffers using filter
-        result = clltk("clear", "--all", "--filter", "Alpha*", check=False)
-        # Note: This may or may not be supported; we're testing the interface
-        # If not supported, the command may fail or ignore the filter
+        # Clear only Alpha buffers using filter (with -y to skip confirmation)
+        result = clltk("clear", "-F", "^Alpha", "-y")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Verify all tracebuffer files still exist (clear doesn't delete files)
         files = self._list_trace_files()
@@ -609,11 +608,11 @@ class TestClltkClear(unittest.TestCase):
             self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Clear the tracebuffer
-        result = clltk("clear", "--buffer", "ContentClearBuffer")
+        result = clltk("clear", "--buffer", "ContentClearBuffer", "-y")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Decode the tracebuffer - should show no entries or empty output
-        result = clltk("decode", "--buffer", "ContentClearBuffer", check=False)
+        result = clltk("decode", "-F", "ContentClearBuffer", check=False)
         # After clearing, decode should either succeed with no entries
         # or return an appropriate status
         # The exact behavior depends on implementation
@@ -635,7 +634,7 @@ class TestClltkClear(unittest.TestCase):
 
         # Clear multiple times - should all succeed
         for i in range(3):
-            result = clltk("clear", "--buffer", "MultiClearBuffer")
+            result = clltk("clear", "--buffer", "MultiClearBuffer", "-y")
             self.assertEqual(
                 result.returncode,
                 0,
@@ -647,7 +646,7 @@ class TestClltkClear(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Clear one more time
-        result = clltk("clear", "--buffer", "MultiClearBuffer")
+        result = clltk("clear", "--buffer", "MultiClearBuffer", "-y")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
 
         # Verify the file still exists and is usable
