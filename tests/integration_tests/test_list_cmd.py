@@ -251,7 +251,7 @@ class TestListOptions(unittest.TestCase):
         self.tmp_dir.cleanup()
 
     def test_recursive_search(self):
-        """Test that -r/--recursive finds buffers in subdirectories."""
+        """Test that recursive is the default and --no-recursive disables it."""
         # Create subdirectory
         subdir = pathlib.Path(self.tmp_dir.name) / "subdir"
         subdir.mkdir()
@@ -262,15 +262,15 @@ class TestListOptions(unittest.TestCase):
         result = clltk("buffer", "--buffer", "SubdirBuffer", "--size", "1KB", env=env)
         self.assertEqual(result.returncode, 0)
 
-        # List without recursive - should not find it
+        # List default (recursive) - should find it
         result = clltk("list", self.tmp_dir.name)
         self.assertEqual(result.returncode, 0)
-        self.assertNotIn("SubdirBuffer", result.stdout)
-
-        # List with recursive - should find it
-        result = clltk("list", "-r", self.tmp_dir.name)
-        self.assertEqual(result.returncode, 0)
         self.assertIn("SubdirBuffer", result.stdout)
+
+        # List with --no-recursive - should not find it
+        result = clltk("list", "--no-recursive", self.tmp_dir.name)
+        self.assertEqual(result.returncode, 0)
+        self.assertNotIn("SubdirBuffer", result.stdout)
 
     def test_recursive_long_flag(self):
         """Test that --recursive flag works."""
@@ -289,8 +289,8 @@ class TestListOptions(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("NestedBuffer", result.stdout)
 
-    def test_no_recursive_default(self):
-        """Test that non-recursive is the default behavior."""
+    def test_recursive_is_default(self):
+        """Test that recursive is the default behavior."""
         # Create subdirectory with buffer
         subdir = pathlib.Path(self.tmp_dir.name) / "subdir2"
         subdir.mkdir()
@@ -304,11 +304,11 @@ class TestListOptions(unittest.TestCase):
         result = clltk("buffer", "--buffer", "RootBuffer", "--size", "1KB")
         self.assertEqual(result.returncode, 0)
 
-        # List without recursive
+        # List default (recursive) - should find both
         result = clltk("list", self.tmp_dir.name)
         self.assertEqual(result.returncode, 0)
         self.assertIn("RootBuffer", result.stdout)
-        self.assertNotIn("HiddenBuffer", result.stdout)
+        self.assertIn("HiddenBuffer", result.stdout)
 
     def test_filter_by_name_regex(self):
         """Test filtering by tracebuffer name regex."""

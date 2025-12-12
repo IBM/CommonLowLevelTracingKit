@@ -527,7 +527,7 @@ static void add_live_command(CLI::App &app)
 	static uint64_t order_delay_ms{};
 	static uint64_t poll_interval_ms{};
 	static bool show_summary{};
-	static bool recursive{};
+	static bool recursive = true;
 	static bool json_output{};
 
 	// Tracepoint filter options (similar to decode command)
@@ -556,7 +556,7 @@ static void add_live_command(CLI::App &app)
 		->type_name("PATH");
 
 	command->add_flag("-r,--recursive,!--no-recursive", recursive,
-					  "Recurse into subdirectories (default: no)");
+					  "Recurse into subdirectories (default: yes)");
 
 	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, tracebuffer_filter_str);
 

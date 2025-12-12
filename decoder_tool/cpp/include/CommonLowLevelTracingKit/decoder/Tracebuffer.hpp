@@ -174,7 +174,7 @@ namespace CommonLowLevelTracingKit::decoder {
 
 	// List all tracebuffers in a directory with their statistics
 	EXPORT TraceBufferInfoCollection
-	listTraceBuffers(const std::filesystem::path &path, bool recursive = false,
+	listTraceBuffers(const std::filesystem::path &path, bool recursive = true,
 					 const std::function<bool(const std::string &)> &filter = {});
 
 } // namespace CommonLowLevelTracingKit::decoder

@@ -52,7 +52,7 @@ namespace CommonLowLevelTracingKit::decoder {
 	EXPORT std::string metaSourceTypeToString(MetaSourceType type);
 
 	EXPORT MetaSourceInfoCollection
-	getMetaInfo(const std::filesystem::path &path, bool recursive = false,
+	getMetaInfo(const std::filesystem::path &path, bool recursive = true,
 				const std::function<bool(const std::string &)> &filter = {});
 
 	EXPORT bool hasMetaInfo(const std::filesystem::path &path);

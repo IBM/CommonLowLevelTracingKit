@@ -137,8 +137,9 @@ static void add_snapshot_command(CLI::App &app)
 		CommonLowLevelTracingKit::cmd::interface::default_filter_pattern;
 	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, filter_str);
 
-	static bool recursive = false;
-	command->add_flag("-r,--recursive", recursive, "Recurse into subdirectories");
+	static bool recursive = true;
+	command->add_flag("-r,--recursive,!--no-recursive", recursive,
+					  "Recurse into subdirectories (default: yes)");
 
 	static uint64_t bucket_size{4096};
 	command

@@ -150,8 +150,9 @@ static void add_list_command(CLI::App &app)
 					 "(default: CLLTK_TRACING_PATH or current directory)")
 		->type_name("PATH");
 
-	static bool recursive = false;
-	command->add_flag("-r,--recursive", recursive, "Recurse into subdirectories");
+	static bool recursive = true;
+	command->add_flag("-r,--recursive,!--no-recursive", recursive,
+					  "Recurse into subdirectories (default: yes)");
 
 	static std::string filter_str =
 		CommonLowLevelTracingKit::cmd::interface::default_filter_pattern;
