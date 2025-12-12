@@ -2,9 +2,13 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "CommonLowLevelTracingKit/tracing/tracing.h"
+#include "commands/filter.hpp"
 #include "commands/interface.hpp"
+#include <boost/regex.hpp>
 #include <filesystem>
-#include <regex>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include <stddef.h>
 #include <string>
 #include <vector>
@@ -61,17 +65,67 @@ static void add_clear_tracebuffer_command(CLI::App &app)
 		"Useful for resetting a tracebuffer to start fresh without recreating it.");
 
 	static std::string buffer_name{};
-	command
-		->add_option("name,-b,--buffer", buffer_name,
-					 "Name of the tracebuffer to clear.\n"
-					 "Must match an existing tracebuffer at CLLTK_TRACING_PATH")
-		->check(validator::TracebufferName{})
-		->required()
-		->type_name("NAME");
+	static bool all_buffers = false;
+	static std::string filter_str =
+		CommonLowLevelTracingKit::cmd::interface::default_filter_pattern;
+
+	auto buffer_opt = command
+						  ->add_option("name,-b,--buffer", buffer_name,
+									   "Name of the tracebuffer to clear.\n"
+									   "Must match an existing tracebuffer at CLLTK_TRACING_PATH")
+						  ->check(validator::TracebufferName{})
+						  ->type_name("NAME");
+
+	auto all_opt =
+		command->add_flag("-a,--all", all_buffers, "Clear all tracebuffers matching the filter");
+
+	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, filter_str);
+
+	// Make --buffer and --all mutually exclusive
+	buffer_opt->excludes(all_opt);
+	all_opt->excludes(buffer_opt);
+
+	// Require one of them
+	command->require_option(1, 2);
 
 	command->callback([]() {
-		clltk_dynamic_tracebuffer_clear(buffer_name.c_str());
-		log_verbose("Cleared tracebuffer '", buffer_name, "'");
+		if (all_buffers) {
+			// Clear all tracebuffers matching the filter
+			const auto tracing_path = get_tracing_path();
+			const boost::regex filter_regex{filter_str};
+
+			size_t cleared_count = 0;
+
+			// Scan directory for tracebuffers
+			for (const auto &entry : std::filesystem::directory_iterator(tracing_path)) {
+				if (!entry.is_regular_file())
+					continue;
+
+				const auto &path = entry.path();
+				const auto ext = path.extension().string();
+
+				if (ext == ".clltk_trace" || ext == ".clltk_ktrace") {
+					const auto name = path.stem().string();
+
+					if (CommonLowLevelTracingKit::cmd::interface::match_tracebuffer_filter(
+							name, filter_regex)) {
+						clltk_dynamic_tracebuffer_clear(name.c_str());
+						log_verbose("Cleared tracebuffer '", name, "'");
+						cleared_count++;
+					}
+				}
+			}
+
+			if (cleared_count > 0) {
+				log_info("Cleared ", cleared_count, " tracebuffer(s)");
+			} else {
+				log_info("No tracebuffers found matching filter");
+			}
+		} else {
+			// Clear a single tracebuffer
+			clltk_dynamic_tracebuffer_clear(buffer_name.c_str());
+			log_verbose("Cleared tracebuffer '", buffer_name, "'");
+		}
 	});
 }
 
@@ -86,17 +140,16 @@ static void add_list_tracebuffer_command(CLI::App &app)
 	static bool recursive = false;
 	command->add_flag("-r,--recursive", recursive, "Recurse into subdirectories");
 
-	static std::string filter_str = "^.*$";
-	command->add_option("-F,--filter", filter_str, "Filter tracebuffers by name using regex")
-		->capture_default_str()
-		->type_name("REGEX");
+	static std::string filter_str =
+		CommonLowLevelTracingKit::cmd::interface::default_filter_pattern;
+	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, filter_str);
 
 	static bool json_output = false;
 	command->add_flag("-j,--json", json_output, "Output as JSON");
 
 	command->callback([]() {
 		const auto tracing_path = get_tracing_path();
-		const std::regex filter_regex{filter_str};
+		const boost::regex filter_regex{filter_str};
 
 		std::vector<std::filesystem::path> found_buffers;
 
@@ -113,7 +166,8 @@ static void add_list_tracebuffer_command(CLI::App &app)
 				const auto ext = path.extension().string();
 				if (ext == ".clltk_trace" || ext == ".clltk_ktrace") {
 					const auto name = path.stem().string();
-					if (std::regex_match(name, filter_regex)) {
+					if (CommonLowLevelTracingKit::cmd::interface::match_tracebuffer_filter(
+							name, filter_regex)) {
 						found_buffers.push_back(path);
 					}
 				}
@@ -133,16 +187,29 @@ static void add_list_tracebuffer_command(CLI::App &app)
 		scan_directory(tracing_path, recursive);
 
 		if (json_output) {
-			std::cout << "[";
-			bool first = true;
+			rapidjson::Document doc;
+			doc.SetArray();
+			auto &allocator = doc.GetAllocator();
+
 			for (const auto &path : found_buffers) {
-				if (!first)
-					std::cout << ",";
-				first = false;
-				std::cout << "\n  {\"name\": \"" << path.stem().string() << "\", \"path\": \""
-						  << path.string() << "\"}";
+				rapidjson::Value obj;
+				obj.SetObject();
+
+				rapidjson::Value name;
+				name.SetString(path.stem().string().c_str(), allocator);
+				obj.AddMember("name", name, allocator);
+
+				rapidjson::Value pathStr;
+				pathStr.SetString(path.string().c_str(), allocator);
+				obj.AddMember("path", pathStr, allocator);
+
+				doc.PushBack(obj, allocator);
 			}
-			std::cout << "\n]" << std::endl;
+
+			rapidjson::StringBuffer buffer;
+			rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+			doc.Accept(writer);
+			std::cout << buffer.GetString() << std::endl;
 		} else {
 			if (found_buffers.empty()) {
 				log_info("No tracebuffers found in ", tracing_path.string());
@@ -160,6 +227,6 @@ static void init_function() noexcept
 	auto [app, lock] = CommonLowLevelTracingKit::cmd::interface::acquireMainApp();
 	add_create_tracebuffer_command(app);
 	add_clear_tracebuffer_command(app);
-	add_list_tracebuffer_command(app);
+	// Note: list command moved to decoder module (list.cpp) with enhanced statistics
 }
 COMMAND_INIT(init_function);

@@ -14,7 +14,7 @@
 
 #include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 
-namespace CommonLowLevelTracingKit::cmd::live
+namespace CommonLowLevelTracingKit::cmd::interface
 {
 
 using TracepointPtr = decoder::TracepointPtr;
@@ -88,6 +88,6 @@ class OrderedBuffer
 	Stats m_stats{};
 };
 
-} // namespace CommonLowLevelTracingKit::cmd::live
+} // namespace CommonLowLevelTracingKit::cmd::interface
 
 #endif // CLLTK_CMD_LIVE_ORDERED_BUFFER_HPP

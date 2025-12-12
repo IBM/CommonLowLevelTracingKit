@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "CommonLowLevelTracingKit/snapshot/snapshot.hpp"
+#include "commands/filter.hpp"
 #include "commands/interface.hpp"
+#include <boost/regex.hpp>
+#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
@@ -14,10 +17,12 @@
 using namespace std::string_literals;
 
 using namespace CommonLowLevelTracingKit::cmd::interface;
+namespace fs = std::filesystem;
 
 static void take_snapshot(const std::string &filename, const std::vector<std::string> &tracepoints,
 						  const bool compress, const size_t bucket_size,
-						  const CommonLowLevelTracingKit::snapshot::verbose_function_t &verbose)
+						  const CommonLowLevelTracingKit::snapshot::verbose_function_t &verbose,
+						  const boost::regex *filter_regex = nullptr)
 {
 	// Register output file for cleanup on interrupt
 	OutputFileGuard output_guard(filename);
@@ -37,8 +42,42 @@ static void take_snapshot(const std::string &filename, const std::vector<std::st
 		return size;
 	};
 
-	CommonLowLevelTracingKit::snapshot::take_snapshot(write_func, tracepoints, compress,
-													  bucket_size, verbose);
+	if (filter_regex) {
+		// Use the filter to only include matching tracebuffers
+		std::vector<std::string> filtered_tracebuffers;
+
+		// Get the tracing path
+		const auto tracing_path = get_tracing_path();
+
+		// Scan directory for tracebuffers
+		for (const auto &entry : std::filesystem::directory_iterator(tracing_path)) {
+			if (!entry.is_regular_file())
+				continue;
+
+			const auto &path = entry.path();
+			const auto ext = path.extension().string();
+
+			if (ext == ".clltk_trace" || ext == ".clltk_ktrace") {
+				const auto name = path.stem().string();
+
+				if (CommonLowLevelTracingKit::cmd::interface::match_tracebuffer_filter(
+						name, *filter_regex)) {
+					filtered_tracebuffers.push_back(path.string());
+				}
+			}
+		}
+
+		// Add other paths from tracepoints parameter
+		filtered_tracebuffers.insert(filtered_tracebuffers.end(), tracepoints.begin(),
+									 tracepoints.end());
+
+		CommonLowLevelTracingKit::snapshot::take_snapshot(write_func, filtered_tracebuffers,
+														  compress, bucket_size, verbose);
+	} else {
+		// No filter, use all provided tracepoints
+		CommonLowLevelTracingKit::snapshot::take_snapshot(write_func, tracepoints, compress,
+														  bucket_size, verbose);
+	}
 
 	if (is_interrupted()) {
 		log_info("Snapshot interrupted, partial file deleted");
@@ -85,6 +124,10 @@ static void add_snapshot_command(CLI::App &app)
 					 "Can be specified multiple times")
 		->type_name("PATH");
 
+	static std::string filter_str =
+		CommonLowLevelTracingKit::cmd::interface::default_filter_pattern;
+	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, filter_str);
+
 	static uint64_t bucket_size{4096};
 	command
 		->add_option("--bucket-size", bucket_size,
@@ -95,7 +138,15 @@ static void add_snapshot_command(CLI::App &app)
 	command->callback([&]() {
 		// Use global verbose flag to enable detailed snapshot output
 		auto verbose_fn = is_verbose() ? verbose_func : verbose;
-		take_snapshot(output_file_name, include_paths, compress, bucket_size, verbose_fn);
+
+		// Check if a filter was specified
+		if (filter_str != CommonLowLevelTracingKit::cmd::interface::default_filter_pattern) {
+			const boost::regex filter_regex{filter_str};
+			take_snapshot(output_file_name, include_paths, compress, bucket_size, verbose_fn,
+						  &filter_regex);
+		} else {
+			take_snapshot(output_file_name, include_paths, compress, bucket_size, verbose_fn);
+		}
 	});
 }
 

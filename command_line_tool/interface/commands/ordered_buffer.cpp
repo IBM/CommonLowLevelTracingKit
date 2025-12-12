@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-namespace CommonLowLevelTracingKit::cmd::live
+namespace CommonLowLevelTracingKit::cmd::interface
 {
 
 OrderedBuffer::OrderedBuffer(size_t max_size, uint64_t order_delay_ns)
@@ -187,4 +187,4 @@ bool OrderedBuffer::has_ready_locked() const
 	return oldest_ts <= safe_threshold;
 }
 
-} // namespace CommonLowLevelTracingKit::cmd::live
+} // namespace CommonLowLevelTracingKit::cmd::interface

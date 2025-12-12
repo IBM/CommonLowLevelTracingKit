@@ -76,6 +76,12 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 			INLINE size_t next_entry_nr() noexcept { return m_entire_count++; }
 
+			INLINE void skipToEnd(const HeadPart &c) noexcept {
+				m_position = c.next_free_abs();
+				m_old_position = m_position;
+				m_entire_count = c.entries;
+			}
+
 		  private:
 			__uint128_t m_position;
 			__uint128_t m_old_position;
@@ -93,11 +99,19 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		INLINE uint64_t getWrapped() const noexcept { return capture().wrapped; }
 		INLINE uint64_t getDropped() const noexcept { return capture().dropped; }
 		INLINE uint64_t getEntryCount() const noexcept { return capture().entries; }
+		INLINE uint64_t getUsed() const noexcept {
+			const auto c = capture();
+			if (c.wrapped == 0) { return c.next_free; }
+			return getSize();
+		}
+		INLINE uint64_t getAvailable() const noexcept { return getSize() - getUsed(); }
 		INLINE const HeadPart capture() const noexcept {
 			return m_headpart->load(std::memory_order_relaxed);
 		}
 
 		INLINE void reset() noexcept { m_read.reset(capture()); }
+		INLINE void skipToEnd() noexcept { m_read.skipToEnd(capture()); }
+
 		INLINE size_t pendingBytes() noexcept { return pendingBytes(capture()); }
 		INLINE size_t pendingBytes(const HeadPart &c) const noexcept {
 			const auto &r = m_read;

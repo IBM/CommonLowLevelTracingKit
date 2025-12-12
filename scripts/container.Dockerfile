@@ -43,7 +43,7 @@ RUN dnf -y install \
     zlib-ng-compat-devel \
     libtar-devel \
     cli11-devel \
-    nlohmann-json-devel \
+    rapidjson-devel \
     libffi-devel \
     libarchive-devel \
     boost-devel \

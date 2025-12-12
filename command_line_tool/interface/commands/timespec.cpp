@@ -1,18 +1,18 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "timespec.hpp"
+#include "commands/timespec.hpp"
 
 #include <ctime>
 #include <stdexcept>
 #include <string>
 
-namespace CommonLowLevelTracingKit::cmd::decode
+namespace CommonLowLevelTracingKit::cmd::interface
 {
 
 bool TimeSpec::needs_trace_bounds() const noexcept
 {
-	return anchor == Anchor::Min || anchor == Anchor::Max || anchor == Anchor::RelativeToMax;
+	return anchor == Anchor::Min || anchor == Anchor::Max;
 }
 
 bool TimeSpec::is_default_min() const noexcept
@@ -223,14 +223,23 @@ TimeSpec TimeSpec::parse(std::string_view input)
 		return result;
 	}
 
-	// Check for relative format (Python-style): -30s, -5m
+	// Check for relative format: -5m (now minus duration), +5m (now plus duration)
 	if (input[0] == '-') {
-		// Could be negative relative or negative number
-		// If next char is a digit, it's relative duration
+		// If next char is a digit, it's relative duration from now
 		if (input.size() > 1 && input[1] >= '0' && input[1] <= '9') {
-			result.anchor = Anchor::RelativeToMax;
+			result.anchor = Anchor::Now;
 			input.remove_prefix(1);
 			result.offset_ns = -parse_duration_ns(input);
+			return result;
+		}
+	}
+
+	if (input[0] == '+') {
+		// If next char is a digit, it's relative duration from now
+		if (input.size() > 1 && input[1] >= '0' && input[1] <= '9') {
+			result.anchor = Anchor::Now;
+			input.remove_prefix(1);
+			result.offset_ns = parse_duration_ns(input);
 			return result;
 		}
 	}
@@ -276,10 +285,6 @@ uint64_t TimeSpec::resolve(uint64_t now_ns, uint64_t min_ns, uint64_t max_ns) co
 	case Anchor::Max:
 		base_ns = static_cast<int64_t>(max_ns);
 		break;
-
-	case Anchor::RelativeToMax:
-		base_ns = static_cast<int64_t>(max_ns);
-		break;
 	}
 
 	int64_t result = base_ns + offset_ns;
@@ -290,4 +295,4 @@ uint64_t TimeSpec::resolve(uint64_t now_ns, uint64_t min_ns, uint64_t max_ns) co
 	return static_cast<uint64_t>(result);
 }
 
-} // namespace CommonLowLevelTracingKit::cmd::decode
+} // namespace CommonLowLevelTracingKit::cmd::interface

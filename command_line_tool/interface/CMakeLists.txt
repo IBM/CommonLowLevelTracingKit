@@ -3,18 +3,31 @@
 
 
 
-find_package(nlohmann_json REQUIRED)
+find_package(RapidJSON REQUIRED)
 find_package(CLI11 REQUIRED)
+find_package(Boost REQUIRED COMPONENTS regex)
 
-add_library(clltk-cmd-interface INTERFACE)
+set(INTERFACE_SOURCES
+    commands/filter.cpp
+    commands/ordered_buffer.cpp
+    commands/timespec.cpp
+)
+
+add_library(clltk-cmd-interface STATIC ${INTERFACE_SOURCES})
 
 target_include_directories(clltk-cmd-interface
-    INTERFACE
+    PUBLIC
         .
 )
 
 target_link_libraries(clltk-cmd-interface
-    INTERFACE
+    PUBLIC
         CLI11::CLI11
-        nlohmann_json::nlohmann_json
+        Boost::regex
+        clltk_decoder_static
+)
+
+target_include_directories(clltk-cmd-interface
+    PUBLIC
+        ${RAPIDJSON_INCLUDE_DIRS}
 )

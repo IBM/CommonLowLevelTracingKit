@@ -5,8 +5,7 @@ set(TARGET_NAME "clltk-cmd-decoder")
 
 add_library(${TARGET_NAME} OBJECT
     decoder.cpp
-    timespec.cpp
-    filter.cpp
+    list.cpp
 )
 
 target_link_directories(${TARGET_NAME}

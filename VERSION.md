@@ -1,6 +1,9 @@
-1.2.51
+1.2.52
 
 # Change log
+## 1.2.52
+- replace nlohman json with RapidJSON
+- standardize tracebuffer filter style across commands
 ## 1.2.51
 - perf: optimize CRC validation and formatting
 - perf: reduce lock contention in OrderedBuffer

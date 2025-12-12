@@ -76,6 +76,7 @@ class SyncTbInternal : public SyncTracebuffer {
 							  const TracepointFilterFunc &filter) noexcept override;
 	uint64_t pending() noexcept override;
 	uint64_t current_top_entries_nr() const noexcept override;
+	void skipToEnd() noexcept override;
 
   private:
 	TracebufferFile m_tracebuffer_file;
@@ -181,6 +182,10 @@ uint64_t SyncTbInternal::pending() noexcept {
 	return m_tracebuffer_file.getRingbuffer().pendingBytes();
 }
 
+void SyncTbInternal::skipToEnd() noexcept {
+	m_tracebuffer_file.getRingbuffer().skipToEnd();
+}
+
 bool Tracebuffer::is_tracebuffer(const fs::path &path) {
 	if (!path.has_extension()) return false;
 	const auto extension = path.extension();
@@ -257,4 +262,82 @@ SnapTracebufferCollection SnapTracebuffer::collect(const fs::path &path,
 		if (tp && (!tracebufferFilter || tracebufferFilter(*tp))) out.push_back(std::move(tp));
 	}
 	return out;
+}
+
+// Helper to get TraceBufferInfo from a single tracebuffer file
+static TraceBufferInfo getTraceBufferInfo(const fs::path &path) {
+	TraceBufferInfo info;
+	info.path = path;
+	info.name = path.stem().string();
+
+	// Get file modification time
+	std::error_code ec;
+	info.modified = fs::last_write_time(path, ec);
+
+	try {
+		TracebufferFile tbf(path.string());
+		const auto &def = tbf.getDefinition();
+		auto &rb = tbf.getRingbuffer();
+
+		info.name = std::string(def.name());
+		info.source_type = toPublicSourceType(def.sourceType());
+
+		// If source type unknown, fall back to extension-based detection
+		if (info.source_type == SourceType::Unknown) {
+			if (path.extension() == ".clltk_ktrace") {
+				info.source_type = (info.name == "TTY") ? SourceType::TTY : SourceType::Kernel;
+			} else if (path.extension() == ".clltk_trace") {
+				info.source_type = SourceType::Userspace;
+			}
+		}
+
+		info.capacity = rb.getSize();
+		info.used = rb.getUsed();
+		info.available = rb.getAvailable();
+		info.fill_percent =
+			(info.capacity > 0)
+				? (static_cast<double>(info.used) / static_cast<double>(info.capacity) * 100.0)
+				: 0.0;
+		info.entries = rb.getEntryCount();
+		info.dropped = rb.getDropped();
+		info.pending = info.entries - info.dropped;
+		info.wrapped = rb.getWrapped();
+
+	} catch (const std::exception &e) { info.error = e.what(); } catch (...) {
+		info.error = "unknown error reading tracebuffer";
+	}
+
+	return info;
+}
+
+TraceBufferInfoCollection CommonLowLevelTracingKit::decoder::listTraceBuffers(
+	const fs::path &path, bool recursive, const std::function<bool(const std::string &)> &filter) {
+	TraceBufferInfoCollection result;
+
+	if (!fs::exists(path)) { return result; }
+
+	auto processEntry = [&](const fs::path &entry_path) {
+		if (!Tracebuffer::is_tracebuffer(entry_path)) { return; }
+
+		const std::string name = entry_path.stem().string();
+		if (filter && !filter(name)) { return; }
+
+		result.push_back(getTraceBufferInfo(entry_path));
+	};
+
+	if (fs::is_directory(path)) {
+		if (recursive) {
+			for (const auto &entry : fs::recursive_directory_iterator(path)) {
+				if (entry.is_regular_file()) { processEntry(entry.path()); }
+			}
+		} else {
+			for (const auto &entry : fs::directory_iterator(path)) {
+				if (entry.is_regular_file()) { processEntry(entry.path()); }
+			}
+		}
+	} else if (fs::is_regular_file(path)) {
+		processEntry(path);
+	}
+
+	return result;
 }

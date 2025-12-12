@@ -15,10 +15,15 @@
 #include <vector>
 
 #include <boost/regex.hpp>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 
 #include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
+#include "commands/filter.hpp"
 #include "commands/interface.hpp"
-#include "ordered_buffer.hpp"
+#include "commands/ordered_buffer.hpp"
+#include "commands/timespec.hpp"
 
 // Include pool header for TracepointPool (from decoder_tool source)
 #include "pool.hpp"
@@ -27,7 +32,6 @@
 using namespace std::chrono_literals;
 
 using namespace CommonLowLevelTracingKit::cmd::interface;
-namespace live = CommonLowLevelTracingKit::cmd::live;
 using SyncTracebuffer = CommonLowLevelTracingKit::decoder::SyncTracebuffer;
 using SyncTracebufferPtr = CommonLowLevelTracingKit::decoder::SyncTracebufferPtr;
 using Tracepoint = CommonLowLevelTracingKit::decoder::Tracepoint;
@@ -66,12 +70,18 @@ class LiveDecoder
   public:
 	struct Config {
 		std::filesystem::path input_path;
-		std::string tracebuffer_filter = "^.*$";
+		std::string tracebuffer_filter =
+			CommonLowLevelTracingKit::cmd::interface::default_filter_pattern;
 		size_t buffer_size = 100000;
 		uint64_t order_delay_ms = 25;
 		uint64_t poll_interval_ms = 5;
+		uint64_t timeout_ms = 0; // 0 = no timeout; stop if no tracepoint for this duration
 		bool show_summary = false;
+		bool json_output = false;
+		bool start_from_now = false; // Skip existing data, only show new tracepoints
 		FILE *output = stdout;
+		// Add filter for individual tracepoints
+		TracepointFilter tracepoint_filter;
 	};
 
 	explicit LiveDecoder(Config config)
@@ -104,6 +114,13 @@ class LiveDecoder
 
 		for (const auto &tb : m_tracebuffers) {
 			m_tb_name_width = std::max(m_tb_name_width, tb->name().size());
+		}
+
+		// Skip to end if --now flag is set
+		if (m_config.start_from_now) {
+			for (auto &tb : m_tracebuffers) {
+				tb->skipToEnd();
+			}
 		}
 
 		print_header();
@@ -155,7 +172,9 @@ class LiveDecoder
 				for (const auto &entry : std::filesystem::directory_iterator(m_config.input_path)) {
 					if (SyncTracebuffer::is_tracebuffer(entry.path())) {
 						auto tb = SyncTracebuffer::make(entry.path());
-						if (tb && boost::regex_match(tb->name().data(), filter_regex)) {
+						if (tb &&
+							CommonLowLevelTracingKit::cmd::interface::match_tracebuffer_filter(
+								tb->name(), filter_regex)) {
 							m_tracebuffers.push_back(std::move(tb));
 						}
 					}
@@ -163,7 +182,8 @@ class LiveDecoder
 			} else if (SyncTracebuffer::is_tracebuffer(m_config.input_path)) {
 				// Single tracebuffer file
 				auto tb = SyncTracebuffer::make(m_config.input_path);
-				if (tb && boost::regex_match(tb->name().data(), filter_regex)) {
+				if (tb && CommonLowLevelTracingKit::cmd::interface::match_tracebuffer_filter(
+							  tb->name(), filter_regex)) {
 					m_tracebuffers.push_back(std::move(tb));
 				}
 			} else {
@@ -187,6 +207,9 @@ class LiveDecoder
 	{
 		const auto poll_interval = std::chrono::milliseconds(m_config.poll_interval_ms);
 		const uint64_t order_delay_ns = m_config.order_delay_ms * 1'000'000;
+		const bool timeout_enabled = m_config.timeout_ms > 0;
+		const auto timeout_duration = std::chrono::milliseconds(m_config.timeout_ms);
+		auto last_activity_time = std::chrono::steady_clock::now();
 
 		while (!m_stop_reader.load(std::memory_order_acquire) &&
 			   !g_stop_requested.load(std::memory_order_acquire)) {
@@ -221,8 +244,26 @@ class LiveDecoder
 						max_seen_ts = ts;
 					}
 
-					m_buffer.push(std::move(tp));
-					++m_total_read;
+					// Apply tracepoint filter if configured
+					if (m_config.tracepoint_filter.has_any_filter) {
+						// Only push tracepoints that pass the filter
+						if (m_config.tracepoint_filter(*tp)) {
+							m_buffer.push(std::move(tp));
+							++m_total_read;
+							// Reset timeout on activity
+							if (timeout_enabled) {
+								last_activity_time = std::chrono::steady_clock::now();
+							}
+						}
+					} else {
+						// No filter, push all tracepoints
+						m_buffer.push(std::move(tp));
+						++m_total_read;
+						// Reset timeout on activity
+						if (timeout_enabled) {
+							last_activity_time = std::chrono::steady_clock::now();
+						}
+					}
 
 					// Check for stop signal periodically
 					if (g_stop_requested.load(std::memory_order_acquire)) {
@@ -263,6 +304,17 @@ class LiveDecoder
 												   : UINT64_MAX;
 					m_buffer.update_watermark(watermark);
 				}
+
+				// Check idle timeout
+				if (timeout_enabled) {
+					auto now = std::chrono::steady_clock::now();
+					if (now - last_activity_time > timeout_duration) {
+						std::cerr << "Timeout: no tracepoints for " << m_config.timeout_ms << "ms"
+								  << std::endl;
+						break;
+					}
+				}
+
 				std::this_thread::sleep_for(poll_interval);
 			} else {
 				// Have pending tracepoints - set watermark to max seen so far.
@@ -288,7 +340,11 @@ class LiveDecoder
 			// Pop all ready tracepoints
 			auto ready = m_buffer.pop_all_ready();
 			for (auto &tp : ready) {
-				print_tracepoint(*tp);
+				if (m_config.json_output) {
+					print_tracepoint_json(*tp);
+				} else {
+					print_tracepoint(*tp);
+				}
 				++m_total_output;
 			}
 
@@ -304,9 +360,61 @@ class LiveDecoder
 
 	void print_header()
 	{
-		fprintf(m_config.output, " %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n",
-				"!timestamp", "time", static_cast<int>(m_tb_name_width), "tracebuffer", "pid",
-				"tid", "formatted", "file", "line");
+		if (!m_config.json_output) {
+			fprintf(m_config.output, " %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n",
+					"!timestamp", "time", static_cast<int>(m_tb_name_width), "tracebuffer", "pid",
+					"tid", "formatted", "file", "line");
+		}
+		// No header for JSON mode - each object is self-describing
+	}
+
+	void print_tracepoint_json(const Tracepoint &p)
+	{
+		rapidjson::Document doc;
+		doc.SetObject();
+		auto &allocator = doc.GetAllocator();
+
+		doc.AddMember("timestamp_ns", rapidjson::Value(p.timestamp_ns), allocator);
+
+		// Use stack buffers for timestamp formatting (no allocation)
+		char ts_buf[ToString::TIMESTAMP_NS_BUF_SIZE];
+		char dt_buf[ToString::DATE_AND_TIME_BUF_SIZE];
+
+		rapidjson::Value timestamp;
+		timestamp.SetString(ToString::timestamp_ns_to(ts_buf, p.timestamp_ns), allocator);
+		doc.AddMember("timestamp", timestamp, allocator);
+
+		rapidjson::Value datetime;
+		datetime.SetString(ToString::date_and_time_to(dt_buf, p.timestamp_ns), allocator);
+		doc.AddMember("datetime", datetime, allocator);
+
+		rapidjson::Value tracebuffer;
+		tracebuffer.SetString(p.tracebuffer().data(), p.tracebuffer().size(), allocator);
+		doc.AddMember("tracebuffer", tracebuffer, allocator);
+
+		doc.AddMember("pid", rapidjson::Value(p.pid()), allocator);
+		doc.AddMember("tid", rapidjson::Value(p.tid()), allocator);
+
+		rapidjson::Value message;
+		message.SetString(p.msg().data(), p.msg().size(), allocator);
+		doc.AddMember("message", message, allocator);
+
+		rapidjson::Value file;
+		file.SetString(p.file().data(), p.file().size(), allocator);
+		doc.AddMember("file", file, allocator);
+
+		doc.AddMember("line", rapidjson::Value(p.line()), allocator);
+		doc.AddMember("is_kernel", rapidjson::Value(p.is_kernel()), allocator);
+		doc.AddMember("source_type", rapidjson::Value(static_cast<int>(p.source_type)), allocator);
+		doc.AddMember("tracepoint_nr", rapidjson::Value(p.nr), allocator);
+
+		// Generate the JSON string
+		rapidjson::StringBuffer buffer;
+		rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+		doc.Accept(writer);
+
+		// Output to the file
+		fprintf(m_config.output, "%s\n", buffer.GetString());
 	}
 
 	void print_tracepoint(const Tracepoint &p)
@@ -348,7 +456,7 @@ class LiveDecoder
 	}
 
 	Config m_config;
-	live::OrderedBuffer m_buffer;
+	OrderedBuffer m_buffer;
 	TracepointPool m_pool;
 
 	std::vector<SyncTracebufferPtr> m_tracebuffers;
@@ -386,9 +494,23 @@ static void add_live_command(CLI::App &app)
 	static uint64_t poll_interval_ms{};
 	static bool show_summary{};
 	static bool recursive{};
+	static bool json_output{};
+
+	// Tracepoint filter options (similar to decode command)
+	static std::vector<uint32_t> filter_pids;
+	static std::vector<uint32_t> filter_tids;
+	static std::string filter_msg;
+	static std::string filter_msg_regex;
+	static std::string filter_file;
+	static std::string filter_file_regex;
+
+	// Time range and timeout options
+	static std::string filter_since_str;
+	static std::string filter_until_str;
+	static std::string timeout_str;
+	static bool start_from_now{};
 
 	// Default values (used for display and reset)
-	constexpr const char *default_filter = "^.*$";
 	constexpr size_t default_buffer_size = 100000;
 	constexpr uint64_t default_order_delay_ms = 25;
 	constexpr uint64_t default_poll_interval_ms = 5;
@@ -402,11 +524,7 @@ static void add_live_command(CLI::App &app)
 	command->add_flag("-r,--recursive,!--no-recursive", recursive,
 					  "Recurse into subdirectories (default: no)");
 
-	command
-		->add_option("-F,--filter", tracebuffer_filter_str,
-					 "Filter tracebuffers by name using regex")
-		->default_val(default_filter)
-		->type_name("REGEX");
+	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, tracebuffer_filter_str);
 
 	command
 		->add_option("--buffer-size", buffer_size,
@@ -434,6 +552,24 @@ static void add_live_command(CLI::App &app)
 	command->add_flag("-S,--summary", show_summary,
 					  "Show statistics summary on exit (read/output/dropped counts, buffer usage)");
 
+	command->add_flag("-j,--json", json_output, "Output as JSON (one object per line)");
+
+	// Add tracepoint filter options (same as decoder command)
+	add_tracepoint_filter_options(command, filter_pids, filter_tids, filter_msg, filter_msg_regex,
+								  filter_file, filter_file_regex);
+
+	// Add time range options (shared with decode command)
+	add_time_range_options(command, filter_since_str, filter_until_str);
+
+	command->add_flag("-n,--now", start_from_now,
+					  "Skip existing buffered data, only show new tracepoints");
+
+	command
+		->add_option("--timeout", timeout_str,
+					 "Stop if no tracepoint received for this duration.\n"
+					 "Formats: 10s, 1m, 500ms")
+		->type_name("TIME");
+
 	command->callback([&]() {
 		// Reset global signal state (for multiple runs in same process)
 		reset_signal_state();
@@ -460,7 +596,60 @@ static void add_live_command(CLI::App &app)
 		config.order_delay_ms = order_delay_ms;
 		config.poll_interval_ms = poll_interval_ms;
 		config.show_summary = show_summary;
+		config.json_output = json_output;
+		config.start_from_now = start_from_now;
 		config.output = stdout;
+
+		// Parse timeout if specified
+		if (!timeout_str.empty()) {
+			try {
+				// Parse as duration (reuse TimeSpec's duration parser via parse with now anchor)
+				auto ts = TimeSpec::parse("now+" + timeout_str);
+				// Extract the offset which is the duration in ns
+				config.timeout_ms = static_cast<uint64_t>(ts.offset_ns / 1'000'000);
+			} catch (const std::invalid_argument &e) {
+				std::cerr << "Invalid --timeout: " << e.what() << std::endl;
+				sigaction(SIGINT, &old_sigint, nullptr);
+				sigaction(SIGTERM, &old_sigterm, nullptr);
+				return;
+			}
+		}
+
+		// Configure tracepoint filter
+		configure_tracepoint_filter(config.tracepoint_filter, filter_pids, filter_tids, filter_msg,
+									filter_msg_regex, filter_file, filter_file_regex);
+
+		// Parse and apply time range filters
+		auto now = std::chrono::system_clock::now();
+		uint64_t now_ns = static_cast<uint64_t>(
+			std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count());
+
+		if (!filter_since_str.empty()) {
+			try {
+				auto since_spec = TimeSpec::parse(filter_since_str);
+				// For live, min/max anchors don't make sense, only now-based
+				config.tracepoint_filter.time_min = since_spec.resolve(now_ns, 0, UINT64_MAX);
+			} catch (const std::invalid_argument &e) {
+				std::cerr << "Invalid --since: " << e.what() << std::endl;
+				sigaction(SIGINT, &old_sigint, nullptr);
+				sigaction(SIGTERM, &old_sigterm, nullptr);
+				return;
+			}
+		}
+
+		if (!filter_until_str.empty()) {
+			try {
+				auto until_spec = TimeSpec::parse(filter_until_str);
+				config.tracepoint_filter.time_max = until_spec.resolve(now_ns, 0, UINT64_MAX);
+			} catch (const std::invalid_argument &e) {
+				std::cerr << "Invalid --until: " << e.what() << std::endl;
+				sigaction(SIGINT, &old_sigint, nullptr);
+				sigaction(SIGTERM, &old_sigterm, nullptr);
+				return;
+			}
+		}
+
+		config.tracepoint_filter.configure();
 
 		// Create and run decoder
 		LiveDecoder decoder(config);
@@ -484,8 +673,19 @@ static void add_live_command(CLI::App &app)
 		sigaction(SIGINT, &old_sigint, nullptr);
 		sigaction(SIGTERM, &old_sigterm, nullptr);
 
-		// Reset static variables for next run (show_summary is a flag, reset to false)
+		// Reset static variables for next run
 		show_summary = false;
+		json_output = false;
+		start_from_now = false;
+		filter_pids.clear();
+		filter_tids.clear();
+		filter_msg.clear();
+		filter_msg_regex.clear();
+		filter_file.clear();
+		filter_file_regex.clear();
+		filter_since_str.clear();
+		filter_until_str.clear();
+		timeout_str.clear();
 	});
 }
 

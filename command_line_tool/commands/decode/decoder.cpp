@@ -7,18 +7,20 @@
 #include <chrono>
 #include <functional>
 #include <iostream>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include <string>
 #include <vector>
 
 #include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
+#include "commands/filter.hpp"
 #include "commands/interface.hpp"
-#include "filter.hpp"
-#include "timespec.hpp"
+#include "commands/timespec.hpp"
 
 using namespace std::string_literals;
 
 using namespace CommonLowLevelTracingKit::cmd::interface;
-namespace decode = CommonLowLevelTracingKit::cmd::decode;
 using Tracebuffer = CommonLowLevelTracingKit::decoder::Tracebuffer;
 using SnapTracebuffer = CommonLowLevelTracingKit::decoder::SnapTracebuffer;
 using SourceType = CommonLowLevelTracingKit::decoder::SourceType;
@@ -59,10 +61,59 @@ void print_tracepoint(FILE *f, int tb_name_size, const Tracepoint &p)
 				file.data(), p.line());
 	}
 }
-void print_header(FILE *f, int tb_name_size)
+void print_tracepoint_json(FILE *f, const Tracepoint &p)
 {
-	fprintf(f, " %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n", "!timestamp", "time",
-			tb_name_size, "tracebuffer", "pid", "tid", "formatted", "file", "line");
+	rapidjson::Document doc;
+	doc.SetObject();
+	auto &allocator = doc.GetAllocator();
+
+	// Add all the tracepoint fields
+	doc.AddMember("timestamp_ns", rapidjson::Value(p.timestamp_ns), allocator);
+
+	rapidjson::Value timestamp;
+	timestamp.SetString(p.timestamp_str().c_str(), allocator);
+	doc.AddMember("timestamp", timestamp, allocator);
+
+	rapidjson::Value datetime;
+	datetime.SetString(p.date_and_time_str().c_str(), allocator);
+	doc.AddMember("datetime", datetime, allocator);
+
+	rapidjson::Value tracebuffer;
+	tracebuffer.SetString(p.tracebuffer().data(), p.tracebuffer().size(), allocator);
+	doc.AddMember("tracebuffer", tracebuffer, allocator);
+
+	doc.AddMember("pid", rapidjson::Value(p.pid()), allocator);
+	doc.AddMember("tid", rapidjson::Value(p.tid()), allocator);
+
+	rapidjson::Value message;
+	message.SetString(p.msg().data(), p.msg().size(), allocator);
+	doc.AddMember("message", message, allocator);
+
+	rapidjson::Value file;
+	file.SetString(p.file().data(), p.file().size(), allocator);
+	doc.AddMember("file", file, allocator);
+
+	doc.AddMember("line", rapidjson::Value(p.line()), allocator);
+	doc.AddMember("is_kernel", rapidjson::Value(p.is_kernel()), allocator);
+	doc.AddMember("source_type", rapidjson::Value(static_cast<int>(p.source_type)), allocator);
+	doc.AddMember("tracepoint_nr", rapidjson::Value(p.nr), allocator);
+
+	// Generate the JSON string
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	doc.Accept(writer);
+
+	// Output to the file
+	fprintf(f, "%s\n", buffer.GetString());
+}
+
+void print_header(FILE *f, int tb_name_size, bool json_mode = false)
+{
+	if (!json_mode) {
+		fprintf(f, " %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n", "!timestamp", "time",
+				tb_name_size, "tracebuffer", "pid", "tid", "formatted", "file", "line");
+	}
+	// No header for JSON mode - each object is self-describing
 }
 
 static void add_decode_command(CLI::App &app)
@@ -92,12 +143,9 @@ static void add_decode_command(CLI::App &app)
 	command->add_flag("-r,--recursive,!--no-recursive", recursive,
 					  "Recurse into subdirectories (default: yes)");
 
-	static std::string tracebuffer_filter_str = "^.*$";
-	command
-		->add_option("-F,--filter", tracebuffer_filter_str,
-					 "Filter tracebuffers by name using regex")
-		->capture_default_str()
-		->type_name("REGEX");
+	static std::string tracebuffer_filter_str =
+		CommonLowLevelTracingKit::cmd::interface::default_filter_pattern;
+	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, tracebuffer_filter_str);
 
 	static bool json_output = false;
 	command->add_flag("-j,--json", json_output, "Output as JSON (one object per line)");
@@ -129,8 +177,8 @@ static void add_decode_command(CLI::App &app)
 	static std::string filter_msg_regex;
 	static std::string filter_file;
 	static std::string filter_file_regex;
-	static std::string filter_time_min_str;
-	static std::string filter_time_max_str;
+	static std::string filter_since_str;
+	static std::string filter_until_str;
 
 	command
 		->add_option("--pid", filter_pids,
@@ -154,20 +202,8 @@ static void add_decode_command(CLI::App &app)
 		->add_option("--file-regex", filter_file_regex,
 					 "Filter tracepoints by source file path using ECMAScript regex")
 		->type_name("REGEX");
-	command
-		->add_option("--time-min", filter_time_min_str,
-					 "Minimum time filter. Formats:\n"
-					 "  1234567890.5    - Unix timestamp (seconds)\n"
-					 "  2025-11-25T21:46:29 - ISO 8601 datetime\n"
-					 "  now, now-1m     - relative to current time\n"
-					 "  min, min+1h     - relative to trace start\n"
-					 "  -30s            - relative to trace end\n"
-					 "Duration suffixes: ns, us, ms, s, m, h")
-		->type_name("TIME");
-	command
-		->add_option("--time-max", filter_time_max_str,
-					 "Maximum time filter (same formats as --time-min)")
-		->type_name("TIME");
+
+	add_time_range_options(command, filter_since_str, filter_until_str);
 
 	command->callback([&]() {
 		// Resolve input path: use provided path, or fall back to tracing path
@@ -204,7 +240,8 @@ static void add_decode_command(CLI::App &app)
 		const auto tbFilter = [&](const Tracebuffer &tb) {
 			// Check tracebuffer name regex
 			const bool tracebuffer_used =
-				boost::regex_match(tb.name().data(), tracebuffer_filter_regex);
+				CommonLowLevelTracingKit::cmd::interface::match_tracebuffer_filter(
+					tb.name(), tracebuffer_filter_regex);
 			if (!tracebuffer_used)
 				return false;
 
@@ -234,39 +271,31 @@ static void add_decode_command(CLI::App &app)
 		};
 
 		// Parse time specifications
-		decode::TimeSpec time_min_spec, time_max_spec;
-		time_max_spec.anchor = decode::TimeSpec::Anchor::Absolute;
-		time_max_spec.absolute_ns = UINT64_MAX;
+		TimeSpec since_spec, until_spec;
+		until_spec.anchor = TimeSpec::Anchor::Absolute;
+		until_spec.absolute_ns = UINT64_MAX;
 
-		if (!filter_time_min_str.empty()) {
+		if (!filter_since_str.empty()) {
 			try {
-				time_min_spec = decode::TimeSpec::parse(filter_time_min_str);
+				since_spec = TimeSpec::parse(filter_since_str);
 			} catch (const std::invalid_argument &e) {
-				std::cerr << "Invalid --time-min: " << e.what() << std::endl;
+				std::cerr << "Invalid --since: " << e.what() << std::endl;
 				return 1;
 			}
 		}
-		if (!filter_time_max_str.empty()) {
+		if (!filter_until_str.empty()) {
 			try {
-				time_max_spec = decode::TimeSpec::parse(filter_time_max_str);
+				until_spec = TimeSpec::parse(filter_until_str);
 			} catch (const std::invalid_argument &e) {
-				std::cerr << "Invalid --time-max: " << e.what() << std::endl;
+				std::cerr << "Invalid --until: " << e.what() << std::endl;
 				return 1;
 			}
 		}
 
 		// Build tracepoint filter (without time initially if we need bounds)
-		decode::TracepointFilter tpFilter;
-		tpFilter.pids.insert(filter_pids.begin(), filter_pids.end());
-		tpFilter.tids.insert(filter_tids.begin(), filter_tids.end());
-		if (!filter_msg_regex.empty())
-			tpFilter.set_msg_filter(filter_msg_regex, true);
-		else if (!filter_msg.empty())
-			tpFilter.set_msg_filter(filter_msg, false);
-		if (!filter_file_regex.empty())
-			tpFilter.set_file_filter(filter_file_regex, true);
-		else if (!filter_file.empty())
-			tpFilter.set_file_filter(filter_file, false);
+		TracepointFilter tpFilter;
+		configure_tracepoint_filter(tpFilter, filter_pids, filter_tids, filter_msg,
+									filter_msg_regex, filter_file, filter_file_regex);
 
 		// Collect tracebuffers (without time filter for now)
 		// Note: recursive flag affects directory traversal in collect()
@@ -288,15 +317,15 @@ static void add_decode_command(CLI::App &app)
 			std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count());
 
 		// Resolve time specifications
-		tpFilter.time_min = time_min_spec.resolve(now_ns, trace_min_ns, trace_max_ns);
-		tpFilter.time_max = time_max_spec.resolve(now_ns, trace_min_ns, trace_max_ns);
+		tpFilter.time_min = since_spec.resolve(now_ns, trace_min_ns, trace_max_ns);
+		tpFilter.time_max = until_spec.resolve(now_ns, trace_min_ns, trace_max_ns);
 		tpFilter.configure();
 
 		size_t tb_name_size = 0;
 		for (const auto &tb : tbs)
 			tb_name_size = std::max(tb_name_size, tb->name().size());
 
-		print_header(out, tb_name_size);
+		print_header(out, tb_name_size, json_output);
 		size_t tp_count = 0;
 		if (sorted) {
 			static constexpr auto comp = [](const TracepointPtr &a, const TracepointPtr &b) {
@@ -315,7 +344,11 @@ static void add_decode_command(CLI::App &app)
 			}
 			while (!tps.empty() && !is_interrupted()) {
 				const auto tp = tps.top().get();
-				print_tracepoint(out, tb_name_size, *tp);
+				if (json_output) {
+					print_tracepoint_json(out, *tp);
+				} else {
+					print_tracepoint(out, tb_name_size, *tp);
+				}
 				tps.pop();
 				++tp_count;
 			}
@@ -327,7 +360,11 @@ static void add_decode_command(CLI::App &app)
 					if (is_interrupted())
 						break;
 					if (tpFilter(*tp)) {
-						print_tracepoint(out, tb_name_size, *tp);
+						if (json_output) {
+							print_tracepoint_json(out, *tp);
+						} else {
+							print_tracepoint(out, tb_name_size, *tp);
+						}
 						++tp_count;
 					}
 				}
