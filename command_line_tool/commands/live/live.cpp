@@ -634,8 +634,8 @@ static void add_live_command(CLI::App &app)
 				// Extract the offset which is the duration in ns
 				config.timeout_ms = static_cast<uint64_t>(ts.offset_ns / 1'000'000);
 			} catch (const std::invalid_argument &e) {
-				std::cerr << "Invalid --timeout: " << e.what() << std::endl;
-				return;
+				log_error("Invalid --timeout: ", e.what());
+				return 1;
 			}
 		}
 
@@ -654,8 +654,8 @@ static void add_live_command(CLI::App &app)
 				// For live, min/max anchors don't make sense, only now-based
 				config.tracepoint_filter.time_min = since_spec.resolve(now_ns, 0, UINT64_MAX);
 			} catch (const std::invalid_argument &e) {
-				std::cerr << "Invalid --since: " << e.what() << std::endl;
-				return;
+				log_error("Invalid --since: ", e.what());
+				return 1;
 			}
 		}
 
@@ -664,8 +664,8 @@ static void add_live_command(CLI::App &app)
 				auto until_spec = TimeSpec::parse(filter_until_str);
 				config.tracepoint_filter.time_max = until_spec.resolve(now_ns, 0, UINT64_MAX);
 			} catch (const std::invalid_argument &e) {
-				std::cerr << "Invalid --until: " << e.what() << std::endl;
-				return;
+				log_error("Invalid --until: ", e.what());
+				return 1;
 			}
 		}
 
@@ -676,7 +676,7 @@ static void add_live_command(CLI::App &app)
 
 		if (!decoder.start()) {
 			show_summary = false;
-			return;
+			return 1;
 		}
 
 		// Wait for completion (will be interrupted by Ctrl+C)
@@ -702,6 +702,12 @@ static void add_live_command(CLI::App &app)
 		filter_since_str.clear();
 		filter_until_str.clear();
 		timeout_str.clear();
+
+		// Return appropriate exit code
+		if (g_stop_requested.load(std::memory_order_acquire)) {
+			return 130; // Standard exit code for SIGINT
+		}
+		return 0;
 	});
 }
 
