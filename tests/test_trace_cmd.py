@@ -544,6 +544,10 @@ class TestTraceEdgeCases(TraceTestCase):
             "Alias test message not found",
         )
 
+    @unittest.skipIf(
+        os.geteuid() == 0,
+        "Test requires non-root user (root bypasses file permissions)",
+    )
     def test_trace_to_readonly_directory(self):
         """Test trace when directory is not writable."""
         import stat

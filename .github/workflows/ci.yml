@@ -10,6 +10,7 @@ on:
 env:
   CI: true
   CONTAINER_TARGET: ci
+  CONTAINER_CMD: docker
 
 jobs:
   # ============================================
@@ -42,6 +43,7 @@ jobs:
           docker save ${{ steps.tag.outputs.tag }} -o /tmp/ci-container.tar
 
       - name: Upload container
+        if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ci-container

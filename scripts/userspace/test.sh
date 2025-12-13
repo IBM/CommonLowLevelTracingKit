@@ -27,21 +27,12 @@ else
     exit 1 
 fi
 
-python3 -m unittest discover -v -s "./tests/python_tests" -p '*.py'
+python3 -m unittest discover -v -s "./tests" -p 'test_*.py'
 if [ $? -eq 0 ];
 then
-    echo "python unittest test ok"
+    echo "python tests ok"
 else
-    echo "python unittest  test failed"
-    exit 1 
-fi
-
-python3 -m unittest discover -v -s "./tests/integration_tests" -p 'test_*.py'
-if [ $? -eq 0 ];
-then
-    echo "python integration test ok"
-else
-    echo "python integration test failed"
+    echo "python tests failed"
     exit 1 
 fi
 

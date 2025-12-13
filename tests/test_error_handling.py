@@ -379,6 +379,10 @@ class TestMissingRequiredArguments(ErrorHandlingTestCase):
 class TestFilePermissionErrors(ErrorHandlingTestCase):
     """Tests for file permission error handling."""
 
+    @unittest.skipIf(
+        os.geteuid() == 0,
+        "Test requires non-root user (root bypasses file permissions)",
+    )
     def test_readonly_output_file(self):
         """Test decode to readonly output file."""
         self._create_buffer("ReadonlyOutput")
@@ -395,6 +399,10 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
         finally:
             output_file.chmod(stat.S_IWUSR | stat.S_IRUSR)
 
+    @unittest.skipIf(
+        os.geteuid() == 0,
+        "Test requires non-root user (root bypasses file permissions)",
+    )
     def test_no_write_permission_to_directory(self):
         """Test buffer creation in directory without write permission."""
         readonly_dir = pathlib.Path(self.tmp_dir.name) / "readonly_dir"
@@ -416,6 +424,10 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
         finally:
             readonly_dir.chmod(stat.S_IRWXU)
 
+    @unittest.skipIf(
+        os.geteuid() == 0,
+        "Test requires non-root user (root bypasses file permissions)",
+    )
     def test_trace_to_readonly_directory(self):
         """Test trace when tracing directory is not writable."""
         readonly_dir = pathlib.Path(self.tmp_dir.name) / "trace_readonly"
@@ -432,6 +444,10 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
             os.environ["CLLTK_TRACING_PATH"] = old_path
             readonly_dir.chmod(stat.S_IRWXU)
 
+    @unittest.skipIf(
+        os.geteuid() == 0,
+        "Test requires non-root user (root bypasses file permissions)",
+    )
     def test_decode_output_to_readonly_directory(self):
         """Test decode output to directory without write permission."""
         self._create_buffer("ReadonlyDirOutput")
@@ -463,6 +479,10 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
         )
         self.assertNotEqual(result.returncode, 0)
 
+    @unittest.skipIf(
+        os.geteuid() == 0,
+        "Test requires non-root user (root bypasses file permissions)",
+    )
     def test_readonly_trace_file(self):
         """Test trace to readonly trace file."""
         self._create_buffer("ReadonlyTrace")

@@ -9,11 +9,11 @@ if(NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     message( FATAL_ERROR "never include this folder, it is only for python unittest")
 endif()
 
-include(../../../../cmake/CreateVersion.cmake)
+include(../../../cmake/CreateVersion.cmake)
 
 set(CLLTK_TRACING_LIB_TYPE "STATIC")
-add_subdirectory("../../../../tracing_library" "./tracing_library/")
-add_subdirectory("../../../../snapshot_library" "./snapshot_library/")
+add_subdirectory("../../../tracing_library" "./tracing_library/")
+add_subdirectory("../../../snapshot_library" "./snapshot_library/")
 
 set(main_c_file ${CMAKE_CURRENT_BINARY_DIR}/main.gen.c)
 if(NOT EXISTS ${main_c_file})

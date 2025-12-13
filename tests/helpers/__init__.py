@@ -10,6 +10,8 @@ Provides utilities for:
 - Runtime execution and environment management
 - CLLTK CLI command execution
 - Library validation (PIC, relocatable checks)
+- Example test case base class
+- Temp target build utilities
 """
 
 from .base import (
@@ -23,3 +25,5 @@ from .library_validation import (
     is_static_lib_relocatable,
     is_shared_lib_pic,
 )
+from .build_examples_helper import ExamplesTestCase
+from .build_temp_target import process, Language
