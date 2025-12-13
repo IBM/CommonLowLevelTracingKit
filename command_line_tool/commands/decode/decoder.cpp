@@ -16,6 +16,7 @@
 #include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
 #include "commands/filter.hpp"
 #include "commands/interface.hpp"
+#include "commands/output.hpp"
 #include "commands/timespec.hpp"
 
 using namespace std::string_literals;
@@ -41,27 +42,28 @@ struct Formattable : public CLI::Validator {
 	}
 };
 
-void print_tracepoint(FILE *f, int tb_name_size, const Tracepoint &p)
+void print_tracepoint(Output &out, int tb_name_size, const Tracepoint &p)
 {
 	const auto tb_view = p.tracebuffer();
 	const char *const tb = tb_view.data();
-	const int tb_size = tb_view.size();
+	const int tb_size = static_cast<int>(tb_view.size());
 	// Add '*' prefix for kernel traces in the tracebuffer name column
 	const auto msg = p.msg();
 	const auto file = p.file();
 	if (p.is_kernel()) {
-		fprintf(f, " %s | %s | *%-*.*s | %5d | %5d | %.*s | %.*s | %ld\n",
-				p.timestamp_str().c_str(), p.date_and_time_str().c_str(), tb_name_size - 1, tb_size,
-				tb, p.pid(), p.tid(), static_cast<int>(msg.size()), msg.data(),
-				static_cast<int>(file.size()), file.data(), p.line());
+		out.printf(" %s | %s | *%-*.*s | %5d | %5d | %.*s | %.*s | %ld\n",
+				   p.timestamp_str().c_str(), p.date_and_time_str().c_str(), tb_name_size - 1,
+				   tb_size, tb, p.pid(), p.tid(), static_cast<int>(msg.size()), msg.data(),
+				   static_cast<int>(file.size()), file.data(), p.line());
 	} else {
-		fprintf(f, " %s | %s | %-*.*s | %5d | %5d | %.*s | %.*s | %ld\n", p.timestamp_str().c_str(),
-				p.date_and_time_str().c_str(), tb_name_size, tb_size, tb, p.pid(), p.tid(),
-				static_cast<int>(msg.size()), msg.data(), static_cast<int>(file.size()),
-				file.data(), p.line());
+		out.printf(" %s | %s | %-*.*s | %5d | %5d | %.*s | %.*s | %ld\n", p.timestamp_str().c_str(),
+				   p.date_and_time_str().c_str(), tb_name_size, tb_size, tb, p.pid(), p.tid(),
+				   static_cast<int>(msg.size()), msg.data(), static_cast<int>(file.size()),
+				   file.data(), p.line());
 	}
 }
-void print_tracepoint_json(FILE *f, const Tracepoint &p)
+
+std::string tracepoint_to_json(const Tracepoint &p)
 {
 	rapidjson::Document doc;
 	doc.SetObject();
@@ -103,15 +105,19 @@ void print_tracepoint_json(FILE *f, const Tracepoint &p)
 	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 	doc.Accept(writer);
 
-	// Output to the file
-	fprintf(f, "%s\n", buffer.GetString());
+	return buffer.GetString();
 }
 
-void print_header(FILE *f, int tb_name_size, bool json_mode = false)
+void print_tracepoint_json(Output &out, const Tracepoint &p)
+{
+	out.printf("%s\n", tracepoint_to_json(p).c_str());
+}
+
+void print_header(Output &out, int tb_name_size, bool json_mode = false)
 {
 	if (!json_mode) {
-		fprintf(f, " %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n", "!timestamp", "time",
-				tb_name_size, "tracebuffer", "pid", "tid", "formatted", "file", "line");
+		out.printf(" %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n", "!timestamp", "time",
+				   tb_name_size, "tracebuffer", "pid", "tid", "formatted", "file", "line");
 	}
 	// No header for JSON mode - each object is self-describing
 }
@@ -149,6 +155,9 @@ static void add_decode_command(CLI::App &app)
 
 	static bool json_output = false;
 	command->add_flag("-j,--json", json_output, "Output as JSON (one object per line)");
+
+	static bool compress_output = false;
+	command->add_flag("-z,--compress", compress_output, "Compress output with gzip");
 
 	static bool sorted = true;
 	command->add_flag("--sorted", sorted,
@@ -211,10 +220,13 @@ static void add_decode_command(CLI::App &app)
 
 		// Determine output destination
 		bool use_stdout = output_path.empty() || output_path == "-";
-		FILE *out = use_stdout ? stdout : std::fopen(output_path.c_str(), "w+");
-		if (!use_stdout && !out) {
-			log_error("Cannot open output file: ", output_path);
-			return 1;
+
+		// Create output wrapper (compressed or uncompressed)
+		FILE *raw_file = nullptr;
+		auto out = create_output(output_path, compress_output, &raw_file);
+		if (!out) {
+			log_error("Cannot open output: ", output_path.empty() ? "stdout" : output_path);
+			throw CLI::RuntimeError(1);
 		}
 
 		// Register output file for cleanup on interrupt
@@ -280,7 +292,7 @@ static void add_decode_command(CLI::App &app)
 				since_spec = TimeSpec::parse(filter_since_str);
 			} catch (const std::invalid_argument &e) {
 				std::cerr << "Invalid --since: " << e.what() << std::endl;
-				return 1;
+				throw CLI::RuntimeError(1);
 			}
 		}
 		if (!filter_until_str.empty()) {
@@ -288,7 +300,7 @@ static void add_decode_command(CLI::App &app)
 				until_spec = TimeSpec::parse(filter_until_str);
 			} catch (const std::invalid_argument &e) {
 				std::cerr << "Invalid --until: " << e.what() << std::endl;
-				return 1;
+				throw CLI::RuntimeError(1);
 			}
 		}
 
@@ -298,8 +310,7 @@ static void add_decode_command(CLI::App &app)
 									filter_msg_regex, filter_file, filter_file_regex);
 
 		// Collect tracebuffers (without time filter for now)
-		// Note: recursive flag affects directory traversal in collect()
-		auto tbs = SnapTracebuffer::collect(resolved_input, tbFilter);
+		auto tbs = SnapTracebuffer::collect(resolved_input, tbFilter, {}, recursive);
 
 		// Find trace time bounds
 		uint64_t trace_min_ns = UINT64_MAX;
@@ -325,7 +336,7 @@ static void add_decode_command(CLI::App &app)
 		for (const auto &tb : tbs)
 			tb_name_size = std::max(tb_name_size, tb->name().size());
 
-		print_header(out, tb_name_size, json_output);
+		print_header(*out, static_cast<int>(tb_name_size), json_output);
 		size_t tp_count = 0;
 		if (sorted) {
 			static constexpr auto comp = [](const TracepointPtr &a, const TracepointPtr &b) {
@@ -345,9 +356,9 @@ static void add_decode_command(CLI::App &app)
 			while (!tps.empty() && !is_interrupted()) {
 				const auto tp = tps.top().get();
 				if (json_output) {
-					print_tracepoint_json(out, *tp);
+					print_tracepoint_json(*out, *tp);
 				} else {
-					print_tracepoint(out, tb_name_size, *tp);
+					print_tracepoint(*out, static_cast<int>(tb_name_size), *tp);
 				}
 				tps.pop();
 				++tp_count;
@@ -361,9 +372,9 @@ static void add_decode_command(CLI::App &app)
 						break;
 					if (tpFilter(*tp)) {
 						if (json_output) {
-							print_tracepoint_json(out, *tp);
+							print_tracepoint_json(*out, *tp);
 						} else {
-							print_tracepoint(out, tb_name_size, *tp);
+							print_tracepoint(*out, static_cast<int>(tb_name_size), *tp);
 						}
 						++tp_count;
 					}
@@ -371,8 +382,12 @@ static void add_decode_command(CLI::App &app)
 			}
 		}
 
-		if (!use_stdout)
-			std::fclose(out);
+		// Close output (gzip will close automatically via destructor, but we need to close raw
+		// file)
+		if (!compress_output && !use_stdout && raw_file != nullptr) {
+			std::fclose(raw_file);
+		}
+		out.reset(); // Ensure gzip output is flushed and closed
 
 		if (is_interrupted()) {
 			log_info("Interrupted after ", tp_count, " tracepoints");

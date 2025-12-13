@@ -1,4 +1,9 @@
 FROM quay.io/fedora/fedora-minimal:43 as ci
+
+LABEL org.opencontainers.image.source="https://github.com/IBM/CommonLowLevelTracingKit"
+LABEL org.opencontainers.image.description="CI container for CommonLowLevelTracingKit"
+LABEL org.opencontainers.image.licenses="BSD-2-Clause-Patent"
+
 RUN echo "build base-layers"
 
 USER root
@@ -8,9 +13,7 @@ RUN dnf -y update && \
 
 RUN dnf -y install \
     git \
-    git-lfs
-
-RUN dnf -y install \
+    git-lfs  \
     cmake \
     make \
     gcc \
@@ -20,28 +23,18 @@ RUN dnf -y install \
     lcov \
     gcovr \
     libasan \
-    rpmdevtools
-
-# Static analysis tools
-RUN dnf -y install \
+    rpmdevtools \
     cppcheck \
-    jq
-
-RUN dnf -y install \
+    jq \
     file \
     rsync \
     gettext \
     wget \
     unzip \
-    openssl
-
-RUN dnf -y install \
+    openssl \
     python3 \
-    python3-pip
-
-RUN dnf -y install \
+    python3-pip \
     zlib-ng-compat-devel \
-    libtar-devel \
     cli11-devel \
     rapidjson-devel \
     libffi-devel \

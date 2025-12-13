@@ -10,6 +10,13 @@ on:
 env:
   CI: true
   CONTAINER_TARGET: ci
+  CONTAINER_CMD: docker
+  CONTAINER_NON_INTERACTIVE: true
+
+# Required for pushing to ghcr.io
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   # ============================================
@@ -21,11 +28,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build CI-Container
-        run: ./scripts/container.sh echo "container ready"
+      - name: Load CI-Container
+        uses: ./.github/actions/load-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Format Check
         run: ./scripts/container.sh ./scripts/ci-cd/step_format.sh
+
+      - name: Fetch main branch for version check
+        if: github.event_name == 'pull_request'
+        run: git fetch origin main:main
 
       - name: Version Check
         if: github.event_name == 'pull_request'
@@ -41,8 +54,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build CI-Container
-        run: ./scripts/container.sh echo "container ready"
+      - name: Load CI-Container
+        uses: ./.github/actions/load-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         run: ./scripts/container.sh ./scripts/ci-cd/step_build.sh
@@ -63,8 +78,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build CI-Container
-        run: ./scripts/container.sh echo "container ready"
+      - name: Load CI-Container
+        uses: ./.github/actions/load-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package
         run: ./scripts/container.sh ./scripts/ci-cd/step_package.sh

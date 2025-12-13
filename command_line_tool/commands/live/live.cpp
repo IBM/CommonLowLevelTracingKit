@@ -23,11 +23,12 @@
 #include "commands/filter.hpp"
 #include "commands/interface.hpp"
 #include "commands/ordered_buffer.hpp"
+#include "commands/output.hpp"
 #include "commands/timespec.hpp"
 
-// Include pool header for TracepointPool (from decoder_tool source)
-#include "pool.hpp"
-#include "to_string.hpp"
+// Include pool and ToString from decoder public API
+#include "CommonLowLevelTracingKit/decoder/Pool.hpp"
+#include "CommonLowLevelTracingKit/decoder/ToString.hpp"
 
 using namespace std::chrono_literals;
 
@@ -62,6 +63,36 @@ void reset_signal_state()
 }
 
 /**
+ * @brief RAII guard for signal handler installation/restoration
+ */
+class SignalGuard
+{
+  public:
+	SignalGuard()
+	{
+		struct sigaction sa{};
+		sa.sa_handler = signal_handler;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = 0;
+		sigaction(SIGINT, &sa, &m_old_sigint);
+		sigaction(SIGTERM, &sa, &m_old_sigterm);
+	}
+
+	~SignalGuard()
+	{
+		sigaction(SIGINT, &m_old_sigint, nullptr);
+		sigaction(SIGTERM, &m_old_sigterm, nullptr);
+	}
+
+	SignalGuard(const SignalGuard &) = delete;
+	SignalGuard &operator=(const SignalGuard &) = delete;
+
+  private:
+	struct sigaction m_old_sigint{};
+	struct sigaction m_old_sigterm{};
+};
+
+/**
  * Live streaming decoder for real-time tracepoint monitoring.
  * Reader thread polls buffers, output thread emits in timestamp order.
  */
@@ -78,8 +109,9 @@ class LiveDecoder
 		uint64_t timeout_ms = 0; // 0 = no timeout; stop if no tracepoint for this duration
 		bool show_summary = false;
 		bool json_output = false;
+		bool compress_output = false;
 		bool start_from_now = false; // Skip existing data, only show new tracepoints
-		FILE *output = stdout;
+		std::string output_path;	 // Output path ("" or "-" for stdout)
 		// Add filter for individual tracepoints
 		TracepointFilter tracepoint_filter;
 	};
@@ -89,6 +121,11 @@ class LiveDecoder
 		  m_buffer(m_config.buffer_size, m_config.order_delay_ms * 1'000'000),
 		  m_pool(4) // Start with 4 blocks = 4096 tracepoint slots
 	{
+		// Create output (compressed or uncompressed)
+		m_output = create_output(m_config.output_path, m_config.compress_output);
+		if (!m_output) {
+			throw std::runtime_error("Failed to open output");
+		}
 	}
 
 	~LiveDecoder() { stop(); }
@@ -237,7 +274,11 @@ class LiveDecoder
 			for (const auto &[pending, idx] : pending_counts) {
 				auto &tb = m_tracebuffers[idx];
 
-				// Read all pending tracepoints from this buffer
+				// Read all pending tracepoints from this buffer.
+				// This inner loop intentionally drains the buffer completely before moving
+				// to the next one. This ensures we don't starve high-throughput buffers and
+				// maintains timestamp ordering as much as possible within each buffer.
+				// The outer loop handles signal checking between buffers.
 				while (auto tp = tb->next_pooled(m_pool)) {
 					uint64_t ts = tp->timestamp_ns;
 					if (ts > max_seen_ts) {
@@ -350,7 +391,7 @@ class LiveDecoder
 
 			// Flush after processing a batch, not after each tracepoint
 			if (!ready.empty()) {
-				fflush(m_config.output);
+				flush_output();
 			} else {
 				// If nothing ready, wait a bit
 				std::this_thread::sleep_for(10ms);
@@ -358,12 +399,22 @@ class LiveDecoder
 		}
 	}
 
+	/**
+	 * @brief Write formatted output using the Output abstraction
+	 */
+	template <typename... Args> void write_output(const char *format, Args... args)
+	{
+		m_output->printf(format, args...);
+	}
+
+	void flush_output() { m_output->flush(); }
+
 	void print_header()
 	{
 		if (!m_config.json_output) {
-			fprintf(m_config.output, " %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n",
-					"!timestamp", "time", static_cast<int>(m_tb_name_width), "tracebuffer", "pid",
-					"tid", "formatted", "file", "line");
+			write_output(" %-20s | %-29s | %-*s | %-5s | %-5s | %s | %s | %s\n", "!timestamp",
+						 "time", static_cast<int>(m_tb_name_width), "tracebuffer", "pid", "tid",
+						 "formatted", "file", "line");
 		}
 		// No header for JSON mode - each object is self-describing
 	}
@@ -414,7 +465,7 @@ class LiveDecoder
 		doc.Accept(writer);
 
 		// Output to the file
-		fprintf(m_config.output, "%s\n", buffer.GetString());
+		write_output("%s\n", buffer.GetString());
 	}
 
 	void print_tracepoint(const Tracepoint &p)
@@ -432,13 +483,15 @@ class LiveDecoder
 
 		// Add '*' prefix for kernel traces
 		if (p.is_kernel()) {
-			fprintf(m_config.output, " %s | %s | *%-*.*s | %5d | %5d | %s | %s | %ld\n", ts_str,
-					dt_str, tb_width - 1, tb_size, tb, p.pid(), p.tid(), p.msg().data(),
-					p.file().data(), p.line());
+			write_output(" %s | %s | *%-*.*s | %5d | %5d | %.*s | %.*s | %ld\n", ts_str, dt_str,
+						 tb_width - 1, tb_size, tb, p.pid(), p.tid(),
+						 static_cast<int>(p.msg().size()), p.msg().data(),
+						 static_cast<int>(p.file().size()), p.file().data(), p.line());
 		} else {
-			fprintf(m_config.output, " %s | %s | %-*.*s | %5d | %5d | %s | %s | %ld\n", ts_str,
-					dt_str, tb_width, tb_size, tb, p.pid(), p.tid(), p.msg().data(),
-					p.file().data(), p.line());
+			write_output(" %s | %s | %-*.*s | %5d | %5d | %.*s | %.*s | %ld\n", ts_str, dt_str,
+						 tb_width, tb_size, tb, p.pid(), p.tid(), static_cast<int>(p.msg().size()),
+						 p.msg().data(), static_cast<int>(p.file().size()), p.file().data(),
+						 p.line());
 		}
 		// Note: fflush is now done in output_loop after processing a batch
 	}
@@ -458,6 +511,7 @@ class LiveDecoder
 	Config m_config;
 	OrderedBuffer m_buffer;
 	TracepointPool m_pool;
+	std::unique_ptr<Output> m_output;
 
 	std::vector<SyncTracebufferPtr> m_tracebuffers;
 	size_t m_tb_name_width{11}; // "tracebuffer"
@@ -488,12 +542,13 @@ static void add_live_command(CLI::App &app)
 
 	// Use static variables for CLI option storage, but reset defaults in callback
 	static std::string input_path{};
+	static std::string output_path{};
 	static std::string tracebuffer_filter_str{};
 	static size_t buffer_size{};
 	static uint64_t order_delay_ms{};
 	static uint64_t poll_interval_ms{};
 	static bool show_summary{};
-	static bool recursive{};
+	static bool recursive = true;
 	static bool json_output{};
 
 	// Tracepoint filter options (similar to decode command)
@@ -521,8 +576,13 @@ static void add_live_command(CLI::App &app)
 					 "(default: CLLTK_TRACING_PATH or current directory)")
 		->type_name("PATH");
 
+	command
+		->add_option("-o,--output", output_path,
+					 "Output file path (default: stdout, use - for stdout)")
+		->type_name("FILE");
+
 	command->add_flag("-r,--recursive,!--no-recursive", recursive,
-					  "Recurse into subdirectories (default: no)");
+					  "Recurse into subdirectories (default: yes)");
 
 	CommonLowLevelTracingKit::cmd::interface::add_filter_option(command, tracebuffer_filter_str);
 
@@ -554,6 +614,9 @@ static void add_live_command(CLI::App &app)
 
 	command->add_flag("-j,--json", json_output, "Output as JSON (one object per line)");
 
+	static bool compress_output{};
+	command->add_flag("-z,--compress", compress_output, "Compress output with gzip");
+
 	// Add tracepoint filter options (same as decoder command)
 	add_tracepoint_filter_options(command, filter_pids, filter_tids, filter_msg, filter_msg_regex,
 								  filter_file, filter_file_regex);
@@ -577,16 +640,11 @@ static void add_live_command(CLI::App &app)
 		// Resolve input path: use provided path, or fall back to tracing path
 		std::string resolved_input = input_path.empty() ? get_tracing_path().string() : input_path;
 
-		// Save previous signal handlers to restore later
-		struct sigaction old_sigint{}, old_sigterm{};
+		// Install signal handlers (RAII - automatically restored on scope exit)
+		SignalGuard signal_guard;
 
-		// Install signal handlers
-		struct sigaction sa{};
-		sa.sa_handler = signal_handler;
-		sigemptyset(&sa.sa_mask);
-		sa.sa_flags = 0;
-		sigaction(SIGINT, &sa, &old_sigint);
-		sigaction(SIGTERM, &sa, &old_sigterm);
+		// Determine output destination
+		bool use_stdout = output_path.empty() || output_path == "-";
 
 		// Configure decoder
 		LiveDecoder::Config config;
@@ -597,8 +655,9 @@ static void add_live_command(CLI::App &app)
 		config.poll_interval_ms = poll_interval_ms;
 		config.show_summary = show_summary;
 		config.json_output = json_output;
+		config.compress_output = compress_output;
 		config.start_from_now = start_from_now;
-		config.output = stdout;
+		config.output_path = use_stdout ? "-" : output_path;
 
 		// Parse timeout if specified
 		if (!timeout_str.empty()) {
@@ -608,10 +667,8 @@ static void add_live_command(CLI::App &app)
 				// Extract the offset which is the duration in ns
 				config.timeout_ms = static_cast<uint64_t>(ts.offset_ns / 1'000'000);
 			} catch (const std::invalid_argument &e) {
-				std::cerr << "Invalid --timeout: " << e.what() << std::endl;
-				sigaction(SIGINT, &old_sigint, nullptr);
-				sigaction(SIGTERM, &old_sigterm, nullptr);
-				return;
+				log_error("Invalid --timeout: ", e.what());
+				return 1;
 			}
 		}
 
@@ -630,10 +687,8 @@ static void add_live_command(CLI::App &app)
 				// For live, min/max anchors don't make sense, only now-based
 				config.tracepoint_filter.time_min = since_spec.resolve(now_ns, 0, UINT64_MAX);
 			} catch (const std::invalid_argument &e) {
-				std::cerr << "Invalid --since: " << e.what() << std::endl;
-				sigaction(SIGINT, &old_sigint, nullptr);
-				sigaction(SIGTERM, &old_sigterm, nullptr);
-				return;
+				log_error("Invalid --since: ", e.what());
+				return 1;
 			}
 		}
 
@@ -642,10 +697,8 @@ static void add_live_command(CLI::App &app)
 				auto until_spec = TimeSpec::parse(filter_until_str);
 				config.tracepoint_filter.time_max = until_spec.resolve(now_ns, 0, UINT64_MAX);
 			} catch (const std::invalid_argument &e) {
-				std::cerr << "Invalid --until: " << e.what() << std::endl;
-				sigaction(SIGINT, &old_sigint, nullptr);
-				sigaction(SIGTERM, &old_sigterm, nullptr);
-				return;
+				log_error("Invalid --until: ", e.what());
+				return 1;
 			}
 		}
 
@@ -655,10 +708,8 @@ static void add_live_command(CLI::App &app)
 		LiveDecoder decoder(config);
 
 		if (!decoder.start()) {
-			sigaction(SIGINT, &old_sigint, nullptr);
-			sigaction(SIGTERM, &old_sigterm, nullptr);
 			show_summary = false;
-			return;
+			return 1;
 		}
 
 		// Wait for completion (will be interrupted by Ctrl+C)
@@ -669,14 +720,15 @@ static void add_live_command(CLI::App &app)
 		// Stop decoder (handles graceful shutdown)
 		decoder.stop();
 
-		// Restore previous signal handlers
-		sigaction(SIGINT, &old_sigint, nullptr);
-		sigaction(SIGTERM, &old_sigterm, nullptr);
+		// Signal handlers automatically restored by SignalGuard destructor
+		// Output is automatically closed by LiveDecoder destructor
 
 		// Reset static variables for next run
 		show_summary = false;
 		json_output = false;
+		compress_output = false;
 		start_from_now = false;
+		output_path.clear();
 		filter_pids.clear();
 		filter_tids.clear();
 		filter_msg.clear();
@@ -686,6 +738,12 @@ static void add_live_command(CLI::App &app)
 		filter_since_str.clear();
 		filter_until_str.clear();
 		timeout_str.clear();
+
+		// Return appropriate exit code
+		if (g_stop_requested.load(std::memory_order_acquire)) {
+			return 130; // Standard exit code for SIGINT
+		}
+		return 0;
 	});
 }
 

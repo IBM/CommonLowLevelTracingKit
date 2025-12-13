@@ -6,12 +6,12 @@
 #include <string_view>
 #include <utility>
 
+#include "CommonLowLevelTracingKit/decoder/ToString.hpp"
 #include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 #include "TracepointInternal.hpp"
 #include "file.hpp"
 #include "formatter.hpp"
 #include "ringbuffer.hpp"
-#include "to_string.hpp"
 
 using namespace CommonLowLevelTracingKit::decoder;
 using ToString = CommonLowLevelTracingKit::decoder::source::low_level::ToString;

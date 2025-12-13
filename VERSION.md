@@ -1,6 +1,17 @@
-1.2.52
+1.2.53
 
 # Change log
+## 1.2.53
+- ci: use GitHub Container Registry for faster CI container caching
+- ci: consolidate Python tests into single directory structure
+- cli: add gzip compression option to decode and live commands
+- cli: add confirmation prompt to clear command with -y/--yes skip option
+- cli: add meta command for inspecting tracepoint definitions
+- cli: make recursive the default for all directory operations
+- refactor: unify tar and gzip implementations in snapshot library
+- refactor: decoder utilities into public API with header/source separation
+- fix: live command error handling and exit codes
+- test: add integration tests for CLI commands
 ## 1.2.52
 - replace nlohman json with RapidJSON
 - standardize tracebuffer filter style across commands

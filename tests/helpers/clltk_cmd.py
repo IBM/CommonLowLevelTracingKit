@@ -10,7 +10,12 @@ from typing import Optional
 from .base import clltk_cmd_file, get_repo_root, CommandResult
 
 
-def clltk(*args: str, check: bool = True, env: Optional[dict] = None) -> CommandResult:
+def clltk(
+    *args: str,
+    check: bool = True,
+    env: Optional[dict] = None,
+    cwd: Optional[pathlib.Path] = None,
+) -> CommandResult:
     """
     Execute the clltk command-line tool.
 
@@ -18,6 +23,7 @@ def clltk(*args: str, check: bool = True, env: Optional[dict] = None) -> Command
         *args: Command-line arguments to pass to clltk
         check: If True, raise exception on non-zero return code
         env: Optional environment variables
+        cwd: Working directory (default: current directory)
 
     Returns:
         CommandResult with returncode, stdout, and stderr
@@ -26,15 +32,12 @@ def clltk(*args: str, check: bool = True, env: Optional[dict] = None) -> Command
     command = [str(cmd_path)] + list(args)
 
     import os
+
     if env is None:
         env = os.environ.copy()
 
     out = subprocess.run(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=get_repo_root(),
-        env=env
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd, env=env
     )
 
     stdout = out.stdout.decode() if out.stdout else ""

@@ -38,6 +38,17 @@ static void add_create_tracepoint_command(CLI::App &app)
 					 "Supports size suffixes: K, M, G (e.g., 512K, 1M)")
 		->capture_default_str()
 		->transform(CLI::AsSizeValue{false})
+		->check([](const std::string &val) -> std::string {
+			try {
+				size_t parsed = std::stoull(val);
+				if (parsed == 0) {
+					return "size must be greater than zero";
+				}
+			} catch (...) {
+				// Let CLI11 handle parsing errors
+			}
+			return "";
+		})
 		->type_name("SIZE");
 
 	static std::string message{};
@@ -77,6 +88,7 @@ static void add_create_tracepoint_command(CLI::App &app)
 		->type_name("PID");
 
 	command->callback([]() {
+		CommonLowLevelTracingKit::cmd::interface::sync_path_to_library();
 		clltk_dynamic_tracepoint_execution(buffer_name.c_str(), filename.c_str(), line, pid, tid,
 										   "%s", message.c_str());
 		log_verbose("Traced message to ", buffer_name);

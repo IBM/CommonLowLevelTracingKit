@@ -12,8 +12,8 @@
 #include <variant>
 #include <vector>
 
+#include "CommonLowLevelTracingKit/decoder/Inline.hpp"
 #include "file.hpp"
-#include "inline.hpp"
 
 namespace CommonLowLevelTracingKit::decoder::source {
 

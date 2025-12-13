@@ -33,13 +33,11 @@ elseif(${CMAKE_C_COMPILER_ID} MATCHES "Clang")
 endif()
 add_library(clltk_snapshot_static STATIC
     source/file.cpp
-    source/snapshot_tar.cpp
-    source/snapshot_gzip.cpp
+    source/snapshot.cpp
 )
 add_library(clltk_snapshot_shared SHARED
     source/file.cpp
-    source/snapshot_tar.cpp
-    source/snapshot_gzip.cpp
+    source/snapshot.cpp
 )
 foreach(LIB_NAME clltk_snapshot_static clltk_snapshot_shared)
     target_include_directories(${LIB_NAME}

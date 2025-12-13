@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <variant>
 
-#include "inline.hpp"
+#include "CommonLowLevelTracingKit/decoder/Inline.hpp"
 
 namespace formatter = CommonLowLevelTracingKit::decoder::source::formatter;
 using namespace CommonLowLevelTracingKit::decoder::exception;
@@ -162,6 +162,7 @@ INLINE static auto fix_types_based_on_format(const std::string_view format,
 				parse_state = other;
 			} else if (is_final_char(c)) { // end of format specifier
 				if (arg_count >= raw_types.size()) [[unlikely]] {
+					// Check before accessing raw_types[arg_count] to prevent out-of-bounds access
 					CLLTK_DECODER_THROW(FormattingFailed,
 										"format specifier count exceeds argument count");
 				}
@@ -183,7 +184,7 @@ INLINE static auto fix_types_based_on_format(const std::string_view format,
 		}
 	}
 	if (arg_count != raw_types.size()) [[unlikely]]
-		CLLTK_DECODER_THROW(FormattingFailed, "invalid format specifier");
+		CLLTK_DECODER_THROW(FormattingFailed, "format specifier count mismatch");
 	return out;
 }
 

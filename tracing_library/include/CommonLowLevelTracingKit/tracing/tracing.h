@@ -84,6 +84,8 @@ void clltk_dynamic_tracepoint_execution(const char *buffer_name, const char *fil
 void clltk_dynamic_tracebuffer_clear(const char *buffer_name)
 	__attribute__((used, visibility("default")));
 
+void clltk_set_tracing_path(const char *path) __attribute__((used, visibility("default")));
+
 void clltk_unrecoverbale_error_callback(const char *const) __attribute__((weak, noreturn));
 
 #ifdef CLLTK_FOR_CPP

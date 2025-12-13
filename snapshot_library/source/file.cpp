@@ -64,6 +64,17 @@ CommonLowLevelTracingKit::snapshot::RegularFile::RegularFile(
 		content = mmap(nullptr, status.st_size, PROT_READ, MAP_PRIVATE, m_fd, 0);
 	}
 }
+
+CommonLowLevelTracingKit::snapshot::RegularFile::RegularFile(const std::filesystem::path &file_path)
+{
+	const std::string full_path = file_path.string();
+	filepath = file_path.filename().string(); // Use just the filename in the archive
+	stat(full_path.c_str(), &status);
+	m_fd = open(full_path.c_str(), O_RDONLY);
+	if (m_fd > 0) {
+		content = mmap(nullptr, status.st_size, PROT_READ, MAP_PRIVATE, m_fd, 0);
+	}
+}
 CommonLowLevelTracingKit::snapshot::RegularFile::~RegularFile()
 {
 	if (m_fd > 0) {

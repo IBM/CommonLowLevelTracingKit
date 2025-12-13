@@ -1,5 +1,5 @@
 #include "archive.hpp"
-#include "inline.hpp"
+#include "CommonLowLevelTracingKit/decoder/Inline.hpp"
 
 #include <archive.h>
 #include <archive_entry.h>
@@ -30,7 +30,6 @@ bool Archive::is_archive(const fs::path &path) {
 		archive_read_free(a);
 		return false;
 	}
-	[[maybe_unused]] const int archive_type = archive_format(a);
 	archive_read_close(a);
 	archive_read_free(a);
 

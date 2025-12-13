@@ -1,7 +1,7 @@
 #ifndef DECODER_TOOL_SOURCE_DEFINITION_HEADER
 #define DECODER_TOOL_SOURCE_DEFINITION_HEADER
+#include "CommonLowLevelTracingKit/decoder/Inline.hpp"
 #include "file.hpp"
-#include "inline.hpp"
 #include <cstring>
 #include <string_view>
 

@@ -247,16 +247,24 @@ static INLINE void add(SnapTracebufferCollection &out, SnapTracebufferCollection
 }
 SnapTracebufferCollection SnapTracebuffer::collect(const fs::path &path,
 												   const TracebufferFilterFunc &tracebufferFilter,
-												   const TracepointFilterFunc &tracepointFilter) {
+												   const TracepointFilterFunc &tracepointFilter,
+												   bool recursive) {
 	SnapTracebufferCollection out{};
 	if (!fs::exists(path)) return out;
 	if (fs::is_directory(path)) {
-		for (auto const &entry : fs::recursive_directory_iterator(path)) {
-			if (Tracebuffer::is_tracebuffer(entry))
-				add(out, collect(entry, tracebufferFilter, tracepointFilter));
+		if (recursive) {
+			for (auto const &entry : fs::recursive_directory_iterator(path)) {
+				if (Tracebuffer::is_tracebuffer(entry))
+					add(out, collect(entry, tracebufferFilter, tracepointFilter, recursive));
+			}
+		} else {
+			for (auto const &entry : fs::directory_iterator(path)) {
+				if (Tracebuffer::is_tracebuffer(entry))
+					add(out, collect(entry, tracebufferFilter, tracepointFilter, recursive));
+			}
 		}
 	} else if (auto archive = Archive::make(path)) {
-		add(out, collect(archive->dir(), tracebufferFilter, tracepointFilter));
+		add(out, collect(archive->dir(), tracebufferFilter, tracepointFilter, recursive));
 	} else if (Tracebuffer::is_tracebuffer(path)) {
 		auto tp = make(path, tracepointFilter);
 		if (tp && (!tracebufferFilter || tracebufferFilter(*tp))) out.push_back(std::move(tp));

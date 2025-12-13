@@ -1,6 +1,6 @@
 #ifndef DECODER_TOOL_SOURCE_FILE_HEADER
 #define DECODER_TOOL_SOURCE_FILE_HEADER
-#include "inline.hpp"
+#include "CommonLowLevelTracingKit/decoder/Inline.hpp"
 #include <algorithm>
 #include <array>
 #include <cstdint>

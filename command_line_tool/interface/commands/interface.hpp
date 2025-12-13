@@ -51,6 +51,19 @@ inline std::filesystem::path get_tracing_path(void)
 	return ".";
 }
 
+// Forward declaration of C library function
+extern "C" void clltk_set_tracing_path(const char *path);
+
+// Sync the -P/--path option to the C tracing library.
+// Call this before invoking C library functions that use the tracing path.
+inline void sync_path_to_library(void)
+{
+	const auto &path_opt = get_path_option();
+	if (!path_opt.empty()) {
+		clltk_set_tracing_path(path_opt.c_str());
+	}
+}
+
 enum class Verbosity { quiet, normal, verbose };
 
 Verbosity get_verbosity(void);

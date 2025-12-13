@@ -32,22 +32,13 @@ fi
 echo "C/C++ tests: PASSED"
 echo ""
 
-# Python unit tests
-echo "Running Python unit tests..."
-if ! python3 -m unittest discover -v -s "./tests/python_tests" -p '*.py'; then
-    echo "FAILED: Python unit tests failed"
+# Python tests
+echo "Running Python tests..."
+if ! python3 -m unittest discover -v -s "./tests" -p 'test_*.py'; then
+    echo "FAILED: Python tests failed"
     exit 1
 fi
-echo "Python unit tests: PASSED"
-echo ""
-
-# Python integration tests
-echo "Running Python integration tests..."
-if ! python3 -m unittest discover -v -s "./tests/integration_tests" -p 'test_*.py'; then
-    echo "FAILED: Python integration tests failed"
-    exit 1
-fi
-echo "Python integration tests: PASSED"
+echo "Python tests: PASSED"
 echo ""
 
 echo "========================================"
