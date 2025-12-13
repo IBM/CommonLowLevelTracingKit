@@ -1,15 +1,45 @@
 name: 'Load CI Container'
-description: 'Downloads and loads the CI container from artifacts'
+description: 'Loads CI container from GitHub Container Registry or builds if needed'
+
+inputs:
+  token:
+    description: 'GitHub token for registry access'
+    required: true
 
 runs:
   using: 'composite'
   steps:
-    - name: Download container
-      uses: actions/download-artifact@v4
-      with:
-        name: ci-container
-        path: /tmp
-
-    - name: Load container
+    - name: Calculate container tag
+      id: tag
       shell: bash
-      run: docker load -i /tmp/ci-container.tar
+      run: |
+        MD5_SUM=$(md5sum ./scripts/container.Dockerfile | cut -d' ' -f1)
+        echo "md5=$MD5_SUM" >> $GITHUB_OUTPUT
+        echo "local_tag=clltk_ci-ci-$MD5_SUM" >> $GITHUB_OUTPUT
+        # Convert repo to lowercase for ghcr.io
+        REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        echo "registry_image=ghcr.io/${REPO_LOWER}/ci:${MD5_SUM}" >> $GITHUB_OUTPUT
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.token }}
+
+    - name: Pull or Build Container
+      shell: bash
+      run: |
+        IMAGE="${{ steps.tag.outputs.registry_image }}"
+        LOCAL_TAG="${{ steps.tag.outputs.local_tag }}"
+        
+        if docker pull "$IMAGE" 2>/dev/null; then
+          echo "Container pulled from registry"
+          docker tag "$IMAGE" "$LOCAL_TAG"
+        else
+          echo "Building container (not found in registry)"
+          docker build --file ./scripts/container.Dockerfile --target ci --tag "$LOCAL_TAG" .
+          docker tag "$LOCAL_TAG" "$IMAGE"
+          # Push may fail for fork PRs (read-only token) - that's okay
+          docker push "$IMAGE" || echo "Warning: Could not push to registry (this is expected for fork PRs)"
+        fi

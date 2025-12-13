@@ -37,7 +37,15 @@ else
     TAG="clltk_ci-$CONTAINER_TARGET-$MD5_SUM"
 fi
 
-if ! $CONTAINER_CMD image exists "$TAG"; then 
+image_exists() {
+    if is_podman $CONTAINER_CMD; then
+        $CONTAINER_CMD image exists "$1"
+    else
+        $CONTAINER_CMD image inspect "$1" > /dev/null 2>&1
+    fi
+}
+
+if ! image_exists "$TAG"; then 
     # build container container
     echo "TAG = $TAG"
 
@@ -114,18 +122,21 @@ container_cmd+=" --entrypoint /bin/bash"
 container_cmd+=" --network=host"
 container_cmd+=" --hostname clltk-ci"
 container_cmd+=" --rm"
-container_cmd+=" --interactive"
-container_cmd+=" --tty"
 
-# last one
+# Add interactive flags unless running in non-interactive mode (e.g. CI)
+if [[ "${CONTAINER_NON_INTERACTIVE:-false}" != "true" ]]; then
+    container_cmd+=" --interactive --tty"
+fi
+
 container_cmd+=" $TAG"
 
 # forward into container 
 if [ $# -ne 0 ]; then
-    # Append -c and the quoted, escaped command to be executed inside the container
-    container_cmd+=" --login -i -c \"$(printf '%q ' "$@")\""
+    # Run the provided command
+    container_cmd+=" -c \"$(printf '%q ' "$@")\""
 else
-    container_cmd+=" --login -i" # bash interactive
+    # Interactive shell
+    container_cmd+=" --login -i"
 fi
 
 echo run = "$container_cmd"

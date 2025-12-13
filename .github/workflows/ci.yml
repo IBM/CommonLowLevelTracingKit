@@ -11,60 +11,34 @@ env:
   CI: true
   CONTAINER_TARGET: ci
   CONTAINER_CMD: docker
+  CONTAINER_NON_INTERACTIVE: true
+
+# Required for pushing to ghcr.io
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  # ============================================
-  # Build container once and share via artifact
-  # ============================================
-  build-container:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Calculate container tag
-        id: tag
-        run: |
-          MD5_SUM=$(md5sum ./scripts/container.Dockerfile | cut -d' ' -f1)
-          echo "md5=$MD5_SUM" >> $GITHUB_OUTPUT
-          echo "tag=clltk_ci-ci-$MD5_SUM" >> $GITHUB_OUTPUT
-
-      - name: Restore cached container
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/ci-container.tar
-          key: ci-container-${{ steps.tag.outputs.md5 }}
-
-      - name: Build CI-Container
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          docker build --file ./scripts/container.Dockerfile --target ci --tag ${{ steps.tag.outputs.tag }} .
-          docker save ${{ steps.tag.outputs.tag }} -o /tmp/ci-container.tar
-
-      - name: Upload container
-        if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-container
-          path: /tmp/ci-container.tar
-          retention-days: 90
-
   # ============================================
   # Quick checks (format, version) - fail fast
   # ============================================
   checks:
     runs-on: ubuntu-latest
-    needs: build-container
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Load CI-Container
         uses: ./.github/actions/load-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Format Check
         run: ./scripts/container.sh ./scripts/ci-cd/step_format.sh
+
+      - name: Fetch main branch for version check
+        if: github.event_name == 'pull_request'
+        run: git fetch origin main:main
 
       - name: Version Check
         if: github.event_name == 'pull_request'
@@ -75,13 +49,15 @@ jobs:
   # ============================================
   build-and-test:
     runs-on: ubuntu-latest
-    needs: [build-container, checks]
+    needs: checks
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Load CI-Container
         uses: ./.github/actions/load-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         run: ./scripts/container.sh ./scripts/ci-cd/step_build.sh
@@ -97,13 +73,15 @@ jobs:
   # ============================================
   package:
     runs-on: ubuntu-latest
-    needs: [build-container, build-and-test]
+    needs: build-and-test
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Load CI-Container
         uses: ./.github/actions/load-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package
         run: ./scripts/container.sh ./scripts/ci-cd/step_package.sh
