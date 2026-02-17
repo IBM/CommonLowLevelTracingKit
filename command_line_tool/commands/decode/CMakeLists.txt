@@ -9,11 +9,6 @@ add_library(${TARGET_NAME} OBJECT
     meta.cpp
 )
 
-target_link_directories(${TARGET_NAME}
-    PRIVATE
-        .
-)
-
 target_link_libraries(${TARGET_NAME}
     PRIVATE
         clltk-cmd-interface

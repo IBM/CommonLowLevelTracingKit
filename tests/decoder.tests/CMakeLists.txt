@@ -1,7 +1,7 @@
 # Copyright (c) 2024, International Business Machines
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
-file(GLOB CPP_FILES "*.cpp")
+file(GLOB CPP_FILES CONFIGURE_DEPENDS "*.cpp")
 
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/args_cpp.tests.cpp

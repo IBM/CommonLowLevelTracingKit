@@ -6,7 +6,7 @@
 
 find_package(Boost REQUIRED CONFIG)
 
-file(GLOB CPP_FILES "*.cpp")
+file(GLOB CPP_FILES CONFIGURE_DEPENDS "*.cpp")
 
 add_executable(cmd_tests
     ${CPP_FILES}

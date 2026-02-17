@@ -11,7 +11,7 @@ set(CLLTK_COMMAND_LINE_COMMANDS "") # each command will add it self to this list
 # So disabling a command must happens in its own cmake file
 
 # iterate over commands 
-file(GLOB COMMAND_FOLDERS ${CMAKE_CURRENT_SOURCE_DIR}/commands/*)
+file(GLOB COMMAND_FOLDERS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/commands/*)
 foreach(COMMAND_FOLDER IN LISTS COMMAND_FOLDERS)
     if(IS_DIRECTORY ${COMMAND_FOLDER} AND EXISTS ${COMMAND_FOLDER}/CMakeLists.txt)
         add_subdirectory(${COMMAND_FOLDER})
