@@ -1,6 +1,8 @@
-1.2.53
+1.2.54
 
 # Change log
+## 1.2.54
+- docs: add AGENTS.md for AI coding agent instructions
 ## 1.2.53
 - ci: use GitHub Container Registry for faster CI container caching
 - ci: consolidate Python tests into single directory structure
