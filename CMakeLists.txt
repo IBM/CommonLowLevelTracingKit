@@ -13,6 +13,7 @@ include(cmake/CheckPICEnabled.cmake)
 include(cmake/CodeCoverage.cmake)
 include(cmake/ASAN.cmake)
 include(cmake/StaticAnalysis.cmake)
+include(cmake/CompileWarnings.cmake)
 
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     # We're in the root, define additional targets for developers.
