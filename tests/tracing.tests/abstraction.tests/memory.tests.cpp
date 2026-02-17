@@ -11,6 +11,7 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 using namespace testing;
+
 TEST(memory, heap_allocation)
 {
 	const size_t first_size = 1024 * memory_get_page_size();
@@ -19,8 +20,13 @@ TEST(memory, heap_allocation)
 	memcpy_and_flush(ptr, data.data(), data.size() + 1);
 	EXPECT_EQ(ptr, data);
 	memory_heap_free(ptr);
+#ifdef CLLTK_ASAN_ENABLED
+	EXPECT_EXIT({ *ptr = 'A'; }, ::testing::ExitedWithCode(1), ".*");
+	EXPECT_EXIT({ [[maybe_unused]] char c = *ptr; }, ::testing::ExitedWithCode(1), ".*");
+#else
 	EXPECT_EXIT({ *ptr = 'A'; }, ::testing::KilledBySignal(SIGSEGV), ".*");
 	EXPECT_EXIT({ [[maybe_unused]] char c = *ptr; }, ::testing::KilledBySignal(SIGSEGV), ".*");
+#endif
 }
 
 TEST(memory, real_relocate)
@@ -44,7 +50,10 @@ TEST(memory, equal_relocate)
 	char *ptrA = std::bit_cast<char *>(memory_heap_allocation(first_size));
 	memcpy_and_flush(ptrA, data.data(), data.size() + 1);
 	char *ptrB = std::bit_cast<char *>(memory_heap_realloc(ptrA, first_size));
+	// ASAN's realloc always returns a new pointer to detect use-after-realloc bugs
+#ifndef CLLTK_ASAN_ENABLED
 	ASSERT_EQ(ptrA, ptrB);
+#endif
 	EXPECT_EQ(ptrB, data);
 	memory_heap_free(ptrB);
 }

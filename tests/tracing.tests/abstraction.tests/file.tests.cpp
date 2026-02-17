@@ -172,7 +172,11 @@ TEST_F(file, mmap)
 	auto temp_file = ::file_create_temp(name, memory_get_page_size());
 	EXPECT_TRUE(temp_file);
 	char *const base = std::bit_cast<char *>(file_mmap_ptr(temp_file));
+	// ASAN's shadow memory layout may make the computed address writable,
+	// so skip the out-of-bounds death test under ASAN
+#ifndef CLLTK_ASAN_ENABLED
 	char *const invalid = base + file_mmap_size(temp_file) + 2 * memory_get_page_size();
 	EXPECT_EXIT({ *invalid = 'A'; }, KilledBySignal(SIGSEGV), ".*");
+#endif
 	file_drop(&temp_file);
 }

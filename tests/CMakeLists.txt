@@ -66,6 +66,9 @@ target_compile_options(gmock PRIVATE -w)        # disable all errors and warning
 target_compile_options(gmock_main PRIVATE -w)   # disable all errors and warnings
 
 add_definitions(-DUNITTEST)
+if(ENABLE_ASAN)
+    add_definitions(-DCLLTK_ASAN_ENABLED)
+endif()
 add_compile_options(-O0)
 
 add_subdirectory(tracing.tests)
