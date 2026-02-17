@@ -9,6 +9,14 @@
 - test: add CLLTK_ASAN_ENABLED CMake define and simplify ASAN guards
 - test: skip stdbuf in live tests when ASAN is enabled
 - fix: memory leak in vector test (missing vector_free)
+- cmake: fix broken OBJECT_LIBRARY type check in command_line_tool
+- cmake: replace no-op directory properties with proper CMake variables
+- cmake: create CompileWarnings.cmake interface library for warning flags
+- cmake: replace directory-scoped compile options with interface libraries
+- cmake: add BUILD_INTERFACE/INSTALL_INTERFACE generator expressions
+- cmake: replace raw pthread/Boost variables with imported targets
+- cmake: add CONFIGURE_DEPENDS to all file(GLOB) calls
+- cmake: remove no-op target_link_directories from command_line_tool
 ## 1.2.53
 - ci: use GitHub Container Registry for faster CI container caching
 - ci: consolidate Python tests into single directory structure
