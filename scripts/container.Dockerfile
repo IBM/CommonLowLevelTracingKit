@@ -48,7 +48,8 @@ RUN update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/cl
 
 RUN pip3 install \
     numpy \
-    pandas
+    pandas \
+    pytz
 
 RUN \
     echo "[safe]" >> ~/.gitconfig &&\
