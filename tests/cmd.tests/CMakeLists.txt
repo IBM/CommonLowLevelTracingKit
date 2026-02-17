@@ -15,6 +15,7 @@ add_executable(cmd_tests
 target_link_libraries(cmd_tests
     GTest::gtest_main
     gmock
+    clltk_test_flags
     clltk_decoder_object
     clltk-cmd-interface
     ${Boost_LIBRARIES}

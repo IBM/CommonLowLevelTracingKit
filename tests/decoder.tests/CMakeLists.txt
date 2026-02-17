@@ -27,6 +27,7 @@ add_executable(decoder_tests
 target_link_libraries(decoder_tests
     GTest::gtest_main
     gmock
+    clltk_test_flags
     clltk_tracing_static
     clltk_snapshot_static
     clltk_decoder_object # use the object lib as static and shared have limited exported symbols

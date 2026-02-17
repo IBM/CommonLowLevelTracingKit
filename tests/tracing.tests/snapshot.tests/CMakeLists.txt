@@ -25,9 +25,8 @@ target_include_directories(${Exe_Name}
 
 target_link_libraries(${Exe_Name}
     GTest::gtest_main
+    clltk_test_flags
     clltk_snapshot_static
 )
 
 gtest_discover_tests(${Exe_Name})
-
-target_compile_options(${Exe_Name} PRIVATE -O0 -g)

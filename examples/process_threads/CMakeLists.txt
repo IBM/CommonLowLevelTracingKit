@@ -8,6 +8,7 @@ add_executable(example-process_threads
 target_link_libraries(example-process_threads
 PRIVATE
     clltk_tracing
+    clltk_example_flags
     pthread
 )
 

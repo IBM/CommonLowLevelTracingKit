@@ -8,6 +8,7 @@ add_executable(example-gen_format_c
 target_link_libraries(example-gen_format_c
 PRIVATE
     clltk_tracing
+    clltk_example_flags
 )
 
 add_dependencies(example-gen_format_c

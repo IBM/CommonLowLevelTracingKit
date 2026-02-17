@@ -28,9 +28,8 @@ target_include_directories(${Exe_Name}
 target_link_libraries(${Exe_Name}
     GTest::gtest_main
     GTest::gmock_main
+    clltk_test_flags
     clltk_tracing_abstraction
 )
 
 gtest_discover_tests(${Exe_Name})
-
-target_compile_options(${Exe_Name} PRIVATE -O0)
