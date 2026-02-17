@@ -5,9 +5,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set_directory_properties(PROPERTIES LANGUAGE CXX)
-set_directory_properties(PROPERTIES LINKER_LANGUAGE CXX)
-
 add_subdirectory(interface)
 
 set(CLLTK_COMMAND_LINE_COMMANDS "") # each command will add it self to this list.
@@ -37,7 +34,7 @@ target_link_libraries(clltk-cmd
 # Check that all commands are OBJECT or SHARED libraries
 foreach(command_target ${CLLTK_COMMAND_LINE_COMMANDS})
     get_target_property(target_type ${command_target} TYPE)
-    if( "${command_target}" STREQUAL "OBJECT_LIBRARY")
+    if(NOT "${target_type}" STREQUAL "OBJECT_LIBRARY")
         message(FATAL_ERROR "To ensure that commands in the main function are detected at runtime, ${command_target} must be OBJECT library, not ${target_type}.")
     endif()
     target_sources(clltk-cmd 
