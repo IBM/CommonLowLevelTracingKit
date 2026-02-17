@@ -3,6 +3,7 @@
 
 """Core utilities for test infrastructure."""
 
+import functools
 import subprocess
 import pathlib
 import os
@@ -108,3 +109,15 @@ def decoder_file() -> pathlib.Path:
 def clltk_cmd_file() -> pathlib.Path:
     """Get path to the clltk command-line tool."""
     return get_build_dir() / "command_line_tool" / "clltk"
+
+
+@functools.lru_cache(maxsize=1)
+def is_asan_build() -> bool:
+    """Detect if clltk is linked against AddressSanitizer."""
+    try:
+        result = subprocess.run(
+            ["ldd", str(clltk_cmd_file())], capture_output=True, text=True
+        )
+        return "libasan" in result.stdout
+    except Exception:
+        return False

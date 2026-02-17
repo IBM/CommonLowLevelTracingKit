@@ -15,9 +15,10 @@ import time
 import unittest
 
 import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-from helpers.base import get_build_dir
+from helpers.base import get_build_dir, is_asan_build
 from helpers.clltk_cmd import clltk
 
 
@@ -33,20 +34,22 @@ class LiveTestCase(unittest.TestCase):
         """Create temporary directory for tracebuffers."""
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.trace_path = self.tmp_dir.name
-        self.old_env = os.environ.get('CLLTK_TRACING_PATH')
-        os.environ['CLLTK_TRACING_PATH'] = self.trace_path
+        self.old_env = os.environ.get("CLLTK_TRACING_PATH")
+        os.environ["CLLTK_TRACING_PATH"] = self.trace_path
 
     def tearDown(self):
         """Clean up."""
         if self.old_env:
-            os.environ['CLLTK_TRACING_PATH'] = self.old_env
+            os.environ["CLLTK_TRACING_PATH"] = self.old_env
         else:
-            os.environ.pop('CLLTK_TRACING_PATH', None)
+            os.environ.pop("CLLTK_TRACING_PATH", None)
         self.tmp_dir.cleanup()
 
 
 @contextlib.contextmanager
-def live_process(trace_path, order_delay=50, poll_interval=5, extra_args=None, use_stdbuf=False):
+def live_process(
+    trace_path, order_delay=50, poll_interval=5, extra_args=None, use_stdbuf=False
+):
     """
     Context manager for running live decoder subprocess.
 
@@ -67,25 +70,28 @@ def live_process(trace_path, order_delay=50, poll_interval=5, extra_args=None, u
             stdout, stderr = proc.communicate(timeout=5)
     """
     clltk_path = get_clltk_path()
-    
+
     args = []
-    if use_stdbuf:
+    if use_stdbuf and not is_asan_build():
         args.extend(["stdbuf", "-oL"])
-    
-    args.extend([
-        str(clltk_path), "live", trace_path,
-        "--order-delay", str(order_delay),
-        "--poll-interval", str(poll_interval)
-    ])
-    
+
+    args.extend(
+        [
+            str(clltk_path),
+            "live",
+            trace_path,
+            "--order-delay",
+            str(order_delay),
+            "--poll-interval",
+            str(poll_interval),
+        ]
+    )
+
     if extra_args:
         args.extend(extra_args)
 
     proc = subprocess.Popen(
-        args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=os.environ.copy()
+        args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ.copy()
     )
 
     try:
@@ -100,8 +106,14 @@ def live_process(trace_path, order_delay=50, poll_interval=5, extra_args=None, u
                 proc.wait()
 
 
-def run_live_with_timeout(trace_path, timeout_seconds=2, order_delay=50, poll_interval=5, 
-                          extra_args=None, use_stdbuf=True):
+def run_live_with_timeout(
+    trace_path,
+    timeout_seconds=2,
+    order_delay=50,
+    poll_interval=5,
+    extra_args=None,
+    use_stdbuf=True,
+):
     """
     Run live decoder with timeout and return result.
 
@@ -117,22 +129,24 @@ def run_live_with_timeout(trace_path, timeout_seconds=2, order_delay=50, poll_in
         subprocess.CompletedProcess
     """
     clltk_path = get_clltk_path()
-    
+
     args = ["timeout", str(timeout_seconds)]
-    if use_stdbuf:
+    if use_stdbuf and not is_asan_build():
         args.extend(["stdbuf", "-oL"])
-    
-    args.extend([
-        str(clltk_path), "live", trace_path,
-        "--order-delay", str(order_delay),
-        "--poll-interval", str(poll_interval)
-    ])
-    
+
+    args.extend(
+        [
+            str(clltk_path),
+            "live",
+            trace_path,
+            "--order-delay",
+            str(order_delay),
+            "--poll-interval",
+            str(poll_interval),
+        ]
+    )
+
     if extra_args:
         args.extend(extra_args)
 
-    return subprocess.run(
-        args,
-        capture_output=True,
-        env=os.environ.copy()
-    )
+    return subprocess.run(args, capture_output=True, env=os.environ.copy())

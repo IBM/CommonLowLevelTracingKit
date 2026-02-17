@@ -23,6 +23,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
+from helpers.base import is_asan_build
 from helpers.clltk_cmd import clltk
 from test_live_base import LiveTestCase, get_clltk_path, run_live_with_timeout
 
@@ -289,10 +290,11 @@ class TestLiveExtremeStress(LiveTestCase):
         clltk("buffer", "--buffer", buffer_name, "--size", "512KB")
 
         # Start decoder
-        decoder_proc = subprocess.Popen(
+        cmd = []
+        if not is_asan_build():
+            cmd.extend(["stdbuf", "-oL"])
+        cmd.extend(
             [
-                "stdbuf",
-                "-oL",
                 str(clltk_path),
                 "live",
                 self.trace_path,
@@ -303,7 +305,10 @@ class TestLiveExtremeStress(LiveTestCase):
                 "15",
                 "--poll-interval",
                 "2",
-            ],
+            ]
+        )
+        decoder_proc = subprocess.Popen(
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=os.environ.copy(),

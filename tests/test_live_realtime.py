@@ -21,6 +21,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
+from helpers.base import is_asan_build
 from helpers.clltk_cmd import clltk
 from test_live_base import (
     LiveTestCase,
@@ -179,7 +180,7 @@ for msg in messages:
         # Step 2: Write some tracepoints BEFORE decoder starts
         for msg in pre_messages:
             result = subprocess.run(
-                [str(clltk_path), 'trace', '-b', buffer_name, msg],
+                [str(clltk_path), "trace", "-b", buffer_name, msg],
                 env=os.environ.copy(),
                 capture_output=True,
             )
@@ -190,10 +191,11 @@ for msg in messages:
             )
 
         # Step 3: Start decoder with piped stdout
-        decoder_proc = subprocess.Popen(
+        cmd = []
+        if not is_asan_build():
+            cmd.extend(["stdbuf", "-oL"])
+        cmd.extend(
             [
-                "stdbuf",
-                "-oL",
                 str(clltk_path),
                 "live",
                 self.trace_path,
@@ -201,7 +203,10 @@ for msg in messages:
                 "30",
                 "--poll-interval",
                 "5",
-            ],
+            ]
+        )
+        decoder_proc = subprocess.Popen(
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=os.environ.copy(),
@@ -219,7 +224,7 @@ for msg in messages:
             # Step 4: Write MORE tracepoints AFTER decoder has started
             for msg in post_messages:
                 result = subprocess.run(
-                    [str(clltk_path), 'trace', '-b', buffer_name, msg],
+                    [str(clltk_path), "trace", "-b", buffer_name, msg],
                     env=os.environ.copy(),
                     capture_output=True,
                 )
@@ -298,14 +303,15 @@ for msg in messages:
         """
         buffer_name = "ConcurrentTestBuffer"
         num_messages = 20
-        
+
         clltk("buffer", "--buffer", buffer_name, "--size", "16KB")
 
         clltk_path = get_clltk_path()
-        decoder_proc = subprocess.Popen(
+        cmd = []
+        if not is_asan_build():
+            cmd.extend(["stdbuf", "-oL"])
+        cmd.extend(
             [
-                "stdbuf",
-                "-oL",
                 str(clltk_path),
                 "live",
                 self.trace_path,
@@ -313,7 +319,10 @@ for msg in messages:
                 "20",
                 "--poll-interval",
                 "5",
-            ],
+            ]
+        )
+        decoder_proc = subprocess.Popen(
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=os.environ.copy(),
@@ -329,7 +338,7 @@ for msg in messages:
                     msg = f"concurrent_msg_{i:04d}"
                     messages_written.append(msg)
                     result = subprocess.run(
-                        [str(clltk_path), 'trace', '-b', buffer_name, msg],
+                        [str(clltk_path), "trace", "-b", buffer_name, msg],
                         env=os.environ.copy(),
                         capture_output=True,
                     )
