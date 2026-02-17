@@ -3,6 +3,12 @@
 # Change log
 ## 1.2.54
 - docs: add AGENTS.md for AI coding agent instructions
+- cli: add backwards-compatible -C flag alias for tracing path
+- ci: auto-detect non-interactive terminal in container script
+- ci: add missing pytz dependency to container
+- test: add CLLTK_ASAN_ENABLED CMake define and simplify ASAN guards
+- test: skip stdbuf in live tests when ASAN is enabled
+- fix: memory leak in vector test (missing vector_free)
 ## 1.2.53
 - ci: use GitHub Container Registry for faster CI container caching
 - ci: consolidate Python tests into single directory structure
