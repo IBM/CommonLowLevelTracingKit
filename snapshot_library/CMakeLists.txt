@@ -12,7 +12,8 @@ add_library(clltk_snapshot_shared SHARED
 foreach(LIB_NAME clltk_snapshot_static clltk_snapshot_shared)
     target_include_directories(${LIB_NAME}
         PUBLIC
-            ./include/
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     )
 
 	target_link_libraries(${LIB_NAME}

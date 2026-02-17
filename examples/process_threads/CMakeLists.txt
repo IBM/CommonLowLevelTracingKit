@@ -5,11 +5,13 @@ add_executable(example-process_threads
     ./process_threads.cpp
 )
 
+find_package(Threads REQUIRED)
+
 target_link_libraries(example-process_threads
 PRIVATE
     clltk_tracing
     clltk_example_flags
-    pthread
+    Threads::Threads
 )
 
 add_dependencies(example-process_threads

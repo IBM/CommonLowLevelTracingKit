@@ -28,7 +28,7 @@ add_custom_target(clltk-version-file
 add_library(clltk-version INTERFACE)
 target_include_directories(clltk-version
     INTERFACE
-        ${CLLTK_VERSION_INCLUDE_PATH}
+        $<BUILD_INTERFACE:${CLLTK_VERSION_INCLUDE_PATH}>
 )
 
 add_dependencies(clltk-version clltk-version-file)

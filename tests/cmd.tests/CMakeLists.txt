@@ -18,7 +18,7 @@ target_link_libraries(cmd_tests
     clltk_test_flags
     clltk_decoder_object
     clltk-cmd-interface
-    ${Boost_LIBRARIES}
+    Boost::boost
 )
 
 target_compile_definitions(cmd_tests

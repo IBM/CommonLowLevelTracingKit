@@ -87,7 +87,8 @@ add_library(clltk_tracing_shared SHARED
 foreach(LIB_NAME clltk_tracing_static clltk_tracing_shared)
     target_include_directories(${LIB_NAME}
         PUBLIC
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
         PRIVATE
             source
     )

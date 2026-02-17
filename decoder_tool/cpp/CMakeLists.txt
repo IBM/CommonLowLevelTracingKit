@@ -26,7 +26,6 @@ target_include_directories(clltk_decoder_object
     PRIVATE
     source
     source/low_level
-    ${Boost_INCLUDE_DIRS}
 )
 
 target_compile_definitions(clltk_decoder_object
@@ -35,7 +34,8 @@ target_compile_definitions(clltk_decoder_object
 )
 
 target_link_libraries(clltk_decoder_object
-    ${Boost_LIBRARIES}
+    PRIVATE
+    Boost::boost
     atomic
     archive
     ffi
@@ -105,7 +105,8 @@ set_target_properties(clltk_decoder_shared
 foreach(LIB_NAME clltk_decoder_static clltk_decoder_shared)
     target_include_directories(${LIB_NAME}
         PUBLIC
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     )
     target_link_libraries(${LIB_NAME}
         PRIVATE
