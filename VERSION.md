@@ -1,6 +1,12 @@
-1.2.54
+1.2.55
 
 # Change log
+## 1.2.55
+- packaging: add RPM subpackages (tracing, decoder, snapshot, devel, cmd, python-decoder)
+- packaging: add CMake package config (find_package(CLLTK)) and pkg-config support
+- packaging: add proper SRPM via git archive + rpmbuild -bs with Fedora-style spec
+- packaging: add comprehensive packaging test suite (89 tests)
+- packaging: merge static libraries into clltk-devel, rename clltk-tools to clltk-cmd
 ## 1.2.54
 - docs: add AGENTS.md for AI coding agent instructions
 - cli: add backwards-compatible -C flag alias for tracing path
