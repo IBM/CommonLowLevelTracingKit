@@ -141,6 +141,15 @@
             }
         },
         {
+            "name": "rpm-full",
+            "configurePreset": "rpm",
+            "variables": {
+                "CPACK_RPM_COMPONENT_INSTALL": "OFF",
+                "CPACK_RPM_DEBUGINFO_PACKAGE": "ON",
+                "CPACK_RPM_INSTALL_WITH_EXEC": "ON"
+            }
+        },
+        {
             "name": "srpm",
             "configurePreset": "rpm",
             "variables": {
@@ -205,6 +214,10 @@
                 {
                     "type": "package",
                     "name": "rpm-python"
+                },
+                {
+                    "type": "package",
+                    "name": "rpm-full"
                 },
                 {
                     "type": "package",
