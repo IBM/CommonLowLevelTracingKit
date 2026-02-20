@@ -154,13 +154,16 @@ install(TARGETS
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT devel
 )
 
-# pkg-config
-configure_file(
-    "${CMAKE_SOURCE_DIR}/cmake/clltk_decoder.pc.in"
-    "${CMAKE_BINARY_DIR}/clltk_decoder.pc"
-    @ONLY
-)
-install(FILES "${CMAKE_BINARY_DIR}/clltk_decoder.pc"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
-    COMPONENT devel
-)
+# pkg-config (only when built from the main project tree where the .pc.in template exists)
+set(_CLLTK_DECODER_PC_IN "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/clltk_decoder.pc.in")
+if(EXISTS "${_CLLTK_DECODER_PC_IN}")
+    configure_file(
+        "${_CLLTK_DECODER_PC_IN}"
+        "${CMAKE_BINARY_DIR}/clltk_decoder.pc"
+        @ONLY
+    )
+    install(FILES "${CMAKE_BINARY_DIR}/clltk_decoder.pc"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+        COMPONENT devel
+    )
+endif()
