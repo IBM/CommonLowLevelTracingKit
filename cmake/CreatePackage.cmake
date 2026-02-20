@@ -16,40 +16,34 @@ set(CPACK_PACKAGE_CONTACT "Eduard Stefes <Eduard.Stefes@ibm.com>, Johannes Staib
 set(CPACK_PACKAGE_CHECKSUM SHA256)
 
 # --- Component definitions ---
+# Each component produces its own RPM when CPACK_RPM_COMPONENT_INSTALL=ON.
+# No GROUP assignment — groups cause multiple components to merge into one RPM.
+
 # Runtime shared libraries
 set(CPACK_COMPONENT_TRACING_DISPLAY_NAME "CLLTK Tracing Runtime Library")
 set(CPACK_COMPONENT_TRACING_DESCRIPTION "Core tracing shared library (libclltk_tracing.so)")
-set(CPACK_COMPONENT_TRACING_GROUP "Runtime")
 
 set(CPACK_COMPONENT_DECODER_LIBS_DISPLAY_NAME "CLLTK Decoder Runtime Library")
 set(CPACK_COMPONENT_DECODER_LIBS_DESCRIPTION "C++ decoder shared library (libclltk_decoder.so)")
-set(CPACK_COMPONENT_DECODER_LIBS_GROUP "Runtime")
 
 set(CPACK_COMPONENT_SNAPSHOT_DISPLAY_NAME "CLLTK Snapshot Runtime Library")
 set(CPACK_COMPONENT_SNAPSHOT_DESCRIPTION "Snapshot shared library (libclltk_snapshot.so)")
-set(CPACK_COMPONENT_SNAPSHOT_GROUP "Runtime")
 
 # Development files (headers, cmake config, pkg-config, .so symlinks)
 set(CPACK_COMPONENT_DEVEL_DISPLAY_NAME "CLLTK Development Files")
 set(CPACK_COMPONENT_DEVEL_DESCRIPTION "Headers, CMake config, and pkg-config files for developing against CLLTK")
-set(CPACK_COMPONENT_DEVEL_GROUP "Development")
-set(CPACK_COMPONENT_DEVEL_DEPENDS "tracing;decoder_libs;snapshot")
 
 # Static libraries
 set(CPACK_COMPONENT_STATIC_DISPLAY_NAME "CLLTK Static Libraries")
 set(CPACK_COMPONENT_STATIC_DESCRIPTION "Static archive libraries (.a) for CLLTK")
-set(CPACK_COMPONENT_STATIC_GROUP "Development")
-set(CPACK_COMPONENT_STATIC_DEPENDS "devel")
 
 # Command line tools
 set(CPACK_COMPONENT_CMD_DISPLAY_NAME "CLLTK Command Line Tools")
 set(CPACK_COMPONENT_CMD_DESCRIPTION "Command line utilities for trace management")
-set(CPACK_COMPONENT_CMD_GROUP "Tools")
 
 # Python decoder
 set(CPACK_COMPONENT_DECODER_DISPLAY_NAME "CLLTK Python Decoder")
 set(CPACK_COMPONENT_DECODER_DESCRIPTION "Python trace decoder script")
-set(CPACK_COMPONENT_DECODER_GROUP "Tools")
 
 # --- Source package configuration ---
 # Include all build-relevant files; exclude docs, tests, examples, dotfiles, build dir
@@ -98,12 +92,13 @@ set(CPACK_RPM_DECODER_PACKAGE_ARCHITECTURE "noarch")
 set(CPACK_RPM_BUILDREQUIRES "cmake >= 3.20, gcc >= 10, gcc-c++, boost-devel, libarchive-devel, libffi-devel, zlib-devel")
 
 # ldconfig scriptlets for shared library components
-set(CPACK_RPM_TRACING_POST_INSTALL_SCRIPT_FILE "/sbin/ldconfig")
-set(CPACK_RPM_TRACING_POST_UNINSTALL_SCRIPT_FILE "/sbin/ldconfig")
-set(CPACK_RPM_DECODER_LIBS_POST_INSTALL_SCRIPT_FILE "/sbin/ldconfig")
-set(CPACK_RPM_DECODER_LIBS_POST_UNINSTALL_SCRIPT_FILE "/sbin/ldconfig")
-set(CPACK_RPM_SNAPSHOT_POST_INSTALL_SCRIPT_FILE "/sbin/ldconfig")
-set(CPACK_RPM_SNAPSHOT_POST_UNINSTALL_SCRIPT_FILE "/sbin/ldconfig")
+set(LDCONFIG_SCRIPTLET "${CMAKE_CURRENT_SOURCE_DIR}/cmake/rpm_ldconfig.sh")
+set(CPACK_RPM_tracing_POST_INSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
+set(CPACK_RPM_tracing_POST_UNINSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
+set(CPACK_RPM_decoder_libs_POST_INSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
+set(CPACK_RPM_decoder_libs_POST_UNINSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
+set(CPACK_RPM_snapshot_POST_INSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
+set(CPACK_RPM_snapshot_POST_UNINSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
 
 # Exclude standard directories from auto filelist
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
