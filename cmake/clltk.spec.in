@@ -1,0 +1,141 @@
+# Copyright (c) 2024, International Business Machines
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+
+Name:           clltk
+Version:        @CLLTK_VERSION_STRING@
+Release:        1%{?dist}
+Summary:        Common Low Level Tracing Kit
+License:        BSD-2-Clause-Patent
+URL:            https://github.com/IBM/CommonLowLevelTracingKit
+Source0:        %{name}-%{version}.tar.gz
+
+BuildRequires:  cmake >= 3.20
+BuildRequires:  gcc >= 10
+BuildRequires:  gcc-c++
+BuildRequires:  boost-devel
+BuildRequires:  libarchive-devel
+BuildRequires:  libffi-devel
+BuildRequires:  zlib-devel
+
+%description
+A fast, lightweight, binary, always-on, printf-style, file-based and
+flight-recorder-like tracing library for C/C++ applications. Provides
+low-overhead tracing with binary format support and comprehensive
+debugging tools.
+
+# --- Subpackages ---
+
+%package -n clltk-tracing
+Summary:        CLLTK tracing shared library
+
+%description -n clltk-tracing
+Core tracing shared library (libclltk_tracing.so) for the Common Low
+Level Tracing Kit.
+
+%package -n clltk-decoder
+Summary:        CLLTK C++ decoder shared library
+
+%description -n clltk-decoder
+C++ decoder shared library (libclltk_decoder.so) for decoding CLLTK
+trace files.
+
+%package -n clltk-snapshot
+Summary:        CLLTK snapshot shared library
+
+%description -n clltk-snapshot
+Snapshot shared library (libclltk_snapshot.so) for creating trace
+archive snapshots.
+
+%package -n clltk-devel
+Summary:        Development files for CLLTK
+Requires:       clltk-tracing = %{version}-%{release}
+
+%description -n clltk-devel
+Headers, CMake config, pkg-config files, and unversioned .so symlinks
+for developing against CLLTK.
+
+%package -n clltk-static
+Summary:        Static libraries for CLLTK
+Requires:       clltk-devel = %{version}-%{release}
+
+%description -n clltk-static
+Static archive libraries (.a) for CLLTK.
+
+%package -n clltk-tools
+Summary:        CLLTK command line tools
+Requires:       clltk-tracing = %{version}-%{release}
+
+%description -n clltk-tools
+Command line utilities (clltk) for trace management.
+
+%package -n clltk-python-decoder
+Summary:        CLLTK Python decoder script
+BuildArch:      noarch
+
+%description -n clltk-python-decoder
+Python trace decoder script for the Common Low Level Tracing Kit.
+
+# --- Build ---
+
+%prep
+%setup -q -n %{name}-%{version}
+
+%build
+%cmake \
+    -DSTANDALONE_PROJECT=OFF \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCLLTK_EXAMPLES=OFF \
+    -DCLLTK_TESTS=OFF \
+    -DCLLTK_SNAPSHOT=ON \
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+%cmake_build
+
+%install
+%cmake_install
+
+# --- File lists ---
+
+%files -n clltk-tracing
+%license LICENSE
+%{_libdir}/libclltk_tracing.so.1
+%{_libdir}/libclltk_tracing.so.1.*
+
+%files -n clltk-decoder
+%license LICENSE
+%{_libdir}/libclltk_decoder.so.1
+%{_libdir}/libclltk_decoder.so.1.*
+
+%files -n clltk-snapshot
+%license LICENSE
+%{_libdir}/libclltk_snapshot.so.1
+%{_libdir}/libclltk_snapshot.so.1.*
+
+%files -n clltk-devel
+%{_includedir}/CommonLowLevelTracingKit/
+%{_libdir}/libclltk_tracing.so
+%{_libdir}/libclltk_decoder.so
+%{_libdir}/libclltk_snapshot.so
+%{_libdir}/cmake/CLLTK/
+%{_libdir}/pkgconfig/clltk_tracing.pc
+%{_libdir}/pkgconfig/clltk_decoder.pc
+%{_libdir}/pkgconfig/clltk_snapshot.pc
+
+%files -n clltk-static
+%{_libdir}/libclltk_tracing_static.a
+%{_libdir}/libclltk_decoder_static.a
+%{_libdir}/libclltk_snapshot_static.a
+
+%files -n clltk-tools
+%{_bindir}/clltk
+
+%files -n clltk-python-decoder
+%{_bindir}/clltk_decoder.py
+
+%post -n clltk-tracing -p /sbin/ldconfig
+%postun -n clltk-tracing -p /sbin/ldconfig
+%post -n clltk-decoder -p /sbin/ldconfig
+%postun -n clltk-decoder -p /sbin/ldconfig
+%post -n clltk-snapshot -p /sbin/ldconfig
+%postun -n clltk-snapshot -p /sbin/ldconfig
+
+%changelog

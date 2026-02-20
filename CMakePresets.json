@@ -33,7 +33,6 @@
             "cacheVariables": {
                 "STANDALONE_PROJECT": "OFF",
                 "CPACK_GENERATOR": "RPM",
-                "CPACK_SOURCE_GENERATOR": "RPM",
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo",
                 "CLLTK_EXAMPLES": "OFF",
                 "CLLTK_TESTS": "OFF",
@@ -148,13 +147,6 @@
                 "CPACK_RPM_DEBUGINFO_PACKAGE": "ON",
                 "CPACK_RPM_INSTALL_WITH_EXEC": "ON"
             }
-        },
-        {
-            "name": "srpm",
-            "configurePreset": "rpm",
-            "variables": {
-                "CPACK_RPM_PACKAGE_SOURCES": "ON"
-            }
         }
     ],
     "workflowPresets": [
@@ -218,10 +210,6 @@
                 {
                     "type": "package",
                     "name": "rpm-full"
-                },
-                {
-                    "type": "package",
-                    "name": "srpm"
                 }
             ]
         }

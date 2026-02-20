@@ -45,16 +45,6 @@ set(CPACK_COMPONENT_CMD_DESCRIPTION "Command line utilities for trace management
 set(CPACK_COMPONENT_DECODER_DISPLAY_NAME "CLLTK Python Decoder")
 set(CPACK_COMPONENT_DECODER_DESCRIPTION "Python trace decoder script")
 
-# --- Source package configuration ---
-# Include all build-relevant files; exclude docs, tests, examples, dotfiles, build dir
-set(CPACK_SOURCE_IGNORE_FILES
-    "${CMAKE_BINARY_DIR}"
-    "${CMAKE_SOURCE_DIR}/docs/"
-    "${CMAKE_SOURCE_DIR}/tests/"
-    "${CMAKE_SOURCE_DIR}/examples/"
-    "${CMAKE_SOURCE_DIR}/\\\\..*"
-)
-
 # --- RPM-specific configuration ---
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 set(CPACK_RPM_PACKAGE_RELEASE 1)
@@ -88,9 +78,6 @@ set(CPACK_RPM_CMD_PACKAGE_REQUIRES "clltk-tracing = ${CLLTK_VERSION_STRING}")
 # Python decoder architecture
 set(CPACK_RPM_DECODER_PACKAGE_ARCHITECTURE "noarch")
 
-# Build dependencies for SRPM
-set(CPACK_RPM_BUILDREQUIRES "cmake >= 3.20, gcc >= 10, gcc-c++, boost-devel, libarchive-devel, libffi-devel, zlib-devel")
-
 # ldconfig scriptlets for shared library components
 set(LDCONFIG_SCRIPTLET "${CMAKE_CURRENT_SOURCE_DIR}/cmake/rpm_ldconfig.sh")
 set(CPACK_RPM_tracing_POST_INSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
@@ -106,10 +93,25 @@ set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
 
-# SRPM build params: pass the rpm preset so rebuilders get correct options
-set(CPACK_RPM_SOURCE_PKG_BUILD_PARAMS "--preset rpm")
-
 # Output location
 set(CPACK_OUTPUT_FILE_PREFIX "${CMAKE_BINARY_DIR}/packages")
 
 include(CPack)
+
+# --- SRPM from real source tree ---
+# CPack's CPACK_SOURCE_GENERATOR=RPM packages the install tree, not actual source.
+# We build a proper SRPM using git archive + rpmbuild -bs with our spec file.
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/clltk.spec.in"
+    "${CMAKE_BINARY_DIR}/clltk.spec"
+    @ONLY
+)
+
+add_custom_target(srpm
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/cmake/build_srpm.sh"
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_BINARY_DIR}"
+        "${CLLTK_VERSION_STRING}"
+    COMMENT "Building SRPM from source tree"
+    VERBATIM
+)

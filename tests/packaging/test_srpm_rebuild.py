@@ -1,19 +1,15 @@
+#!/usr/bin/python3
 # Copyright (c) 2024, International Business Machines
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
 """Level 3: Test that the SRPM can be rebuilt from scratch.
 
 This verifies that the source RPM is self-contained and can produce
-binary RPMs via rpmbuild --rebuild.
-
-NOTE: CPack's CPACK_SOURCE_GENERATOR=RPM packages the install tree, not the
-actual project source. The resulting SRPM cannot be rebuilt with rpmbuild
---rebuild because it lacks CMakeLists.txt, CMakePresets.json, etc. This test
-is therefore skipped by default. Enable with CLLTK_TEST_SRPM_REBUILD=1 once
-a proper source-based SRPM workflow is implemented.
+binary RPMs via rpmbuild --rebuild. The SRPM is built from a real
+git archive source tarball with a proper spec file (cmake/clltk.spec.in),
+not from CPack's source generator.
 """
 
-import os
 import pathlib
 import shutil
 import subprocess
@@ -28,15 +24,7 @@ def setUpModule():
     ensure_rpms_built()
 
 
-_SRPM_REBUILD_ENABLED = os.environ.get("CLLTK_TEST_SRPM_REBUILD", "0") == "1"
-
-
 @unittest.skipUnless(shutil.which("rpmbuild"), "rpmbuild not available")
-@unittest.skipUnless(
-    _SRPM_REBUILD_ENABLED,
-    "SRPM rebuild skipped: CPack SRPMs package install tree, not source. "
-    "Set CLLTK_TEST_SRPM_REBUILD=1 to enable.",
-)
 class TestSrpmRebuild(unittest.TestCase):
     """Test rebuilding binary RPMs from the SRPM."""
 

@@ -22,11 +22,11 @@ if ! cmake --workflow --preset rpms; then
     exit 1
 fi
 
-# Build source package
+# Build SRPM from real source tree
 echo ""
-echo "Building source package..."
-if ! cmake --build --preset rpm --target package_source; then
-    echo "FAILED: Source package failed"
+echo "Building SRPM..."
+if ! cmake --build --preset rpm --target srpm; then
+    echo "FAILED: SRPM build failed"
     exit 1
 fi
 

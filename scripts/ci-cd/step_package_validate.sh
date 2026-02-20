@@ -45,19 +45,20 @@ echo "Found RPM packages in $PACKAGES_DIR:"
 ls -la "$PACKAGES_DIR"/*.rpm 2>/dev/null || true
 echo ""
 
-# Run packaging tests (Levels 1, 2, 2+)
+# Run packaging tests
 # Note: -t . is required so that relative imports (from .helpers.rpm) resolve correctly
-echo "Running packaging tests (Levels 1-2+)..."
-
 if $SKIP_SRPM_REBUILD; then
-    export CLLTK_TEST_SRPM_REBUILD=0
+    echo "Running packaging tests (Levels 1-2+, skipping SRPM rebuild)..."
+    TEST_PATTERN='test_rpm_*.py test_consumer_*.py'
+    # Run each pattern separately since unittest discover takes one -p
+    python3 -m unittest discover -v -t . -s ./tests/packaging -p 'test_rpm_*.py' || { echo "FAILED: Packaging tests failed"; exit 1; }
+    python3 -m unittest discover -v -t . -s ./tests/packaging -p 'test_consumer_*.py' || { echo "FAILED: Packaging tests failed"; exit 1; }
 else
-    export CLLTK_TEST_SRPM_REBUILD=1
-fi
-
-if ! python3 -m unittest discover -v -t . -s ./tests/packaging -p 'test_*.py'; then
-    echo "FAILED: Packaging tests failed"
-    exit 1
+    echo "Running packaging tests (Levels 1-3, including SRPM rebuild)..."
+    if ! python3 -m unittest discover -v -t . -s ./tests/packaging -p 'test_*.py'; then
+        echo "FAILED: Packaging tests failed"
+        exit 1
+    fi
 fi
 
 echo ""

@@ -3,33 +3,13 @@
 
 """Helper utilities for RPM package inspection and validation."""
 
-import glob
-import os
 import pathlib
 import re
-import shutil
 import subprocess
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-
-def get_repo_root() -> pathlib.Path:
-    """Get the repository root path."""
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return pathlib.Path(result.stdout.strip())
-
-
-def get_build_dir() -> pathlib.Path:
-    """Get the build directory path."""
-    build_dir = os.environ.get("BUILD_DIR")
-    if build_dir:
-        return pathlib.Path(build_dir).resolve()
-    return get_repo_root() / "build"
+from tests.helpers.base import get_repo_root, get_build_dir
 
 
 def get_packages_dir() -> pathlib.Path:
@@ -66,14 +46,13 @@ def ensure_rpms_built() -> None:
         check=True,
         capture_output=True,
     )
-    # Package all presets
+    # Package binary RPMs via CPack presets
     for preset in [
         "rpm-libs",
         "rpm-devel",
         "rpm-tools",
         "rpm-python",
         "rpm-full",
-        "srpm",
     ]:
         subprocess.run(
             ["cpack", "--preset", preset],
@@ -81,6 +60,13 @@ def ensure_rpms_built() -> None:
             check=True,
             capture_output=True,
         )
+    # Build SRPM via custom target (uses git archive + rpmbuild -bs)
+    subprocess.run(
+        ["cmake", "--build", "--preset", "rpm", "--target", "srpm"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
 
 
 def find_rpms(pattern: str = "*.rpm") -> List[pathlib.Path]:
