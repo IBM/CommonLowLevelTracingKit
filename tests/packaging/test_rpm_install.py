@@ -108,6 +108,50 @@ class TestInstallSmokeTest(unittest.TestCase):
             "not found", result.stdout, f"Unresolved dependencies: {result.stdout}"
         )
 
+    def test_shared_lib_decoder_loadable(self):
+        """Verify the decoder shared library can be loaded (ldd resolves all deps)."""
+        lib = self._find_file("libclltk_decoder.so")
+        if lib is None:
+            self.skipTest("libclltk_decoder.so not found")
+        env = os.environ.copy()
+        lib_dirs = [
+            str(self._prefix / "lib64"),
+            str(self._prefix / "lib"),
+        ]
+        env["LD_LIBRARY_PATH"] = ":".join(lib_dirs)
+        result = subprocess.run(
+            ["ldd", str(lib)],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        self.assertEqual(result.returncode, 0, f"ldd failed: {result.stderr}")
+        self.assertNotIn(
+            "not found", result.stdout, f"Unresolved dependencies: {result.stdout}"
+        )
+
+    def test_shared_lib_snapshot_loadable(self):
+        """Verify the snapshot shared library can be loaded (ldd resolves all deps)."""
+        lib = self._find_file("libclltk_snapshot.so")
+        if lib is None:
+            self.skipTest("libclltk_snapshot.so not found")
+        env = os.environ.copy()
+        lib_dirs = [
+            str(self._prefix / "lib64"),
+            str(self._prefix / "lib"),
+        ]
+        env["LD_LIBRARY_PATH"] = ":".join(lib_dirs)
+        result = subprocess.run(
+            ["ldd", str(lib)],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        self.assertEqual(result.returncode, 0, f"ldd failed: {result.stderr}")
+        self.assertNotIn(
+            "not found", result.stdout, f"Unresolved dependencies: {result.stdout}"
+        )
+
     def test_decoder_script_exists(self):
         script = self._find_file("clltk_decoder.py")
         self.assertIsNotNone(script, "clltk_decoder.py not found")

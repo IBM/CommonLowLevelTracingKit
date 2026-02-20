@@ -107,6 +107,11 @@ class TestDecoderLibsRpm(unittest.TestCase):
         archives = [f for f in self.rpm.files if f.endswith(".a")]
         self.assertEqual(len(archives), 0, "Runtime RPM should not contain static libs")
 
+    def test_no_unversioned_so(self):
+        """The unversioned .so symlink belongs in devel, not runtime."""
+        unversioned = [f for f in self.rpm.files if f.endswith("libclltk_decoder.so")]
+        self.assertEqual(len(unversioned), 0, "Unversioned .so should be in devel RPM")
+
     def test_ldconfig_scriptlet(self):
         scripts = self.rpm.scripts
         has_ldconfig = any("ldconfig" in v for v in scripts.values())
@@ -136,6 +141,15 @@ class TestSnapshotRpm(unittest.TestCase):
     def test_no_headers(self):
         headers = [f for f in self.rpm.files if f.endswith((".h", ".hpp"))]
         self.assertEqual(len(headers), 0, "Runtime RPM should not contain headers")
+
+    def test_no_static_libs(self):
+        archives = [f for f in self.rpm.files if f.endswith(".a")]
+        self.assertEqual(len(archives), 0, "Runtime RPM should not contain static libs")
+
+    def test_no_unversioned_so(self):
+        """The unversioned .so symlink belongs in devel, not runtime."""
+        unversioned = [f for f in self.rpm.files if f.endswith("libclltk_snapshot.so")]
+        self.assertEqual(len(unversioned), 0, "Unversioned .so should be in devel RPM")
 
     def test_ldconfig_scriptlet(self):
         scripts = self.rpm.scripts
@@ -202,6 +216,34 @@ class TestDevelRpm(unittest.TestCase):
             f"Missing dep on clltk-tracing. Requires: {self.rpm.requires}",
         )
 
+    def test_requires_decoder(self):
+        decoder_dep = [r for r in self.rpm.requires if "clltk-decoder" in r]
+        self.assertTrue(
+            len(decoder_dep) > 0,
+            f"Missing dep on clltk-decoder. Requires: {self.rpm.requires}",
+        )
+
+    def test_requires_snapshot(self):
+        snapshot_dep = [r for r in self.rpm.requires if "clltk-snapshot" in r]
+        self.assertTrue(
+            len(snapshot_dep) > 0,
+            f"Missing dep on clltk-snapshot. Requires: {self.rpm.requires}",
+        )
+
+    def test_contains_unversioned_so_symlinks(self):
+        """Devel RPM should contain unversioned .so symlinks for all libs."""
+        for lib in [
+            "libclltk_tracing.so",
+            "libclltk_decoder.so",
+            "libclltk_snapshot.so",
+        ]:
+            with self.subTest(lib=lib):
+                matches = [f for f in self.rpm.files if f.endswith(lib)]
+                self.assertTrue(
+                    len(matches) > 0,
+                    f"Missing unversioned symlink {lib} in devel RPM",
+                )
+
 
 class TestStaticRpm(unittest.TestCase):
     """Validate the clltk-static RPM."""
@@ -262,11 +304,13 @@ class TestToolsRpm(unittest.TestCase):
         binaries = [f for f in self.rpm.files if f.endswith("/clltk")]
         self.assertTrue(len(binaries) > 0, "Missing clltk binary")
 
-    def test_requires_tracing(self):
-        tracing_dep = [r for r in self.rpm.requires if "clltk-tracing" in r]
-        self.assertTrue(
-            len(tracing_dep) > 0,
-            f"Missing dep on clltk-tracing. Requires: {self.rpm.requires}",
+    def test_no_manual_tracing_dep(self):
+        """clltk binary statically links tracing; RPM auto-requires handles shared lib deps."""
+        manual_dep = [r for r in self.rpm.requires if "clltk-tracing" in r and "=" in r]
+        self.assertEqual(
+            len(manual_dep),
+            0,
+            f"Should not have manual dep on clltk-tracing: {manual_dep}",
         )
 
 
@@ -331,6 +375,30 @@ class TestFullRpm(unittest.TestCase):
         self.assertTrue(
             len(pc_files) >= 3, f"Expected at least 3 .pc files, got: {pc_files}"
         )
+
+
+class TestDebuginfoRpms(unittest.TestCase):
+    """Validate that debuginfo RPMs are produced for compiled packages."""
+
+    def _find_debuginfo(self, name_pattern):
+        """Find a debuginfo RPM matching the given name pattern."""
+        return find_rpm_by_name(name_pattern)
+
+    def test_tracing_debuginfo(self):
+        rpm = self._find_debuginfo(r"clltk-tracing-debuginfo-\d")
+        self.assertIsNotNone(rpm, "Missing clltk-tracing-debuginfo RPM")
+
+    def test_decoder_debuginfo(self):
+        rpm = self._find_debuginfo(r"clltk-decoder-debuginfo-\d")
+        self.assertIsNotNone(rpm, "Missing clltk-decoder-debuginfo RPM")
+
+    def test_snapshot_debuginfo(self):
+        rpm = self._find_debuginfo(r"clltk-snapshot-debuginfo-\d")
+        self.assertIsNotNone(rpm, "Missing clltk-snapshot-debuginfo RPM")
+
+    def test_tools_debuginfo(self):
+        rpm = self._find_debuginfo(r"clltk-tools-debuginfo-\d")
+        self.assertIsNotNone(rpm, "Missing clltk-tools-debuginfo RPM")
 
 
 class TestSrpm(unittest.TestCase):

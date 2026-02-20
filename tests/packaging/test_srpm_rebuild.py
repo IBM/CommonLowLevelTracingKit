@@ -73,6 +73,25 @@ class TestSrpmRebuild(unittest.TestCase):
             f"rpmbuild --rebuild produced no RPMs in {rpm_dir}",
         )
 
+        # Verify we got the expected subpackages (at least 7:
+        # tracing, decoder, snapshot, devel, static, tools, python-decoder)
+        expected_subpackages = [
+            "clltk-tracing",
+            "clltk-decoder",
+            "clltk-snapshot",
+            "clltk-devel",
+            "clltk-static",
+            "clltk-tools",
+            "clltk-python-decoder",
+        ]
+        rpm_names = [p.name for p in rpms]
+        for pkg in expected_subpackages:
+            found = any(pkg in name for name in rpm_names)
+            self.assertTrue(
+                found,
+                f"Expected subpackage '{pkg}' not found in rebuilt RPMs: {rpm_names}",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

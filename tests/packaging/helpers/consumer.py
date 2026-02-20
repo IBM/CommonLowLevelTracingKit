@@ -157,8 +157,18 @@ def compile_with_pkg_config(
     source_code: str,
     lib_name: str,
     install_prefix: pathlib.Path,
+    compiler: str = "gcc",
+    source_ext: str = ".c",
 ) -> BuildResult:
-    """Compile a C source file using pkg-config flags."""
+    """Compile a source file using pkg-config flags.
+
+    Args:
+        source_code: The source code to compile.
+        lib_name: The pkg-config library name.
+        install_prefix: The install prefix where .pc files are located.
+        compiler: The compiler to use (default: gcc). Use g++ for C++ sources.
+        source_ext: The source file extension (default: .c). Use .cpp for C++.
+    """
     env = os.environ.copy()
     pc_dirs = [
         str(install_prefix / "lib64" / "pkgconfig"),
@@ -167,7 +177,7 @@ def compile_with_pkg_config(
     env["PKG_CONFIG_PATH"] = ":".join(pc_dirs)
 
     tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="clltk_pkgconfig_"))
-    source_path = tmpdir / "test.c"
+    source_path = tmpdir / f"test{source_ext}"
     source_path.write_text(source_code)
     output_path = tmpdir / "test"
 
@@ -190,9 +200,16 @@ def compile_with_pkg_config(
 
     flags = result.stdout.strip().split()
 
+    # Add library path for linking
+    lib_dirs = [
+        str(install_prefix / "lib64"),
+        str(install_prefix / "lib"),
+    ]
+    env["LD_LIBRARY_PATH"] = ":".join(lib_dirs)
+
     # Compile
     compile_result = _run(
-        ["gcc", str(source_path), "-o", str(output_path)] + flags,
+        [compiler, str(source_path), "-o", str(output_path)] + flags,
         cwd=tmpdir,
         env=env,
     )

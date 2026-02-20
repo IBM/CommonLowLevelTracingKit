@@ -17,12 +17,30 @@ def get_packages_dir() -> pathlib.Path:
     return get_build_dir() / "packages"
 
 
+EXPECTED_RPM_PATTERNS = [
+    "clltk-tracing-",
+    "clltk-decoder-",
+    "clltk-snapshot-",
+    "clltk-devel-",
+    "clltk-static-",
+    "clltk-tools-",
+    "clltk-python-decoder-",
+]
+
+
 def packages_exist() -> bool:
-    """Check if RPM packages have been built."""
+    """Check if all expected RPM packages have been built."""
     pkg_dir = get_packages_dir()
     if not pkg_dir.is_dir():
         return False
-    return len(list(pkg_dir.glob("*.rpm"))) > 0
+    rpm_names = [p.name for p in pkg_dir.glob("*.rpm")]
+    if not rpm_names:
+        return False
+    # Check that every expected subpackage has at least one matching RPM
+    for pattern in EXPECTED_RPM_PATTERNS:
+        if not any(pattern in name for name in rpm_names):
+            return False
+    return True
 
 
 def ensure_rpms_built() -> None:

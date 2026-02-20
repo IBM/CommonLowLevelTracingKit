@@ -28,6 +28,16 @@ SIMPLE_C_SOURCE = """\
 int main(void) { return 0; }
 """
 
+SIMPLE_DECODER_CPP_SOURCE = """\
+#include <CommonLowLevelTracingKit/decoder/Tracebuffer.hpp>
+int main() { return 0; }
+"""
+
+SIMPLE_SNAPSHOT_CPP_SOURCE = """\
+#include <CommonLowLevelTracingKit/snapshot/snapshot.hpp>
+int main() { return 0; }
+"""
+
 
 class TestPkgConfigTracing(unittest.TestCase):
     """Test pkg-config for clltk_tracing."""
@@ -70,14 +80,60 @@ class TestPkgConfigTracing(unittest.TestCase):
         success, _, _ = run_pkg_config("clltk_decoder", self._prefix)
         self.assertTrue(success, "pkg-config failed to find clltk_decoder")
 
+    def test_pkgconfig_decoder_libs(self):
+        success, cflags, libs = run_pkg_config("clltk_decoder", self._prefix)
+        if not success:
+            self.skipTest("pkg-config not available for clltk_decoder")
+        self.assertIn(
+            "-lclltk_decoder", libs, f"libs should contain -lclltk_decoder: {libs}"
+        )
+
     def test_pkgconfig_snapshot_found(self):
         success, _, _ = run_pkg_config("clltk_snapshot", self._prefix)
         self.assertTrue(success, "pkg-config failed to find clltk_snapshot")
+
+    def test_pkgconfig_snapshot_libs(self):
+        success, cflags, libs = run_pkg_config("clltk_snapshot", self._prefix)
+        if not success:
+            self.skipTest("pkg-config not available for clltk_snapshot")
+        self.assertIn(
+            "-lclltk_snapshot", libs, f"libs should contain -lclltk_snapshot: {libs}"
+        )
 
     @unittest.skipUnless(shutil.which("gcc"), "gcc not available")
     def test_compile_with_pkgconfig(self):
         """Compile a minimal C program using pkg-config flags."""
         result = compile_with_pkg_config(SIMPLE_C_SOURCE, "clltk_tracing", self._prefix)
+        self.assertTrue(
+            result.success,
+            f"Compilation with pkg-config flags failed:\n{result.stderr}",
+        )
+
+    @unittest.skipUnless(shutil.which("g++"), "g++ not available")
+    def test_compile_decoder_with_pkgconfig(self):
+        """Compile a minimal C++ program using pkg-config flags for decoder."""
+        result = compile_with_pkg_config(
+            SIMPLE_DECODER_CPP_SOURCE,
+            "clltk_decoder",
+            self._prefix,
+            compiler="g++",
+            source_ext=".cpp",
+        )
+        self.assertTrue(
+            result.success,
+            f"Compilation with pkg-config flags failed:\n{result.stderr}",
+        )
+
+    @unittest.skipUnless(shutil.which("g++"), "g++ not available")
+    def test_compile_snapshot_with_pkgconfig(self):
+        """Compile a minimal C++ program using pkg-config flags for snapshot."""
+        result = compile_with_pkg_config(
+            SIMPLE_SNAPSHOT_CPP_SOURCE,
+            "clltk_snapshot",
+            self._prefix,
+            compiler="g++",
+            source_ext=".cpp",
+        )
         self.assertTrue(
             result.success,
             f"Compilation with pkg-config flags failed:\n{result.stderr}",

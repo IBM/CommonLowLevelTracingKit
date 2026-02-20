@@ -13,8 +13,11 @@ BuildRequires:  cmake >= 3.20
 BuildRequires:  gcc >= 10
 BuildRequires:  gcc-c++
 BuildRequires:  boost-devel
+BuildRequires:  boost-regex
+BuildRequires:  cli11-devel
 BuildRequires:  libarchive-devel
 BuildRequires:  libffi-devel
+BuildRequires:  rapidjson-devel
 BuildRequires:  zlib-devel
 
 %description
@@ -49,6 +52,8 @@ archive snapshots.
 %package -n clltk-devel
 Summary:        Development files for CLLTK
 Requires:       clltk-tracing = %{version}-%{release}
+Requires:       clltk-decoder = %{version}-%{release}
+Requires:       clltk-snapshot = %{version}-%{release}
 
 %description -n clltk-devel
 Headers, CMake config, pkg-config files, and unversioned .so symlinks
@@ -63,7 +68,6 @@ Static archive libraries (.a) for CLLTK.
 
 %package -n clltk-tools
 Summary:        CLLTK command line tools
-Requires:       clltk-tracing = %{version}-%{release}
 
 %description -n clltk-tools
 Command line utilities (clltk) for trace management.
@@ -71,6 +75,7 @@ Command line utilities (clltk) for trace management.
 %package -n clltk-python-decoder
 Summary:        CLLTK Python decoder script
 BuildArch:      noarch
+Requires:       python3
 
 %description -n clltk-python-decoder
 Python trace decoder script for the Common Low Level Tracing Kit.
@@ -95,6 +100,10 @@ Python trace decoder script for the Common Low Level Tracing Kit.
 
 # --- File lists ---
 
+%files
+%license LICENSE
+%doc README.md
+
 %files -n clltk-tracing
 %license LICENSE
 %{_libdir}/libclltk_tracing.so.1
@@ -111,6 +120,7 @@ Python trace decoder script for the Common Low Level Tracing Kit.
 %{_libdir}/libclltk_snapshot.so.1.*
 
 %files -n clltk-devel
+%license LICENSE
 %{_includedir}/CommonLowLevelTracingKit/
 %{_libdir}/libclltk_tracing.so
 %{_libdir}/libclltk_decoder.so
@@ -121,14 +131,17 @@ Python trace decoder script for the Common Low Level Tracing Kit.
 %{_libdir}/pkgconfig/clltk_snapshot.pc
 
 %files -n clltk-static
+%license LICENSE
 %{_libdir}/libclltk_tracing_static.a
 %{_libdir}/libclltk_decoder_static.a
 %{_libdir}/libclltk_snapshot_static.a
 
 %files -n clltk-tools
+%license LICENSE
 %{_bindir}/clltk
 
 %files -n clltk-python-decoder
+%license LICENSE
 %{_bindir}/clltk_decoder.py
 
 %post -n clltk-tracing -p /sbin/ldconfig
@@ -139,3 +152,5 @@ Python trace decoder script for the Common Low Level Tracing Kit.
 %postun -n clltk-snapshot -p /sbin/ldconfig
 
 %changelog
+* Fri Feb 20 2026 CLLTK Maintainers <clltk@ibm.com> - @CLLTK_VERSION_STRING@-1
+- Initial RPM packaging with subpackages
