@@ -155,7 +155,7 @@ install(TARGETS
 )
 install(TARGETS
     clltk_tracing_static
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT static
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT devel
 )
 
 # pkg-config

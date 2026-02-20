@@ -56,21 +56,14 @@ Requires:       clltk-decoder = %{version}-%{release}
 Requires:       clltk-snapshot = %{version}-%{release}
 
 %description -n clltk-devel
-Headers, CMake config, pkg-config files, and unversioned .so symlinks
-for developing against CLLTK.
+Headers, CMake config, pkg-config files, unversioned .so symlinks,
+and static archive libraries (.a) for developing against CLLTK.
 
-%package -n clltk-static
-Summary:        Static libraries for CLLTK
-Requires:       clltk-devel = %{version}-%{release}
+%package -n clltk-cmd
+Summary:        CLLTK command line tool
 
-%description -n clltk-static
-Static archive libraries (.a) for CLLTK.
-
-%package -n clltk-tools
-Summary:        CLLTK command line tools
-
-%description -n clltk-tools
-Command line utilities (clltk) for trace management.
+%description -n clltk-cmd
+Command line utility (clltk) for trace management.
 
 %package -n clltk-python-decoder
 Summary:        CLLTK Python decoder script
@@ -125,18 +118,15 @@ Python trace decoder script for the Common Low Level Tracing Kit.
 %{_libdir}/libclltk_tracing.so
 %{_libdir}/libclltk_decoder.so
 %{_libdir}/libclltk_snapshot.so
+%{_libdir}/libclltk_tracing_static.a
+%{_libdir}/libclltk_decoder_static.a
+%{_libdir}/libclltk_snapshot_static.a
 %{_libdir}/cmake/CLLTK/
 %{_libdir}/pkgconfig/clltk_tracing.pc
 %{_libdir}/pkgconfig/clltk_decoder.pc
 %{_libdir}/pkgconfig/clltk_snapshot.pc
 
-%files -n clltk-static
-%license LICENSE
-%{_libdir}/libclltk_tracing_static.a
-%{_libdir}/libclltk_decoder_static.a
-%{_libdir}/libclltk_snapshot_static.a
-
-%files -n clltk-tools
+%files -n clltk-cmd
 %license LICENSE
 %{_bindir}/clltk
 

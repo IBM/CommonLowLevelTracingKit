@@ -22,8 +22,7 @@ EXPECTED_RPM_PATTERNS = [
     "clltk-decoder-",
     "clltk-snapshot-",
     "clltk-devel-",
-    "clltk-static-",
-    "clltk-tools-",
+    "clltk-cmd-",
     "clltk-python-decoder-",
 ]
 
@@ -68,7 +67,7 @@ def ensure_rpms_built() -> None:
     for preset in [
         "rpm-libs",
         "rpm-devel",
-        "rpm-tools",
+        "rpm-cmd",
         "rpm-python",
         "rpm-full",
     ]:

@@ -244,20 +244,6 @@ class TestDevelRpm(unittest.TestCase):
                     f"Missing unversioned symlink {lib} in devel RPM",
                 )
 
-
-class TestStaticRpm(unittest.TestCase):
-    """Validate the clltk-static RPM."""
-
-    @classmethod
-    def setUpClass(cls):
-        rpm_path = find_rpm_by_name(r"clltk-static-\d")
-        if rpm_path is None:
-            raise unittest.SkipTest("clltk-static RPM not found")
-        cls.rpm = rpm_inspect(rpm_path)
-
-    def test_name(self):
-        self.assertEqual(self.rpm.info.name, "clltk-static")
-
     def test_contains_tracing_static(self):
         archives = [f for f in self.rpm.files if "libclltk_tracing_static.a" in f]
         self.assertTrue(len(archives) > 0, "Missing tracing static library")
@@ -270,32 +256,19 @@ class TestStaticRpm(unittest.TestCase):
         archives = [f for f in self.rpm.files if "libclltk_snapshot_static.a" in f]
         self.assertTrue(len(archives) > 0, "Missing snapshot static library")
 
-    def test_no_shared_libs(self):
-        shared = [f for f in self.rpm.files if ".so" in f]
-        self.assertEqual(
-            len(shared), 0, f"Static RPM should not contain shared libs: {shared}"
-        )
 
-    def test_requires_devel(self):
-        devel_dep = [r for r in self.rpm.requires if "clltk-devel" in r]
-        self.assertTrue(
-            len(devel_dep) > 0,
-            f"Missing dep on clltk-devel. Requires: {self.rpm.requires}",
-        )
-
-
-class TestToolsRpm(unittest.TestCase):
-    """Validate the clltk-tools RPM."""
+class TestCmdRpm(unittest.TestCase):
+    """Validate the clltk-cmd RPM."""
 
     @classmethod
     def setUpClass(cls):
-        rpm_path = find_rpm_by_name(r"clltk-tools-\d")
+        rpm_path = find_rpm_by_name(r"clltk-cmd-\d")
         if rpm_path is None:
-            raise unittest.SkipTest("clltk-tools RPM not found")
+            raise unittest.SkipTest("clltk-cmd RPM not found")
         cls.rpm = rpm_inspect(rpm_path)
 
     def test_name(self):
-        self.assertEqual(self.rpm.info.name, "clltk-tools")
+        self.assertEqual(self.rpm.info.name, "clltk-cmd")
 
     def test_version(self):
         self.assertEqual(self.rpm.info.version, VERSION)
@@ -396,9 +369,9 @@ class TestDebuginfoRpms(unittest.TestCase):
         rpm = self._find_debuginfo(r"clltk-snapshot-debuginfo-\d")
         self.assertIsNotNone(rpm, "Missing clltk-snapshot-debuginfo RPM")
 
-    def test_tools_debuginfo(self):
-        rpm = self._find_debuginfo(r"clltk-tools-debuginfo-\d")
-        self.assertIsNotNone(rpm, "Missing clltk-tools-debuginfo RPM")
+    def test_cmd_debuginfo(self):
+        rpm = self._find_debuginfo(r"clltk-cmd-debuginfo-\d")
+        self.assertIsNotNone(rpm, "Missing clltk-cmd-debuginfo RPM")
 
 
 class TestSrpm(unittest.TestCase):

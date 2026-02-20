@@ -29,17 +29,13 @@ set(CPACK_COMPONENT_DECODER_LIBS_DESCRIPTION "C++ decoder shared library (libcll
 set(CPACK_COMPONENT_SNAPSHOT_DISPLAY_NAME "CLLTK Snapshot Runtime Library")
 set(CPACK_COMPONENT_SNAPSHOT_DESCRIPTION "Snapshot shared library (libclltk_snapshot.so)")
 
-# Development files (headers, cmake config, pkg-config, .so symlinks)
+# Development files (headers, cmake config, pkg-config, .so symlinks, static libs)
 set(CPACK_COMPONENT_DEVEL_DISPLAY_NAME "CLLTK Development Files")
-set(CPACK_COMPONENT_DEVEL_DESCRIPTION "Headers, CMake config, and pkg-config files for developing against CLLTK")
+set(CPACK_COMPONENT_DEVEL_DESCRIPTION "Headers, CMake config, pkg-config files, and static libraries for developing against CLLTK")
 
-# Static libraries
-set(CPACK_COMPONENT_STATIC_DISPLAY_NAME "CLLTK Static Libraries")
-set(CPACK_COMPONENT_STATIC_DESCRIPTION "Static archive libraries (.a) for CLLTK")
-
-# Command line tools
-set(CPACK_COMPONENT_CMD_DISPLAY_NAME "CLLTK Command Line Tools")
-set(CPACK_COMPONENT_CMD_DESCRIPTION "Command line utilities for trace management")
+# Command line tool
+set(CPACK_COMPONENT_CMD_DISPLAY_NAME "CLLTK Command Line Tool")
+set(CPACK_COMPONENT_CMD_DESCRIPTION "Command line utility (clltk) for trace management")
 
 # Python decoder
 set(CPACK_COMPONENT_DECODER_DISPLAY_NAME "CLLTK Python Decoder")
@@ -57,8 +53,7 @@ set(CPACK_RPM_TRACING_PACKAGE_NAME "clltk-tracing")
 set(CPACK_RPM_DECODER_LIBS_PACKAGE_NAME "clltk-decoder")
 set(CPACK_RPM_SNAPSHOT_PACKAGE_NAME "clltk-snapshot")
 set(CPACK_RPM_DEVEL_PACKAGE_NAME "clltk-devel")
-set(CPACK_RPM_STATIC_PACKAGE_NAME "clltk-static")
-set(CPACK_RPM_CMD_PACKAGE_NAME "clltk-tools")
+set(CPACK_RPM_CMD_PACKAGE_NAME "clltk-cmd")
 set(CPACK_RPM_DECODER_PACKAGE_NAME "clltk-python-decoder")
 
 # Per-component RPM package summaries
@@ -66,13 +61,11 @@ set(CPACK_RPM_TRACING_PACKAGE_SUMMARY "CLLTK tracing shared library")
 set(CPACK_RPM_DECODER_LIBS_PACKAGE_SUMMARY "CLLTK C++ decoder shared library")
 set(CPACK_RPM_SNAPSHOT_PACKAGE_SUMMARY "CLLTK snapshot shared library")
 set(CPACK_RPM_DEVEL_PACKAGE_SUMMARY "Development files for CLLTK")
-set(CPACK_RPM_STATIC_PACKAGE_SUMMARY "Static libraries for CLLTK")
-set(CPACK_RPM_CMD_PACKAGE_SUMMARY "CLLTK command line tools")
+set(CPACK_RPM_CMD_PACKAGE_SUMMARY "CLLTK command line tool")
 set(CPACK_RPM_DECODER_PACKAGE_SUMMARY "CLLTK Python decoder script")
 
 # Per-component RPM dependencies
 set(CPACK_RPM_DEVEL_PACKAGE_REQUIRES "clltk-tracing = ${CLLTK_VERSION_STRING}, clltk-decoder = ${CLLTK_VERSION_STRING}, clltk-snapshot = ${CLLTK_VERSION_STRING}")
-set(CPACK_RPM_STATIC_PACKAGE_REQUIRES "clltk-devel = ${CLLTK_VERSION_STRING}")
 
 # Python decoder architecture
 set(CPACK_RPM_DECODER_PACKAGE_ARCHITECTURE "noarch")

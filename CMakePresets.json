@@ -112,14 +112,14 @@
             "name": "rpm-devel",
             "configurePreset": "rpm",
             "variables": {
-                "CPACK_COMPONENTS_ALL": "devel;static",
+                "CPACK_COMPONENTS_ALL": "devel",
                 "CPACK_RPM_COMPONENT_INSTALL": "ON",
                 "CPACK_RPM_PACKAGE_COMPONENT": "ON",
                 "CPACK_RPM_INSTALL_WITH_EXEC": "ON"
             }
         },
         {
-            "name": "rpm-tools",
+            "name": "rpm-cmd",
             "configurePreset": "rpm",
             "variables": {
                 "CPACK_COMPONENTS_ALL": "cmd",
@@ -201,7 +201,7 @@
                 },
                 {
                     "type": "package",
-                    "name": "rpm-tools"
+                    "name": "rpm-cmd"
                 },
                 {
                     "type": "package",

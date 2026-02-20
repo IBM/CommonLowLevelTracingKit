@@ -73,15 +73,14 @@ class TestSrpmRebuild(unittest.TestCase):
             f"rpmbuild --rebuild produced no RPMs in {rpm_dir}",
         )
 
-        # Verify we got the expected subpackages (at least 7:
-        # tracing, decoder, snapshot, devel, static, tools, python-decoder)
+        # Verify we got the expected subpackages (at least 6:
+        # tracing, decoder, snapshot, devel, cmd, python-decoder)
         expected_subpackages = [
             "clltk-tracing",
             "clltk-decoder",
             "clltk-snapshot",
             "clltk-devel",
-            "clltk-static",
-            "clltk-tools",
+            "clltk-cmd",
             "clltk-python-decoder",
         ]
         rpm_names = [p.name for p in rpms]
