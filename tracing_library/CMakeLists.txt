@@ -147,13 +147,26 @@ set_target_properties(
         PUBLIC_HEADER "${PUBLIC_HEADERS}"
 )
 install(TARGETS
-    clltk_tracing_static
     clltk_tracing_shared
     EXPORT CLLTKTracingTargets
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT tracing
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT tracing
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT tracing
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/tracing/
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/tracing/ COMPONENT devel
+)
+install(TARGETS
+    clltk_tracing_static
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT static
+)
+
+# pkg-config
+configure_file(
+    "${CMAKE_SOURCE_DIR}/cmake/clltk_tracing.pc.in"
+    "${CMAKE_BINARY_DIR}/clltk_tracing.pc"
+    @ONLY
+)
+install(FILES "${CMAKE_BINARY_DIR}/clltk_tracing.pc"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+    COMPONENT devel
 )
 
 # create alias target clltk_tracing based on set cache option

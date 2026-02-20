@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: clltk_snapshot
+Description: Common Low Level Tracing Kit - Snapshot Library
+Version: @CLLTK_VERSION_STRING@
+Libs: -L${libdir} -lclltk_snapshot
+Cflags: -I${includedir}
+Requires.private: libarchive

@@ -143,11 +143,24 @@ set_target_properties(
         PUBLIC_HEADER "${PUBLIC_HEADERS}"
 )
 install(TARGETS
-    clltk_decoder_static
     clltk_decoder_shared
     EXPORT CLLTKTracingTargets
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT tracing
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT tracing
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT tracing
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/decoder/
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT decoder_libs
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT decoder_libs
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/decoder/ COMPONENT devel
+)
+install(TARGETS
+    clltk_decoder_static
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT static
+)
+
+# pkg-config
+configure_file(
+    "${CMAKE_SOURCE_DIR}/cmake/clltk_decoder.pc.in"
+    "${CMAKE_BINARY_DIR}/clltk_decoder.pc"
+    @ONLY
+)
+install(FILES "${CMAKE_BINARY_DIR}/clltk_decoder.pc"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+    COMPONENT devel
 )

@@ -99,10 +99,31 @@
     ],
     "packagePresets": [
         {
-            "name": "rpm-c/c++",
+            "name": "rpm-libs",
             "configurePreset": "rpm",
             "variables": {
-                "CPACK_COMPONENTS_ALL": "tracing;snapshot;cmd",
+                "CPACK_COMPONENTS_ALL": "tracing;decoder_libs;snapshot",
+                "CPACK_RPM_COMPONENT_INSTALL": "ON",
+                "CPACK_RPM_PACKAGE_COMPONENT": "ON",
+                "CPACK_RPM_DEBUGINFO_PACKAGE": "ON",
+                "CPACK_RPM_INSTALL_WITH_EXEC": "ON"
+            }
+        },
+        {
+            "name": "rpm-devel",
+            "configurePreset": "rpm",
+            "variables": {
+                "CPACK_COMPONENTS_ALL": "devel;static",
+                "CPACK_RPM_COMPONENT_INSTALL": "ON",
+                "CPACK_RPM_PACKAGE_COMPONENT": "ON",
+                "CPACK_RPM_INSTALL_WITH_EXEC": "ON"
+            }
+        },
+        {
+            "name": "rpm-tools",
+            "configurePreset": "rpm",
+            "variables": {
+                "CPACK_COMPONENTS_ALL": "cmd",
                 "CPACK_RPM_COMPONENT_INSTALL": "ON",
                 "CPACK_RPM_PACKAGE_COMPONENT": "ON",
                 "CPACK_RPM_DEBUGINFO_PACKAGE": "ON",
@@ -171,7 +192,15 @@
                 },
                 {
                     "type": "package",
-                    "name": "rpm-c/c++"
+                    "name": "rpm-libs"
+                },
+                {
+                    "type": "package",
+                    "name": "rpm-devel"
+                },
+                {
+                    "type": "package",
+                    "name": "rpm-tools"
                 },
                 {
                     "type": "package",

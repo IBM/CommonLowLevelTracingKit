@@ -53,12 +53,25 @@ set_target_properties(
     PROPERTIES
         PUBLIC_HEADER include/CommonLowLevelTracingKit/snapshot/snapshot.hpp
 )
-install(TARGETS 
+install(TARGETS
     clltk_snapshot_shared
-    clltk_snapshot_static
     EXPORT CLLTKTracingTargets
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT snapshot
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT snapshot
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT snapshot
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/snapshot/
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/snapshot/ COMPONENT devel
+)
+install(TARGETS
+    clltk_snapshot_static
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT static
+)
+
+# pkg-config
+configure_file(
+    "${CMAKE_SOURCE_DIR}/cmake/clltk_snapshot.pc.in"
+    "${CMAKE_BINARY_DIR}/clltk_snapshot.pc"
+    @ONLY
+)
+install(FILES "${CMAKE_BINARY_DIR}/clltk_snapshot.pc"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+    COMPONENT devel
 )
