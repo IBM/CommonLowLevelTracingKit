@@ -16,6 +16,7 @@ static void add_create_tracepoint_command(CLI::App &app)
 	CLI::App *const command =
 		app.add_subcommand("trace", "Trace a single message to a tracebuffer");
 	command->alias("tp");
+	command->alias("tracepoint");
 	command->description(
 		"Write a single string message as a dynamic tracepoint to a tracebuffer.\n"
 		"Useful for manual trace injection from scripts, shell commands, or external programs.\n"
@@ -23,7 +24,7 @@ static void add_create_tracepoint_command(CLI::App &app)
 
 	static std::string buffer_name{};
 	command
-		->add_option("buffer,-b,--buffer", buffer_name,
+		->add_option("buffer,-b,--buffer,--tracebuffer,--tb", buffer_name,
 					 "Target tracebuffer name.\n"
 					 "If the tracebuffer does not exist, it will be created automatically")
 		->required()
@@ -32,7 +33,7 @@ static void add_create_tracepoint_command(CLI::App &app)
 
 	static size_t size{512000};
 	command
-		->add_option("-s,--size", size,
+		->add_option("-s,--size,--tracebuffer-size", size,
 					 "Ring buffer size in bytes if creating a new tracebuffer.\n"
 					 "One basic tracepoint is approximately 32 bytes.\n"
 					 "Supports size suffixes: K, M, G (e.g., 512K, 1M)")
@@ -53,7 +54,7 @@ static void add_create_tracepoint_command(CLI::App &app)
 
 	static std::string message{};
 	command
-		->add_option("message,-m,--message", message,
+		->add_option("message,-m,--message,--msg", message,
 					 "ASCII message string to trace.\n"
 					 "This is the main content of the tracepoint")
 		->required()
@@ -75,14 +76,14 @@ static void add_create_tracepoint_command(CLI::App &app)
 
 	static uint32_t tid{};
 	command
-		->add_option("--tid", tid,
+		->add_option("--tid,-t", tid,
 					 "Thread ID to associate with this tracepoint.\n"
 					 "Defaults to the clltk process's thread ID if not specified")
 		->type_name("TID");
 
 	static uint32_t pid{};
 	command
-		->add_option("--pid", pid,
+		->add_option("--pid,-p", pid,
 					 "Process ID to associate with this tracepoint.\n"
 					 "Defaults to the clltk process's PID if not specified")
 		->type_name("PID");

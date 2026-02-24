@@ -20,6 +20,7 @@ static void add_create_tracebuffer_command(CLI::App &app)
 {
 	CLI::App *const command = app.add_subcommand("buffer", "Create a new tracebuffer");
 	command->alias("tb");
+	command->alias("tracebuffer");
 	command->description(
 		"Create a new userspace tracebuffer with a specified ring buffer size.\n"
 		"The tracebuffer is created at CLLTK_TRACING_PATH (or -P path, or current directory).\n"
@@ -28,7 +29,7 @@ static void add_create_tracebuffer_command(CLI::App &app)
 
 	static std::string buffer_name{};
 	command
-		->add_option("buffer,-b,--buffer", buffer_name,
+		->add_option("buffer,-b,--buffer,--name,-n", buffer_name,
 					 "Unique name for this tracebuffer.\n"
 					 "Must start with a letter and contain only alphanumeric characters or "
 					 "underscores.\n"
