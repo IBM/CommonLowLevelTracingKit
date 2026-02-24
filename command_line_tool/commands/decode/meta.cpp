@@ -11,6 +11,7 @@
 #include "CommonLowLevelTracingKit/decoder/Meta.hpp"
 #include "commands/filter.hpp"
 #include "commands/interface.hpp"
+#include "commands/output.hpp"
 
 using namespace std::string_literals;
 
@@ -26,41 +27,41 @@ static std::string source_type_to_string(MetaSourceType type)
 	return CommonLowLevelTracingKit::decoder::metaSourceTypeToString(type);
 }
 
-static void print_source_header(FILE *f, size_t name_width)
+static void print_source_header(Output &out, size_t name_width)
 {
-	fprintf(f, "%-*s %-11s %10s %8s\n", static_cast<int>(name_width), "SOURCE", "TYPE", "META_SIZE",
-			"ENTRIES");
+	out.printf("%-*s %-11s %10s %8s\n", static_cast<int>(name_width), "SOURCE", "TYPE", "META_SIZE",
+			   "ENTRIES");
 }
 
-static void print_source_row(FILE *f, const MetaSourceInfo &info, size_t name_width)
+static void print_source_row(Output &out, const MetaSourceInfo &info, size_t name_width)
 {
 	if (info.valid()) {
-		fprintf(f, "%-*s %-11s %10lu %8zu\n", static_cast<int>(name_width), info.name.c_str(),
-				source_type_to_string(info.source_type).c_str(), info.meta_size,
-				info.entries.size());
+		out.printf("%-*s %-11s %10lu %8zu\n", static_cast<int>(name_width), info.name.c_str(),
+				   source_type_to_string(info.source_type).c_str(), info.meta_size,
+				   info.entries.size());
 	} else {
-		fprintf(f, "%-*s %-11s %10s %8s  [error: %s]\n", static_cast<int>(name_width),
-				info.name.c_str(), source_type_to_string(info.source_type).c_str(), "?", "?",
-				info.error.value_or("unknown").c_str());
+		out.printf("%-*s %-11s %10s %8s  [error: %s]\n", static_cast<int>(name_width),
+				   info.name.c_str(), source_type_to_string(info.source_type).c_str(), "?", "?",
+				   info.error.value_or("unknown").c_str());
 	}
 }
 
-static void print_entry_header(FILE *f, bool full)
+static void print_entry_header(Output &out, bool full)
 {
 	if (full) {
-		fprintf(f, "  %-7s %6s %-10s %s\n", "TYPE", "LINE", "ARGTYPES", "FILE");
-		fprintf(f, "  %s\n", "FORMAT");
+		out.printf("  %-7s %6s %-10s %s\n", "TYPE", "LINE", "ARGTYPES", "FILE");
+		out.printf("  %s\n", "FORMAT");
 	} else {
-		fprintf(f, "  %-7s %6s %-25s %-10s %s\n", "TYPE", "LINE", "FILE", "ARGTYPES", "FORMAT");
+		out.printf("  %-7s %6s %-25s %-10s %s\n", "TYPE", "LINE", "FILE", "ARGTYPES", "FORMAT");
 	}
 }
 
-static void print_entry_row(FILE *f, const MetaEntryInfo &entry, bool full)
+static void print_entry_row(Output &out, const MetaEntryInfo &entry, bool full)
 {
 	if (full) {
-		fprintf(f, "  %-7s %6u %-10s %s\n", MetaEntryInfo::typeToString(entry.type).c_str(),
-				entry.line, entry.arg_types.c_str(), entry.file.c_str());
-		fprintf(f, "  %s\n", entry.format.c_str());
+		out.printf("  %-7s %6u %-10s %s\n", MetaEntryInfo::typeToString(entry.type).c_str(),
+				   entry.line, entry.arg_types.c_str(), entry.file.c_str());
+		out.printf("  %s\n", entry.format.c_str());
 	} else {
 		std::string format_display = entry.format;
 		if (format_display.size() > 50) {
@@ -76,13 +77,14 @@ static void print_entry_row(FILE *f, const MetaEntryInfo &entry, bool full)
 			file_display = "..." + file_display.substr(file_display.size() - 22);
 		}
 
-		fprintf(f, "  %-7s %6u %-25s %-10s %s\n", MetaEntryInfo::typeToString(entry.type).c_str(),
-				entry.line, file_display.c_str(), entry.arg_types.c_str(), format_display.c_str());
+		out.printf("  %-7s %6u %-25s %-10s %s\n", MetaEntryInfo::typeToString(entry.type).c_str(),
+				   entry.line, file_display.c_str(), entry.arg_types.c_str(),
+				   format_display.c_str());
 	}
 }
 
-static void print_text_output(FILE *f, const MetaSourceInfoCollection &sources, bool show_entries,
-							  bool full)
+static void print_text_output(Output &out, const MetaSourceInfoCollection &sources,
+							  bool show_entries, bool full)
 {
 	if (sources.empty()) {
 		return;
@@ -93,26 +95,26 @@ static void print_text_output(FILE *f, const MetaSourceInfoCollection &sources, 
 		name_width = std::max(name_width, source.name.size());
 	}
 
-	print_source_header(f, name_width);
+	print_source_header(out, name_width);
 
 	for (const auto &source : sources) {
 		if (is_interrupted()) {
 			break;
 		}
-		print_source_row(f, source, name_width);
+		print_source_row(out, source, name_width);
 		if (show_entries && source.valid() && !source.entries.empty()) {
-			print_entry_header(f, full);
+			print_entry_header(out, full);
 			for (const auto &entry : source.entries) {
 				if (is_interrupted()) {
 					break;
 				}
-				print_entry_row(f, entry, full);
+				print_entry_row(out, entry, full);
 			}
 		}
 	}
 }
 
-static void print_json_output(FILE *f, const MetaSourceInfoCollection &sources, bool pretty)
+static void print_json_output(Output &out, const MetaSourceInfoCollection &sources, bool pretty)
 {
 	rapidjson::Document doc;
 	doc.SetArray();
@@ -199,7 +201,7 @@ static void print_json_output(FILE *f, const MetaSourceInfoCollection &sources, 
 		rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 		doc.Accept(writer);
 	}
-	fprintf(f, "%s\n", buffer.GetString());
+	out.printf("%s\n", buffer.GetString());
 }
 
 static void add_meta_command(CLI::App &app)
@@ -246,6 +248,15 @@ static void add_meta_command(CLI::App &app)
 	command->add_flag("-w,--width", full_width,
 					  "Show full width output (no truncation of format strings or file paths)");
 
+	static std::string output_path{};
+	command
+		->add_option("-o,--output", output_path,
+					 "Output file path (default: stdout, use - for stdout)")
+		->type_name("FILE");
+
+	static bool compress_output = false;
+	command->add_flag("-z,--compress", compress_output, "Compress output with gzip");
+
 	command->callback([&]() {
 		std::string resolved_input = input_path.empty() ? get_tracing_path().string() : input_path;
 
@@ -258,13 +269,19 @@ static void add_meta_command(CLI::App &app)
 		auto sources =
 			CommonLowLevelTracingKit::decoder::getMetaInfo(resolved_input, recursive, filter_func);
 
+		auto out = create_output(output_path, compress_output);
+		if (!out) {
+			log_error("Cannot open output: ", output_path.empty() ? "stdout" : output_path);
+			throw CLI::RuntimeError(1);
+		}
+
 		if (json_output) {
-			print_json_output(stdout, sources, pretty_json);
+			print_json_output(*out, sources, pretty_json);
 		} else {
 			if (sources.empty()) {
 				log_info("No meta information found in ", resolved_input);
 			} else {
-				print_text_output(stdout, sources, show_entries, full_width);
+				print_text_output(*out, sources, show_entries, full_width);
 
 				if (!is_interrupted()) {
 					size_t total_sources = sources.size();
@@ -277,12 +294,11 @@ static void add_meta_command(CLI::App &app)
 							++error_count;
 						}
 					}
-					fprintf(stdout, "\nTotal: %zu sources, %zu entries", total_sources,
-							total_entries);
+					out->printf("\nTotal: %zu sources, %zu entries", total_sources, total_entries);
 					if (error_count > 0) {
-						fprintf(stdout, " (%zu errors)", error_count);
+						out->printf(" (%zu errors)", error_count);
 					}
-					fprintf(stdout, "\n");
+					out->printf("\n");
 				}
 			}
 		}
