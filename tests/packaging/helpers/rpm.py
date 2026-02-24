@@ -47,15 +47,17 @@ def ensure_rpms_built() -> None:
     if packages_exist():
         return
     root = get_repo_root()
-    # Configure if needed
-    build_dir = get_build_dir()
-    if not (build_dir / "CMakeCache.txt").exists():
-        subprocess.run(
-            ["cmake", "--preset", "rpm"],
-            cwd=root,
-            check=True,
-            capture_output=True,
-        )
+    # Always (re-)configure with the rpm preset using --fresh so that any
+    # leftover CMakeCache.txt from a different preset (e.g. "unittests") is
+    # discarded.  Without --fresh the old cache variables (missing
+    # CPACK_GENERATOR=RPM) survive and CPack produces TGZ/Shell archives
+    # instead of RPMs.
+    subprocess.run(
+        ["cmake", "--preset", "rpm", "--fresh"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
     # Build
     subprocess.run(
         ["cmake", "--build", "--preset", "rpm"],

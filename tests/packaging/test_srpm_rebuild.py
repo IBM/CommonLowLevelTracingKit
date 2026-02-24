@@ -24,7 +24,6 @@ def setUpModule():
     ensure_rpms_built()
 
 
-@unittest.skipUnless(shutil.which("rpmbuild"), "rpmbuild not available")
 class TestSrpmRebuild(unittest.TestCase):
     """Test rebuilding binary RPMs from the SRPM."""
 
@@ -33,8 +32,7 @@ class TestSrpmRebuild(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         srpms = find_srpms()
-        if not srpms:
-            raise unittest.SkipTest("No SRPM found")
+        assert srpms, "No SRPM found after ensure_rpms_built()"
         cls._srpm_path = srpms[0]
         cls._tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="clltk_srpm_rebuild_"))
 

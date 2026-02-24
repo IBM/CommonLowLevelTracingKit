@@ -18,7 +18,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from helpers.base import run_command
-from helpers.clltk_cmd import clltk
+from helpers.clltk_cmd import clltk, clltk_as_nobody
 
 
 def setUpModule():
@@ -544,10 +544,6 @@ class TestTraceEdgeCases(TraceTestCase):
             "Alias test message not found",
         )
 
-    @unittest.skipIf(
-        os.geteuid() == 0,
-        "Test requires non-root user (root bypasses file permissions)",
-    )
     def test_trace_to_readonly_directory(self):
         """Test trace when directory is not writable."""
         import stat
@@ -560,7 +556,8 @@ class TestTraceEdgeCases(TraceTestCase):
         os.environ["CLLTK_TRACING_PATH"] = str(readonly_dir)
 
         try:
-            result = clltk("trace", "-b", "ReadonlyTest", "-m", "test", check=False)
+            run = clltk_as_nobody if os.geteuid() == 0 else clltk
+            result = run("trace", "-b", "ReadonlyTest", "-m", "test", check=False)
             # Should fail due to permissions
             self.assertNotEqual(result.returncode, 0)
         finally:

@@ -33,8 +33,9 @@ class TestTracingRpm(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         rpm_path = find_rpm_by_name(r"clltk-tracing-\d")
-        if rpm_path is None:
-            raise unittest.SkipTest("clltk-tracing RPM not found")
+        assert rpm_path is not None, (
+            "clltk-tracing RPM not found after ensure_rpms_built()"
+        )
         cls.rpm = rpm_inspect(rpm_path)
 
     def test_name(self):
@@ -83,8 +84,9 @@ class TestDecoderLibsRpm(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         rpm_path = find_rpm_by_name(r"clltk-decoder-\d")
-        if rpm_path is None:
-            raise unittest.SkipTest("clltk-decoder RPM not found")
+        assert rpm_path is not None, (
+            "clltk-decoder RPM not found after ensure_rpms_built()"
+        )
         cls.rpm = rpm_inspect(rpm_path)
 
     def test_name(self):
@@ -124,8 +126,9 @@ class TestSnapshotRpm(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         rpm_path = find_rpm_by_name(r"clltk-snapshot-\d")
-        if rpm_path is None:
-            raise unittest.SkipTest("clltk-snapshot RPM not found")
+        assert rpm_path is not None, (
+            "clltk-snapshot RPM not found after ensure_rpms_built()"
+        )
         cls.rpm = rpm_inspect(rpm_path)
 
     def test_name(self):
@@ -163,8 +166,9 @@ class TestDevelRpm(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         rpm_path = find_rpm_by_name(r"clltk-devel-\d")
-        if rpm_path is None:
-            raise unittest.SkipTest("clltk-devel RPM not found")
+        assert rpm_path is not None, (
+            "clltk-devel RPM not found after ensure_rpms_built()"
+        )
         cls.rpm = rpm_inspect(rpm_path)
 
     def test_name(self):
@@ -263,8 +267,7 @@ class TestCmdRpm(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         rpm_path = find_rpm_by_name(r"clltk-cmd-\d")
-        if rpm_path is None:
-            raise unittest.SkipTest("clltk-cmd RPM not found")
+        assert rpm_path is not None, "clltk-cmd RPM not found after ensure_rpms_built()"
         cls.rpm = rpm_inspect(rpm_path)
 
     def test_name(self):
@@ -293,8 +296,9 @@ class TestPythonDecoderRpm(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         rpm_path = find_rpm_by_name(r"clltk-python-decoder-\d")
-        if rpm_path is None:
-            raise unittest.SkipTest("clltk-python-decoder RPM not found")
+        assert rpm_path is not None, (
+            "clltk-python-decoder RPM not found after ensure_rpms_built()"
+        )
         cls.rpm = rpm_inspect(rpm_path)
 
     def test_name(self):
@@ -318,8 +322,9 @@ class TestFullRpm(unittest.TestCase):
     def setUpClass(cls):
         # The full RPM uses the base package name without a component suffix
         rpm_path = find_rpm_by_name(r"^clltk-\d")
-        if rpm_path is None:
-            raise unittest.SkipTest("clltk full RPM not found")
+        assert rpm_path is not None, (
+            "clltk full RPM not found after ensure_rpms_built()"
+        )
         cls.rpm = rpm_inspect(rpm_path)
 
     def test_version(self):
@@ -351,37 +356,36 @@ class TestFullRpm(unittest.TestCase):
 
 
 class TestDebuginfoRpms(unittest.TestCase):
-    """Validate that debuginfo RPMs are produced for compiled packages.
-
-    CPack's debuginfo generation with component installs depends on the
-    rpmbuild version and environment. Tests skip when debuginfo RPMs are
-    not found rather than failing hard.
-    """
+    """Validate that debuginfo RPMs are produced for compiled packages."""
 
     def _find_debuginfo(self, name_pattern):
         """Find a debuginfo RPM matching the given name pattern."""
         rpm = find_rpm_by_name(name_pattern)
-        if rpm is None:
-            self.skipTest(
-                f"debuginfo RPM matching '{name_pattern}' not produced "
-                "(CPack debuginfo generation is environment-dependent)"
-            )
+        self.assertIsNotNone(
+            rpm,
+            f"debuginfo RPM matching '{name_pattern}' not produced "
+            "after ensure_rpms_built()",
+        )
         return rpm
 
     def test_tracing_debuginfo(self):
         rpm = self._find_debuginfo(r"clltk-tracing-debuginfo-\d")
+        assert rpm is not None  # guaranteed by _find_debuginfo
         self.assertTrue(rpm.exists())
 
     def test_decoder_debuginfo(self):
         rpm = self._find_debuginfo(r"clltk-decoder-debuginfo-\d")
+        assert rpm is not None  # guaranteed by _find_debuginfo
         self.assertTrue(rpm.exists())
 
     def test_snapshot_debuginfo(self):
         rpm = self._find_debuginfo(r"clltk-snapshot-debuginfo-\d")
+        assert rpm is not None  # guaranteed by _find_debuginfo
         self.assertTrue(rpm.exists())
 
     def test_cmd_debuginfo(self):
         rpm = self._find_debuginfo(r"clltk-cmd-debuginfo-\d")
+        assert rpm is not None  # guaranteed by _find_debuginfo
         self.assertTrue(rpm.exists())
 
 
@@ -391,8 +395,7 @@ class TestSrpm(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         srpms = find_srpms()
-        if not srpms:
-            raise unittest.SkipTest("No SRPM found")
+        assert srpms, "No SRPM found after ensure_rpms_built()"
         cls.srpm_path = srpms[0]
         cls.files = []
         # rpm -qpl on SRPMs lists the source files

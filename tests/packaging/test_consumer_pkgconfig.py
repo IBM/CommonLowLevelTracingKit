@@ -10,7 +10,6 @@ correct flags, and that a C file can be compiled using those flags.
 
 import pathlib
 import shutil
-import subprocess
 import tempfile
 import unittest
 
@@ -47,11 +46,7 @@ class TestPkgConfigTracing(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._prefix = pathlib.Path(tempfile.mkdtemp(prefix="clltk_pkgconfig_"))
-        try:
-            cmake_install_to_prefix(cls._prefix)
-        except subprocess.CalledProcessError as e:
-            shutil.rmtree(cls._prefix, ignore_errors=True)
-            raise unittest.SkipTest(f"cmake --install failed: {e}")
+        cmake_install_to_prefix(cls._prefix)
 
     @classmethod
     def tearDownClass(cls):
@@ -64,14 +59,12 @@ class TestPkgConfigTracing(unittest.TestCase):
 
     def test_pkgconfig_tracing_cflags(self):
         success, cflags, libs = run_pkg_config("clltk_tracing", self._prefix)
-        if not success:
-            self.skipTest("pkg-config not available for clltk_tracing")
+        self.assertTrue(success, "pkg-config failed for clltk_tracing")
         self.assertIn("-I", cflags, f"cflags should contain -I: {cflags}")
 
     def test_pkgconfig_tracing_libs(self):
         success, cflags, libs = run_pkg_config("clltk_tracing", self._prefix)
-        if not success:
-            self.skipTest("pkg-config not available for clltk_tracing")
+        self.assertTrue(success, "pkg-config failed for clltk_tracing")
         self.assertIn(
             "-lclltk_tracing", libs, f"libs should contain -lclltk_tracing: {libs}"
         )
@@ -82,8 +75,7 @@ class TestPkgConfigTracing(unittest.TestCase):
 
     def test_pkgconfig_decoder_libs(self):
         success, cflags, libs = run_pkg_config("clltk_decoder", self._prefix)
-        if not success:
-            self.skipTest("pkg-config not available for clltk_decoder")
+        self.assertTrue(success, "pkg-config failed for clltk_decoder")
         self.assertIn(
             "-lclltk_decoder", libs, f"libs should contain -lclltk_decoder: {libs}"
         )
@@ -94,13 +86,11 @@ class TestPkgConfigTracing(unittest.TestCase):
 
     def test_pkgconfig_snapshot_libs(self):
         success, cflags, libs = run_pkg_config("clltk_snapshot", self._prefix)
-        if not success:
-            self.skipTest("pkg-config not available for clltk_snapshot")
+        self.assertTrue(success, "pkg-config failed for clltk_snapshot")
         self.assertIn(
             "-lclltk_snapshot", libs, f"libs should contain -lclltk_snapshot: {libs}"
         )
 
-    @unittest.skipUnless(shutil.which("gcc"), "gcc not available")
     def test_compile_with_pkgconfig(self):
         """Compile a minimal C program using pkg-config flags."""
         result = compile_with_pkg_config(SIMPLE_C_SOURCE, "clltk_tracing", self._prefix)
@@ -109,7 +99,6 @@ class TestPkgConfigTracing(unittest.TestCase):
             f"Compilation with pkg-config flags failed:\n{result.stderr}",
         )
 
-    @unittest.skipUnless(shutil.which("g++"), "g++ not available")
     def test_compile_decoder_with_pkgconfig(self):
         """Compile a minimal C++ program using pkg-config flags for decoder."""
         result = compile_with_pkg_config(
@@ -124,7 +113,6 @@ class TestPkgConfigTracing(unittest.TestCase):
             f"Compilation with pkg-config flags failed:\n{result.stderr}",
         )
 
-    @unittest.skipUnless(shutil.which("g++"), "g++ not available")
     def test_compile_snapshot_with_pkgconfig(self):
         """Compile a minimal C++ program using pkg-config flags for snapshot."""
         result = compile_with_pkg_config(

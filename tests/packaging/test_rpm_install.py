@@ -35,11 +35,7 @@ class TestInstallSmokeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._prefix = pathlib.Path(tempfile.mkdtemp(prefix="clltk_install_"))
-        try:
-            cmake_install_to_prefix(cls._prefix)
-        except subprocess.CalledProcessError as e:
-            shutil.rmtree(cls._prefix, ignore_errors=True)
-            raise unittest.SkipTest(f"cmake --install failed: {e}")
+        cmake_install_to_prefix(cls._prefix)
 
     @classmethod
     def tearDownClass(cls):
@@ -59,8 +55,7 @@ class TestInstallSmokeTest(unittest.TestCase):
 
     def test_clltk_binary_runs(self):
         binary = self._find_file("clltk")
-        if binary is None:
-            self.skipTest("clltk binary not found")
+        self.assertIsNotNone(binary, "clltk binary not found in install prefix")
         result = subprocess.run(
             [str(binary), "--version"],
             capture_output=True,
@@ -88,8 +83,7 @@ class TestInstallSmokeTest(unittest.TestCase):
     def test_shared_lib_tracing_loadable(self):
         """Verify the shared library can be loaded (ldd resolves all deps)."""
         lib = self._find_file("libclltk_tracing.so")
-        if lib is None:
-            self.skipTest("libclltk_tracing.so not found")
+        self.assertIsNotNone(lib, "libclltk_tracing.so not found in install prefix")
         # Use ldd to check if all dependencies resolve
         env = os.environ.copy()
         lib_dirs = [
@@ -111,8 +105,7 @@ class TestInstallSmokeTest(unittest.TestCase):
     def test_shared_lib_decoder_loadable(self):
         """Verify the decoder shared library can be loaded (ldd resolves all deps)."""
         lib = self._find_file("libclltk_decoder.so")
-        if lib is None:
-            self.skipTest("libclltk_decoder.so not found")
+        self.assertIsNotNone(lib, "libclltk_decoder.so not found in install prefix")
         env = os.environ.copy()
         lib_dirs = [
             str(self._prefix / "lib64"),
@@ -133,8 +126,7 @@ class TestInstallSmokeTest(unittest.TestCase):
     def test_shared_lib_snapshot_loadable(self):
         """Verify the snapshot shared library can be loaded (ldd resolves all deps)."""
         lib = self._find_file("libclltk_snapshot.so")
-        if lib is None:
-            self.skipTest("libclltk_snapshot.so not found")
+        self.assertIsNotNone(lib, "libclltk_snapshot.so not found in install prefix")
         env = os.environ.copy()
         lib_dirs = [
             str(self._prefix / "lib64"),
@@ -158,8 +150,7 @@ class TestInstallSmokeTest(unittest.TestCase):
 
     def test_decoder_script_executable(self):
         script = self._find_file("clltk_decoder.py")
-        if script is None:
-            self.skipTest("clltk_decoder.py not found")
+        self.assertIsNotNone(script, "clltk_decoder.py not found in install prefix")
         self.assertTrue(
             os.access(str(script), os.X_OK), "clltk_decoder.py is not executable"
         )

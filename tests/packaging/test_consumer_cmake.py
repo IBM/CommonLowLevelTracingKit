@@ -10,7 +10,6 @@ project can find_package(CLLTK), build, link, and run.
 
 import pathlib
 import shutil
-import subprocess
 import tempfile
 import unittest
 
@@ -41,11 +40,7 @@ class TestConsumerCMake(unittest.TestCase):
     def setUpClass(cls):
         # Install CLLTK to temp prefix
         cls._prefix = pathlib.Path(tempfile.mkdtemp(prefix="clltk_cmake_prefix_"))
-        try:
-            cmake_install_to_prefix(cls._prefix)
-        except subprocess.CalledProcessError as e:
-            shutil.rmtree(cls._prefix, ignore_errors=True)
-            raise unittest.SkipTest(f"cmake --install failed: {e}")
+        cmake_install_to_prefix(cls._prefix)
 
         # Create consumer project
         cls._project_dir = create_temp_consumer_project()
