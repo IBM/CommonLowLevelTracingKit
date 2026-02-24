@@ -108,6 +108,13 @@ static void add_clear_tracebuffer_command(CLI::App &app)
 		CommonLowLevelTracingKit::cmd::interface::sync_path_to_library();
 		const auto tracing_path = get_tracing_path();
 
+		// Require at least one of --buffer, --all, or --filter
+		if (buffer_name.empty() && !all_flag &&
+			filter_str == CommonLowLevelTracingKit::cmd::interface::default_filter_pattern) {
+			throw CLI::RuntimeError(
+				"No buffer specified. Use --buffer <NAME>, --all, or --filter <PATTERN>.", 1);
+		}
+
 		// Helper to prompt for confirmation
 		auto confirm = [](const std::string &prompt) -> bool {
 			std::cout << prompt << " [y/N] ";

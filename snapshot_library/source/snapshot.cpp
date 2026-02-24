@@ -138,7 +138,8 @@ static std::optional<size_t> write_snapshot_impl(write_function_t output_write,
 // Define the main function that generates the CLLTK traces snapshot
 std::optional<size_t> CommonLowLevelTracingKit::snapshot::take_snapshot(
 	write_function_t func, const std::vector<std::string> &additional_tracepoints,
-	const bool compress, const size_t bucket_size, const verbose_function_t &verbose)
+	const bool compress, const size_t bucket_size, const verbose_function_t &verbose,
+	bool recursive)
 {
 	std::ignore = bucket_size; // bucket_size not used with libarchive
 
@@ -147,7 +148,7 @@ std::optional<size_t> CommonLowLevelTracingKit::snapshot::take_snapshot(
 	const std::filesystem::path root_path = tracing_path ? tracing_path : ".";
 
 	// open all files
-	auto files = getAllFiles(root_path);
+	auto files = getAllFiles(root_path, recursive);
 	files.push_back(std::make_unique<VirtualFile>(additional_tracepoints));
 
 	return write_snapshot_impl(func, files, compress, verbose);

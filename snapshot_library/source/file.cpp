@@ -60,7 +60,7 @@ CommonLowLevelTracingKit::snapshot::RegularFile::RegularFile(
 	filepath = std::filesystem::relative(full_path, root_path);
 	stat(full_path.c_str(), &status);
 	m_fd = open(full_path.c_str(), O_RDONLY);
-	if (m_fd > 0) {
+	if (m_fd >= 0) {
 		content = mmap(nullptr, status.st_size, PROT_READ, MAP_PRIVATE, m_fd, 0);
 	}
 }
@@ -71,15 +71,15 @@ CommonLowLevelTracingKit::snapshot::RegularFile::RegularFile(const std::filesyst
 	filepath = file_path.filename().string(); // Use just the filename in the archive
 	stat(full_path.c_str(), &status);
 	m_fd = open(full_path.c_str(), O_RDONLY);
-	if (m_fd > 0) {
+	if (m_fd >= 0) {
 		content = mmap(nullptr, status.st_size, PROT_READ, MAP_PRIVATE, m_fd, 0);
 	}
 }
 CommonLowLevelTracingKit::snapshot::RegularFile::~RegularFile()
 {
-	if (m_fd > 0) {
+	if (m_fd >= 0) {
 		close(m_fd);
-		m_fd = 0;
+		m_fd = -1;
 	}
 	if (content != nullptr && content != MAP_FAILED) {
 		munmap((void *)content, status.st_size);
@@ -139,7 +139,8 @@ std::string CommonLowLevelTracingKit::snapshot::VirtualFile::to_file_content(
 }
 
 std::vector<std::unique_ptr<CommonLowLevelTracingKit::snapshot::File>>
-CommonLowLevelTracingKit::snapshot::getAllFiles(const std::filesystem::path &root_path)
+CommonLowLevelTracingKit::snapshot::getAllFiles(const std::filesystem::path &root_path,
+												bool recursive)
 {
 	std::vector<std::unique_ptr<File>> files{};
 
@@ -147,15 +148,19 @@ CommonLowLevelTracingKit::snapshot::getAllFiles(const std::filesystem::path &roo
 		return files;
 	}
 
-	const auto diriter = std::filesystem::recursive_directory_iterator(root_path);
-	if (diriter == std::filesystem::end(diriter)) {
-		// could not open
-		return files;
-	}
-
-	for (const auto &entry : diriter) {
+	auto collect = [&](const auto &entry) {
 		if (entry.is_regular_file()) {
 			files.push_back(std::make_unique<RegularFile>(entry, root_path));
+		}
+	};
+
+	if (recursive) {
+		for (const auto &entry : std::filesystem::recursive_directory_iterator(root_path)) {
+			collect(entry);
+		}
+	} else {
+		for (const auto &entry : std::filesystem::directory_iterator(root_path)) {
+			collect(entry);
 		}
 	}
 	return files;

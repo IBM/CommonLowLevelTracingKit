@@ -39,10 +39,9 @@ namespace CommonLowLevelTracingKit::decoder::source::low_level {
 		}
 
 		template <size_t width> static INLINE void write_digits(char *p, int32_t v) {
-			for (int i = width - 1; i >= 0; --i) {
-				p[i] = static_cast<char>('0' + (v % 10));
-				v /= 10;
-			}
+			// Delegate to the unsigned overload to avoid negative remainder
+			// from operator% producing non-digit characters.
+			write_digits<width>(p, static_cast<uint32_t>(v < 0 ? -v : v));
 		}
 
 		// Fast UTC date calculation without timezone lookup

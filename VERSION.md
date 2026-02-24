@@ -1,6 +1,14 @@
-1.2.55
+1.2.56
 
 # Change log
+## 1.2.56
+- cmd: fix gzip-to-stdout closing fd 1 on destruction (dup before gzdopen)
+- cmd: fix silent truncation of gzip output lines longer than 8 KB
+- cmd: fix --no-recursive ignored by snapshot when no --filter is given
+- cmd: fix clltk clear with no arguments giving a confusing empty-name error
+- cmd: add -o/--output and -z/--compress to list and meta commands
+- snapshot: fix fd 0 treated as invalid (m_fd check was > 0, should be >= 0)
+- decoder: fix write_digits producing garbage characters for negative year values
 ## 1.2.55
 - packaging: add RPM subpackages (tracing, decoder, snapshot, devel, cmd, python-decoder)
 - packaging: add CMake package config (find_package(CLLTK)) and pkg-config support
