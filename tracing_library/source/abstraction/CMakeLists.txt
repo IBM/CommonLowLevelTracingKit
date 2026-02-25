@@ -5,6 +5,8 @@ target_include_directories(clltk_tracing_abstraction_interface
         include
 )
 
+find_package(Threads REQUIRED)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_library(clltk_tracing_abstraction OBJECT
         linux_user_space/file.c
@@ -15,7 +17,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     )
     target_link_libraries(clltk_tracing_abstraction
         PRIVATE
-            pthread
+            Threads::Threads
     )
     set_target_properties(clltk_tracing_abstraction
         PROPERTIES

@@ -6,7 +6,7 @@ set(Exe_Name "")
 get_filename_component(Exe_Name ${CMAKE_CURRENT_LIST_DIR} NAME)
 string(REPLACE " " "_" Exe_Name ${Exe_Name})
 
-file(GLOB_RECURSE Exe_Name_Sources
+file(GLOB_RECURSE Exe_Name_Sources CONFIGURE_DEPENDS
     "*.c" "*.cpp"
 )
 
@@ -26,9 +26,9 @@ target_include_directories(${Exe_Name}
 
 target_link_libraries(${Exe_Name}
     GTest::gtest_main
+    clltk_test_flags
     clltk_tracing_static
 )
 
 gtest_discover_tests(${Exe_Name})
 
-target_compile_options(${Exe_Name} PRIVATE -O0)

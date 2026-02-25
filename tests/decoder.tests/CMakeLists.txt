@@ -1,7 +1,7 @@
 # Copyright (c) 2024, International Business Machines
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
-file(GLOB CPP_FILES "*.cpp")
+file(GLOB CPP_FILES CONFIGURE_DEPENDS "*.cpp")
 
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/args_cpp.tests.cpp
@@ -27,6 +27,7 @@ add_executable(decoder_tests
 target_link_libraries(decoder_tests
     GTest::gtest_main
     gmock
+    clltk_test_flags
     clltk_tracing_static
     clltk_snapshot_static
     clltk_decoder_object # use the object lib as static and shared have limited exported symbols

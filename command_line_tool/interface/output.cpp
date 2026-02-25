@@ -3,6 +3,8 @@
 
 #include "commands/output.hpp"
 
+#include <vector>
+
 namespace CommonLowLevelTracingKit::cmd::interface
 {
 
@@ -28,15 +30,21 @@ int GzipFileOutput::printf(const char *format, ...)
 	char buffer[8192];
 	int len = vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
-	if (len > 0) {
-		// Clamp to buffer size to avoid writing beyond buffer
-		size_t write_len = static_cast<size_t>(len);
-		if (write_len > sizeof(buffer) - 1) {
-			write_len = sizeof(buffer) - 1;
-		}
+	if (len <= 0) {
+		return len;
+	}
+	size_t write_len = static_cast<size_t>(len);
+	if (write_len < sizeof(buffer)) {
+		// Common fast path: output fits in the stack buffer
 		return m_gz->write(buffer, write_len);
 	}
-	return len;
+	// Output exceeded the stack buffer -- allocate and re-format
+	std::vector<char> heap_buf(write_len + 1);
+	va_list args2;
+	va_start(args2, format);
+	vsnprintf(heap_buf.data(), heap_buf.size(), format, args2);
+	va_end(args2);
+	return m_gz->write(heap_buf.data(), write_len);
 }
 
 void GzipFileOutput::flush()

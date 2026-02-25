@@ -8,6 +8,7 @@ add_executable(example-extreme_c
 target_link_libraries(example-extreme_c
 PRIVATE
     clltk_tracing
+    clltk_example_flags
 )
 
 add_dependencies(example-extreme_c

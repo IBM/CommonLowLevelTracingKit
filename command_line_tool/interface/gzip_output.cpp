@@ -3,6 +3,8 @@
 
 #include "commands/gzip_output.hpp"
 
+#include <unistd.h>
+
 namespace CommonLowLevelTracingKit::cmd::interface
 {
 
@@ -12,8 +14,17 @@ std::unique_ptr<GzipOutput> GzipOutput::open(const std::string &path)
 	bool use_stdout = (path.empty() || path == "-");
 
 	if (use_stdout) {
-		// Use gzdopen with stdout's file descriptor
-		gz = gzdopen(fileno(stdout), "wb");
+		// dup() stdout's fd so that gzclose() later closes only the
+		// duplicate, leaving the real stdout (fd 1) intact.
+		int fd = dup(fileno(stdout));
+		if (fd < 0) {
+			return nullptr;
+		}
+		gz = gzdopen(fd, "wb");
+		if (gz == nullptr) {
+			close(fd);
+			return nullptr;
+		}
 	} else {
 		gz = gzopen(path.c_str(), "wb");
 	}

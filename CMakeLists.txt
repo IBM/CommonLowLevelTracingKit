@@ -5,14 +5,15 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
 project(CommonLowLevelTracingKit LANGUAGES C CXX)
 
+include(GNUInstallDirs)
 include(cmake/Toolchain.cmake)
 include(cmake/ToolchainVersionCheck.cmake)
 include(cmake/CreateVersion.cmake)
-include(cmake/CreatePackage.cmake)
 include(cmake/CheckPICEnabled.cmake)
 include(cmake/CodeCoverage.cmake)
 include(cmake/ASAN.cmake)
 include(cmake/StaticAnalysis.cmake)
+include(cmake/CompileWarnings.cmake)
 
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     # We're in the root, define additional targets for developers.
@@ -69,3 +70,36 @@ if(CLLTK_TESTS AND EXISTS ./tests/)
     enable_testing()
     add_subdirectory(./tests/)
 endif()
+
+# --- CMake package config for find_package(CLLTK) ---
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
+install(EXPORT CLLTKTracingTargets
+    FILE CLLTKTracingTargets.cmake
+    NAMESPACE clltk::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CLLTK
+    COMPONENT devel
+)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CLLTKConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/CLLTKConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CLLTK
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/CLLTKConfigVersion.cmake"
+    VERSION ${CLLTK_VERSION_STRING}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/CLLTKConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/CLLTKConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CLLTK
+    COMPONENT devel
+)
+
+# CPack packaging (must be last)
+include(cmake/CreatePackage.cmake)

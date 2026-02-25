@@ -142,6 +142,9 @@ else
     # Step 7: Package
     if ! $SKIP_PACKAGE; then
         run_step "Package" "step_package.sh" || true
+
+        # Step 8: Package Validation
+        run_step "Package Validate" "step_package_validate.sh" --skip-srpm-rebuild || true
     fi
 fi
 

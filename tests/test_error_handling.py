@@ -28,7 +28,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 from helpers.base import run_command
-from helpers.clltk_cmd import clltk
+from helpers.clltk_cmd import clltk, clltk_as_nobody
 
 
 def setUpModule():
@@ -379,10 +379,6 @@ class TestMissingRequiredArguments(ErrorHandlingTestCase):
 class TestFilePermissionErrors(ErrorHandlingTestCase):
     """Tests for file permission error handling."""
 
-    @unittest.skipIf(
-        os.geteuid() == 0,
-        "Test requires non-root user (root bypasses file permissions)",
-    )
     def test_readonly_output_file(self):
         """Test decode to readonly output file."""
         self._create_buffer("ReadonlyOutput")
@@ -394,15 +390,12 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
         output_file.chmod(stat.S_IRUSR)
 
         try:
-            result = clltk("decode", "--output", str(output_file), check=False)
+            run = clltk_as_nobody if os.geteuid() == 0 else clltk
+            result = run("decode", "--output", str(output_file), check=False)
             self.assertNotEqual(result.returncode, 0)
         finally:
             output_file.chmod(stat.S_IWUSR | stat.S_IRUSR)
 
-    @unittest.skipIf(
-        os.geteuid() == 0,
-        "Test requires non-root user (root bypasses file permissions)",
-    )
     def test_no_write_permission_to_directory(self):
         """Test buffer creation in directory without write permission."""
         readonly_dir = pathlib.Path(self.tmp_dir.name) / "readonly_dir"
@@ -410,7 +403,8 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
         readonly_dir.chmod(stat.S_IRUSR | stat.S_IXUSR)
 
         try:
-            result = clltk(
+            run = clltk_as_nobody if os.geteuid() == 0 else clltk
+            result = run(
                 "-P",
                 str(readonly_dir),
                 "buffer",
@@ -424,10 +418,6 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
         finally:
             readonly_dir.chmod(stat.S_IRWXU)
 
-    @unittest.skipIf(
-        os.geteuid() == 0,
-        "Test requires non-root user (root bypasses file permissions)",
-    )
     def test_trace_to_readonly_directory(self):
         """Test trace when tracing directory is not writable."""
         readonly_dir = pathlib.Path(self.tmp_dir.name) / "trace_readonly"
@@ -438,16 +428,13 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
         os.environ["CLLTK_TRACING_PATH"] = str(readonly_dir)
 
         try:
-            result = clltk("trace", "-b", "Test", "-m", "message", check=False)
+            run = clltk_as_nobody if os.geteuid() == 0 else clltk
+            result = run("trace", "-b", "Test", "-m", "message", check=False)
             self.assertNotEqual(result.returncode, 0)
         finally:
             os.environ["CLLTK_TRACING_PATH"] = old_path
             readonly_dir.chmod(stat.S_IRWXU)
 
-    @unittest.skipIf(
-        os.geteuid() == 0,
-        "Test requires non-root user (root bypasses file permissions)",
-    )
     def test_decode_output_to_readonly_directory(self):
         """Test decode output to directory without write permission."""
         self._create_buffer("ReadonlyDirOutput")
@@ -459,7 +446,8 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
 
         try:
             output_path = readonly_dir / "output.txt"
-            result = clltk("decode", "--output", str(output_path), check=False)
+            run = clltk_as_nobody if os.geteuid() == 0 else clltk
+            result = run("decode", "--output", str(output_path), check=False)
             self.assertNotEqual(result.returncode, 0)
         finally:
             readonly_dir.chmod(stat.S_IRWXU)
@@ -479,10 +467,6 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
         )
         self.assertNotEqual(result.returncode, 0)
 
-    @unittest.skipIf(
-        os.geteuid() == 0,
-        "Test requires non-root user (root bypasses file permissions)",
-    )
     def test_readonly_trace_file(self):
         """Test trace to readonly trace file."""
         self._create_buffer("ReadonlyTrace")
@@ -490,7 +474,8 @@ class TestFilePermissionErrors(ErrorHandlingTestCase):
         trace_file.chmod(stat.S_IRUSR)
 
         try:
-            result = clltk("trace", "-b", "ReadonlyTrace", "-m", "message", check=False)
+            run = clltk_as_nobody if os.geteuid() == 0 else clltk
+            result = run("trace", "-b", "ReadonlyTrace", "-m", "message", check=False)
             # Should fail because file is readonly
             self.assertNotEqual(result.returncode, 0)
         finally:

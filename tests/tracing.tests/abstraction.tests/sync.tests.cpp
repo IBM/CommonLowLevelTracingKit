@@ -23,13 +23,6 @@
 using namespace ::testing;
 using namespace ::testing::internal;
 
-#if defined(__SANITIZE_ADDRESS__) || \
-	(defined(__clang__) && defined(__has_feature) && __has_feature(address_sanitizer))
-static constexpr bool AsanEnabled = true;
-#else
-static constexpr bool AsanEnabled = false;
-#endif
-
 using namespace std::string_literals;
 
 TEST(sync, global_mutex_in_thread)
@@ -121,8 +114,9 @@ TEST(sync, memory_mutex_in_ended_thread)
 }
 TEST(sync, memory_mutex_in_killed_process)
 {
-	if (AsanEnabled)
-		return;
+#ifdef CLLTK_ASAN_ENABLED
+	GTEST_SKIP() << "Incompatible with ASAN";
+#endif
 	file_t *file = file_create_temp("memory_mutex_in_killed_process", sizeof(sync_mutex_t));
 	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
 	sync_memory_mutex_init(mutex);
@@ -165,8 +159,9 @@ TEST(sync, memory_mutex_in_killed_process)
 
 TEST(sync, memory_mutex_in_exit_process)
 {
-	if (AsanEnabled)
-		return;
+#ifdef CLLTK_ASAN_ENABLED
+	GTEST_SKIP() << "Incompatible with ASAN";
+#endif
 	file_t *file = file_create_temp("memory_mutex_in_exit_process", sizeof(sync_mutex_t));
 	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
 	sync_memory_mutex_init(mutex);
@@ -207,8 +202,9 @@ TEST(sync, memory_mutex_in_exit_process)
 }
 TEST(sync, memory_mutex_in_exit_process_during_recovery)
 {
-	if (AsanEnabled)
-		return;
+#ifdef CLLTK_ASAN_ENABLED
+	GTEST_SKIP() << "Incompatible with ASAN";
+#endif
 	file_t *file =
 		file_create_temp("memory_mutex_in_exit_process_during_recovery", sizeof(sync_mutex_t));
 	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
@@ -317,8 +313,9 @@ TEST(sync, signal_in_same_process_same_thread)
 
 TEST(sync, get_mutex_timeout_with_process)
 {
-	if (AsanEnabled)
-		return;
+#ifdef CLLTK_ASAN_ENABLED
+	GTEST_SKIP() << "Incompatible with ASAN";
+#endif
 	file_t *file = file_create_temp("get_mutex_timeout_with_process", sizeof(sync_mutex_t) + 1);
 	sync_mutex_t *const mutex = (sync_mutex_t *)file_mmap_ptr(file);
 	sync_memory_mutex_init(mutex);

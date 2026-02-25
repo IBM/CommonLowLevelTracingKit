@@ -1,36 +1,6 @@
 # Copyright (c) 2024, International Business Machines
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
-if (${CMAKE_C_COMPILER_ID} MATCHES "GNU")
-    add_compile_options(-O3)
-    add_compile_options(-Wall)
-    add_compile_options(-Werror)
-    add_compile_options(-Wextra)
-    add_compile_options(-Wstack-protector)
-    add_compile_options(-fstack-protector-all)
-    add_compile_options(-Wvla)
-    add_compile_options(-Wswitch)
-    add_compile_options(-Wlogical-op)
-    add_compile_options(-Wcast-align)
-    add_compile_options(-Wdisabled-optimization)
-    add_compile_options(-Winit-self)
-    add_compile_options(-Wmissing-include-dirs)
-    add_compile_options(-Wshadow)
-    add_compile_options(-Wstrict-overflow=5)
-    add_compile_options(-Wundef)
-    add_compile_options(-Wuninitialized)
-    add_compile_options(-Wunused-parameter)
-    add_compile_options(-Wunused-variable)
-    add_compile_options(-Wunused-function)
-    add_compile_options(-Wunused-label)
-    add_compile_options(-Wunused-value)
-    add_compile_options(-Wpointer-arith)
-    add_compile_options(-Wsign-compare)
-    add_compile_options(-Warray-bounds)
-    add_compile_options(-Wformat)
-elseif(${CMAKE_C_COMPILER_ID} MATCHES "Clang")
-    add_compile_options(-Wall)
-endif()
 add_library(clltk_snapshot_static STATIC
     source/file.cpp
     source/snapshot.cpp
@@ -42,13 +12,17 @@ add_library(clltk_snapshot_shared SHARED
 foreach(LIB_NAME clltk_snapshot_static clltk_snapshot_shared)
     target_include_directories(${LIB_NAME}
         PUBLIC
-            ./include/
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     )
 
 	target_link_libraries(${LIB_NAME}
 		PRIVATE
 			archive
+			clltk_warnings
 	)
+
+    target_compile_options(${LIB_NAME} PRIVATE -O3)
 
     set_target_properties(${LIB_NAME}
         PROPERTIES
@@ -79,12 +53,28 @@ set_target_properties(
     PROPERTIES
         PUBLIC_HEADER include/CommonLowLevelTracingKit/snapshot/snapshot.hpp
 )
-install(TARGETS 
+install(TARGETS
     clltk_snapshot_shared
-    clltk_snapshot_static
     EXPORT CLLTKTracingTargets
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT snapshot
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT snapshot
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT snapshot
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/snapshot/
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT snapshot NAMELINK_COMPONENT devel
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/snapshot/ COMPONENT devel
 )
+install(TARGETS
+    clltk_snapshot_static
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT devel
+)
+
+# pkg-config (only when built from the main project tree where the .pc.in template exists)
+set(_CLLTK_SNAPSHOT_PC_IN "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/clltk_snapshot.pc.in")
+if(EXISTS "${_CLLTK_SNAPSHOT_PC_IN}")
+    configure_file(
+        "${_CLLTK_SNAPSHOT_PC_IN}"
+        "${CMAKE_BINARY_DIR}/clltk_snapshot.pc"
+        @ONLY
+    )
+    install(FILES "${CMAKE_BINARY_DIR}/clltk_snapshot.pc"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+        COMPONENT devel
+    )
+endif()

@@ -8,6 +8,7 @@ add_executable(example-simple_cpp
 target_link_libraries(example-simple_cpp
 PRIVATE
     clltk_tracing
+    clltk_example_flags
 )
 
 

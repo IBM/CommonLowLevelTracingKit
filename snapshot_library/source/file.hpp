@@ -48,7 +48,7 @@ struct RegularFile : public File {
 	~RegularFile() override;
 
   private:
-	int m_fd{};
+	int m_fd{-1};
 };
 
 struct VirtualFile : public File {
@@ -63,7 +63,8 @@ struct VirtualFile : public File {
 									   const uint64_t ns);
 };
 
-std::vector<std::unique_ptr<File>> getAllFiles(const std::filesystem::path &root_path);
+std::vector<std::unique_ptr<File>> getAllFiles(const std::filesystem::path &root_path,
+											   bool recursive = true);
 
 } // namespace CommonLowLevelTracingKit::snapshot
 

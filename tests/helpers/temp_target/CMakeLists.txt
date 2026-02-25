@@ -10,6 +10,7 @@ if(NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 endif()
 
 include(../../../cmake/CreateVersion.cmake)
+include(../../../cmake/CompileWarnings.cmake)
 
 set(CLLTK_TRACING_LIB_TYPE "STATIC")
 add_subdirectory("../../../tracing_library" "./tracing_library/")

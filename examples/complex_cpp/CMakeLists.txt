@@ -9,6 +9,7 @@ add_executable(example-complex_cpp
 target_link_libraries(example-complex_cpp
 PRIVATE
     clltk_tracing
+    clltk_example_flags
 )
 
 add_dependencies(example-complex_cpp

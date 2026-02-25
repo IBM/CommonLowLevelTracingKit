@@ -1,0 +1,11 @@
+# Copyright (c) 2024, International Business Machines
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Include the exported targets
+include("${CMAKE_CURRENT_LIST_DIR}/CLLTKTracingTargets.cmake" OPTIONAL)
+
+check_required_components(CLLTK)

@@ -13,6 +13,7 @@
 #include "CommonLowLevelTracingKit/decoder/Tracebuffer.hpp"
 #include "commands/filter.hpp"
 #include "commands/interface.hpp"
+#include "commands/output.hpp"
 
 using namespace std::string_literals;
 
@@ -63,29 +64,29 @@ static std::string format_time_iso(const std::filesystem::file_time_type &time)
 	return oss.str();
 }
 
-static void print_table_header(FILE *f, size_t name_width)
+static void print_table_header(Output &out, size_t name_width)
 {
-	fprintf(f, "%-*s %-6s %12s %12s %5s %10s %10s %10s %8s %-19s %s\n",
-			static_cast<int>(name_width), "NAME", "SOURCE", "CAPACITY", "USED", "FILL", "ENTRIES",
-			"PENDING", "DROPPED", "WRAPPED", "MODIFIED", "PATH");
+	out.printf("%-*s %-6s %12s %12s %5s %10s %10s %10s %8s %-19s %s\n",
+			   static_cast<int>(name_width), "NAME", "SOURCE", "CAPACITY", "USED", "FILL",
+			   "ENTRIES", "PENDING", "DROPPED", "WRAPPED", "MODIFIED", "PATH");
 }
 
-static void print_table_row(FILE *f, const TraceBufferInfo &info, size_t name_width)
+static void print_table_row(Output &out, const TraceBufferInfo &info, size_t name_width)
 {
 	if (info.valid()) {
-		fprintf(f, "%-*s %-6s %12lu %12lu %4.0f%% %10lu %10lu %10lu %8lu %-19s %s\n",
-				static_cast<int>(name_width), info.name.c_str(),
-				source_type_to_string(info.source_type).c_str(), info.capacity, info.used,
-				info.fill_percent, info.entries, info.pending, info.dropped, info.wrapped,
-				format_time(info.modified).c_str(), info.path.string().c_str());
+		out.printf("%-*s %-6s %12lu %12lu %4.0f%% %10lu %10lu %10lu %8lu %-19s %s\n",
+				   static_cast<int>(name_width), info.name.c_str(),
+				   source_type_to_string(info.source_type).c_str(), info.capacity, info.used,
+				   info.fill_percent, info.entries, info.pending, info.dropped, info.wrapped,
+				   format_time(info.modified).c_str(), info.path.string().c_str());
 	} else {
-		fprintf(f, "%-*s %-6s %12s %12s %5s %10s %10s %10s %8s %-19s %s\n",
-				static_cast<int>(name_width), info.name.c_str(), "?", "?", "?", "?", "?", "?", "?",
-				"?", format_time(info.modified).c_str(), info.path.string().c_str());
+		out.printf("%-*s %-6s %12s %12s %5s %10s %10s %10s %8s %-19s %s\n",
+				   static_cast<int>(name_width), info.name.c_str(), "?", "?", "?", "?", "?", "?",
+				   "?", "?", format_time(info.modified).c_str(), info.path.string().c_str());
 	}
 }
 
-static void print_json_output(FILE *f, const TraceBufferInfoCollection &infos)
+static void print_json_output(Output &out, const TraceBufferInfoCollection &infos)
 {
 	rapidjson::Document doc;
 	doc.SetArray();
@@ -132,7 +133,7 @@ static void print_json_output(FILE *f, const TraceBufferInfoCollection &infos)
 	rapidjson::StringBuffer buffer;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 	doc.Accept(writer);
-	fprintf(f, "%s\n", buffer.GetString());
+	out.printf("%s\n", buffer.GetString());
 }
 
 static void add_list_command(CLI::App &app)
@@ -161,6 +162,15 @@ static void add_list_command(CLI::App &app)
 	static bool json_output = false;
 	command->add_flag("-j,--json", json_output, "Output as JSON");
 
+	static std::string output_path{};
+	command
+		->add_option("-o,--output", output_path,
+					 "Output file path (default: stdout, use - for stdout)")
+		->type_name("FILE");
+
+	static bool compress_output = false;
+	command->add_flag("-z,--compress", compress_output, "Compress output with gzip");
+
 	command->callback([&]() {
 		// Resolve input path: use provided path, or fall back to tracing path
 		std::string resolved_input = input_path.empty() ? get_tracing_path().string() : input_path;
@@ -176,8 +186,14 @@ static void add_list_command(CLI::App &app)
 		auto infos = CommonLowLevelTracingKit::decoder::listTraceBuffers(resolved_input, recursive,
 																		 filter_func);
 
+		auto out = create_output(output_path, compress_output);
+		if (!out) {
+			log_error("Cannot open output: ", output_path.empty() ? "stdout" : output_path);
+			throw CLI::RuntimeError(1);
+		}
+
 		if (json_output) {
-			print_json_output(stdout, infos);
+			print_json_output(*out, infos);
 		} else {
 			if (infos.empty()) {
 				log_info("No tracebuffers found in ", resolved_input);
@@ -188,9 +204,9 @@ static void add_list_command(CLI::App &app)
 					name_width = std::max(name_width, info.name.size());
 				}
 
-				print_table_header(stdout, name_width);
+				print_table_header(*out, name_width);
 				for (const auto &info : infos) {
-					print_table_row(stdout, info, name_width);
+					print_table_row(*out, info, name_width);
 				}
 			}
 		}

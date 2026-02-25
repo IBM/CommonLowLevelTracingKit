@@ -6,7 +6,7 @@
 
 find_package(Boost REQUIRED CONFIG)
 
-file(GLOB CPP_FILES "*.cpp")
+file(GLOB CPP_FILES CONFIGURE_DEPENDS "*.cpp")
 
 add_executable(cmd_tests
     ${CPP_FILES}
@@ -15,9 +15,10 @@ add_executable(cmd_tests
 target_link_libraries(cmd_tests
     GTest::gtest_main
     gmock
+    clltk_test_flags
     clltk_decoder_object
     clltk-cmd-interface
-    ${Boost_LIBRARIES}
+    Boost::boost
 )
 
 target_compile_definitions(cmd_tests

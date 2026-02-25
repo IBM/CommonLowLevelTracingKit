@@ -85,7 +85,7 @@ static void take_snapshot(const std::string &filename, const std::vector<std::st
 	} else {
 		// No filter, use all tracebuffers from CLLTK_TRACING_PATH
 		CommonLowLevelTracingKit::snapshot::take_snapshot(write_func, tracepoints, compress,
-														  bucket_size, verbose);
+														  bucket_size, verbose, recursive);
 	}
 
 	if (is_interrupted()) {
@@ -158,7 +158,8 @@ static void add_snapshot_command(CLI::App &app)
 			take_snapshot(output_file_name, include_paths, compress, bucket_size, verbose_fn,
 						  &filter_regex, recursive);
 		} else {
-			take_snapshot(output_file_name, include_paths, compress, bucket_size, verbose_fn);
+			take_snapshot(output_file_name, include_paths, compress, bucket_size, verbose_fn,
+						  nullptr, recursive);
 		}
 	});
 }

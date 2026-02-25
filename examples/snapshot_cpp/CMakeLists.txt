@@ -8,6 +8,7 @@ add_executable(example-snapshot_cpp
 target_link_libraries(example-snapshot_cpp
 PRIVATE
     clltk_snapshot_static
+    clltk_example_flags
 )
 
 set_target_properties(example-snapshot_cpp

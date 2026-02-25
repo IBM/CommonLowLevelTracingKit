@@ -20,6 +20,7 @@ static void add_create_tracebuffer_command(CLI::App &app)
 {
 	CLI::App *const command = app.add_subcommand("buffer", "Create a new tracebuffer");
 	command->alias("tb");
+	command->alias("tracebuffer");
 	command->description(
 		"Create a new userspace tracebuffer with a specified ring buffer size.\n"
 		"The tracebuffer is created at CLLTK_TRACING_PATH (or -P path, or current directory).\n"
@@ -28,7 +29,7 @@ static void add_create_tracebuffer_command(CLI::App &app)
 
 	static std::string buffer_name{};
 	command
-		->add_option("buffer,-b,--buffer", buffer_name,
+		->add_option("buffer,-b,--buffer,--name,-n", buffer_name,
 					 "Unique name for this tracebuffer.\n"
 					 "Must start with a letter and contain only alphanumeric characters or "
 					 "underscores.\n"
@@ -107,6 +108,13 @@ static void add_clear_tracebuffer_command(CLI::App &app)
 	command->callback([]() {
 		CommonLowLevelTracingKit::cmd::interface::sync_path_to_library();
 		const auto tracing_path = get_tracing_path();
+
+		// Require at least one of --buffer, --all, or --filter
+		if (buffer_name.empty() && !all_flag &&
+			filter_str == CommonLowLevelTracingKit::cmd::interface::default_filter_pattern) {
+			throw CLI::RuntimeError(
+				"No buffer specified. Use --buffer <NAME>, --all, or --filter <PATTERN>.", 1);
+		}
 
 		// Helper to prompt for confirmation
 		auto confirm = [](const std::string &prompt) -> bool {

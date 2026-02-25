@@ -33,7 +33,6 @@
             "cacheVariables": {
                 "STANDALONE_PROJECT": "OFF",
                 "CPACK_GENERATOR": "RPM",
-                "CPACK_SOURCE_GENERATOR": "RPM",
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo",
                 "CLLTK_EXAMPLES": "OFF",
                 "CLLTK_TESTS": "OFF",
@@ -99,10 +98,31 @@
     ],
     "packagePresets": [
         {
-            "name": "rpm-c/c++",
+            "name": "rpm-libs",
             "configurePreset": "rpm",
             "variables": {
-                "CPACK_COMPONENTS_ALL": "tracing;snapshot;cmd",
+                "CPACK_COMPONENTS_ALL": "tracing;decoder_libs;snapshot",
+                "CPACK_RPM_COMPONENT_INSTALL": "ON",
+                "CPACK_RPM_PACKAGE_COMPONENT": "ON",
+                "CPACK_RPM_DEBUGINFO_PACKAGE": "ON",
+                "CPACK_RPM_INSTALL_WITH_EXEC": "ON"
+            }
+        },
+        {
+            "name": "rpm-devel",
+            "configurePreset": "rpm",
+            "variables": {
+                "CPACK_COMPONENTS_ALL": "devel",
+                "CPACK_RPM_COMPONENT_INSTALL": "ON",
+                "CPACK_RPM_PACKAGE_COMPONENT": "ON",
+                "CPACK_RPM_INSTALL_WITH_EXEC": "ON"
+            }
+        },
+        {
+            "name": "rpm-cmd",
+            "configurePreset": "rpm",
+            "variables": {
+                "CPACK_COMPONENTS_ALL": "cmd",
                 "CPACK_RPM_COMPONENT_INSTALL": "ON",
                 "CPACK_RPM_PACKAGE_COMPONENT": "ON",
                 "CPACK_RPM_DEBUGINFO_PACKAGE": "ON",
@@ -120,10 +140,12 @@
             }
         },
         {
-            "name": "srpm",
+            "name": "rpm-full",
             "configurePreset": "rpm",
             "variables": {
-                "CPACK_RPM_PACKAGE_SOURCES": "ON"
+                "CPACK_RPM_COMPONENT_INSTALL": "OFF",
+                "CPACK_RPM_DEBUGINFO_PACKAGE": "ON",
+                "CPACK_RPM_INSTALL_WITH_EXEC": "ON"
             }
         }
     ],
@@ -171,7 +193,15 @@
                 },
                 {
                     "type": "package",
-                    "name": "rpm-c/c++"
+                    "name": "rpm-libs"
+                },
+                {
+                    "type": "package",
+                    "name": "rpm-devel"
+                },
+                {
+                    "type": "package",
+                    "name": "rpm-cmd"
                 },
                 {
                     "type": "package",
@@ -179,7 +209,7 @@
                 },
                 {
                     "type": "package",
-                    "name": "srpm"
+                    "name": "rpm-full"
                 }
             ]
         }

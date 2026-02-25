@@ -124,7 +124,8 @@ container_cmd+=" --hostname clltk-ci"
 container_cmd+=" --rm"
 
 # Add interactive flags unless running in non-interactive mode (e.g. CI)
-if [[ "${CONTAINER_NON_INTERACTIVE:-false}" != "true" ]]; then
+# Auto-detect: skip --interactive --tty when stdin is not a terminal
+if [[ "${CONTAINER_NON_INTERACTIVE:-false}" != "true" ]] && [ -t 0 ]; then
     container_cmd+=" --interactive --tty"
 fi
 

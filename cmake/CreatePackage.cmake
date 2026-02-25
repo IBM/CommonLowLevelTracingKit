@@ -1,8 +1,9 @@
-
+# Copyright (c) 2024, International Business Machines
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 
 include(GNUInstallDirs)
 
-# Main package configuration
+# --- Main package metadata ---
 set(CPACK_PACKAGE_NAME "clltk")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Common Low Level Tracing Kit - High-performance binary tracing library")
 set(CPACK_PACKAGE_DESCRIPTION "A fast, lightweight, binary, always-on, printf-style, file-based and flight-recorder-like tracing library for C/C++ applications. Provides low-overhead tracing with binary format support, kernel-space tracing capabilities, and comprehensive debugging tools.")
@@ -14,37 +15,98 @@ set(CPACK_PACKAGE_VENDOR "IBM")
 set(CPACK_PACKAGE_CONTACT "Eduard Stefes <Eduard.Stefes@ibm.com>, Johannes Staib <Johannes.Staib@ibm.com>")
 set(CPACK_PACKAGE_CHECKSUM SHA256)
 
-# Component descriptions
-set(CPACK_COMPONENT_TRACING_DISPLAY_NAME "CLLTK Runtime Libraries")
-set(CPACK_COMPONENT_TRACING_DESCRIPTION "Core tracing runtime libraries (shared and static)")
-set(CPACK_COMPONENT_TRACING_GROUP "Runtime")
+# --- Component definitions ---
+# Each component produces its own RPM when CPACK_RPM_COMPONENT_INSTALL=ON.
+# No GROUP assignment — groups cause multiple components to merge into one RPM.
 
-set(CPACK_COMPONENT_CMD_DISPLAY_NAME "CLLTK Command Line Tools")
-set(CPACK_COMPONENT_CMD_DESCRIPTION "Command line utilities for trace management")
-set(CPACK_COMPONENT_CMD_GROUP "Tools")
+# Runtime shared libraries
+set(CPACK_COMPONENT_TRACING_DISPLAY_NAME "CLLTK Tracing Runtime Library")
+set(CPACK_COMPONENT_TRACING_DESCRIPTION "Core tracing shared library (libclltk_tracing.so)")
 
-set(CPACK_COMPONENT_SNAPSHOT_DISPLAY_NAME "CLLTK Snapshot Library")
-set(CPACK_COMPONENT_SNAPSHOT_DESCRIPTION "Libraries for snapshot and archival functionality")
-set(CPACK_COMPONENT_SNAPSHOT_GROUP "Runtime")
+set(CPACK_COMPONENT_DECODER_LIBS_DISPLAY_NAME "CLLTK Decoder Runtime Library")
+set(CPACK_COMPONENT_DECODER_LIBS_DESCRIPTION "C++ decoder shared library (libclltk_decoder.so)")
 
-set(CPACK_COMPONENT_DECODER_DISPLAY_NAME "CLLTK Decoder Libraries")
-set(CPACK_COMPONENT_DECODER_DESCRIPTION "Trace decoding and analysis libraries")
-set(CPACK_COMPONENT_DECODER_GROUP "Runtime")
+set(CPACK_COMPONENT_SNAPSHOT_DISPLAY_NAME "CLLTK Snapshot Runtime Library")
+set(CPACK_COMPONENT_SNAPSHOT_DESCRIPTION "Snapshot shared library (libclltk_snapshot.so)")
 
-set(CPACK_SOURCE_IGNORE_FILES 
-    "${CMAKE_BINARY_DIR}"
-    "${CMAKE_BINARY_DIR}/CMakeFiles/.*"
-    "${CMAKE_SOURCE_DIR}/docs/"
-    "${CMAKE_SOURCE_DIR}/tests/"
-    "${CMAKE_SOURCE_DIR}/examples/"
-    "${CMAKE_SOURCE_DIR}/scripts/"
-    "${CMAKE_SOURCE_DIR}/\\\\..*"
-)
+# Development files (headers, cmake config, pkg-config, .so symlinks, static libs)
+set(CPACK_COMPONENT_DEVEL_DISPLAY_NAME "CLLTK Development Files")
+set(CPACK_COMPONENT_DEVEL_DESCRIPTION "Headers, CMake config, pkg-config files, and static libraries for developing against CLLTK")
 
+# Command line tool
+set(CPACK_COMPONENT_CMD_DISPLAY_NAME "CLLTK Command Line Tool")
+set(CPACK_COMPONENT_CMD_DESCRIPTION "Command line utility (clltk) for trace management")
+
+# Python decoder
+set(CPACK_COMPONENT_DECODER_DISPLAY_NAME "CLLTK Python Decoder")
+set(CPACK_COMPONENT_DECODER_DESCRIPTION "Python trace decoder script")
+
+# --- RPM-specific configuration ---
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 set(CPACK_RPM_PACKAGE_RELEASE 1)
-set(CPACK_RPM_BUILD_SOURCE_DIRS_PREFIX "/clltk-debug")
+set(CPACK_RPM_PACKAGE_RELEASE_DIST ON)
 set(CPACK_RPM_PACKAGE_LICENSE "BSD-2-Clause-Patent")
+set(CPACK_RPM_BUILD_SOURCE_DIRS_PREFIX "/clltk-debug")
+
+# Per-component RPM package names
+set(CPACK_RPM_TRACING_PACKAGE_NAME "clltk-tracing")
+set(CPACK_RPM_DECODER_LIBS_PACKAGE_NAME "clltk-decoder")
+set(CPACK_RPM_SNAPSHOT_PACKAGE_NAME "clltk-snapshot")
+set(CPACK_RPM_DEVEL_PACKAGE_NAME "clltk-devel")
+set(CPACK_RPM_CMD_PACKAGE_NAME "clltk-cmd")
+set(CPACK_RPM_DECODER_PACKAGE_NAME "clltk-python-decoder")
+
+# Per-component RPM package summaries
+set(CPACK_RPM_TRACING_PACKAGE_SUMMARY "CLLTK tracing shared library")
+set(CPACK_RPM_DECODER_LIBS_PACKAGE_SUMMARY "CLLTK C++ decoder shared library")
+set(CPACK_RPM_SNAPSHOT_PACKAGE_SUMMARY "CLLTK snapshot shared library")
+set(CPACK_RPM_DEVEL_PACKAGE_SUMMARY "Development files for CLLTK")
+set(CPACK_RPM_CMD_PACKAGE_SUMMARY "CLLTK command line tool")
+set(CPACK_RPM_DECODER_PACKAGE_SUMMARY "CLLTK Python decoder script")
+
+# Per-component RPM dependencies
+set(CPACK_RPM_DEVEL_PACKAGE_REQUIRES "clltk-tracing = ${CLLTK_VERSION_STRING}, clltk-decoder = ${CLLTK_VERSION_STRING}, clltk-snapshot = ${CLLTK_VERSION_STRING}")
+
+# Python decoder architecture
+set(CPACK_RPM_DECODER_PACKAGE_ARCHITECTURE "noarch")
+
+# ldconfig scriptlets for shared library components
+# NOTE: CPack requires UPPERCASE component names in variable names
+set(LDCONFIG_SCRIPTLET "${CMAKE_CURRENT_SOURCE_DIR}/cmake/rpm_ldconfig.sh")
+set(CPACK_RPM_TRACING_POST_INSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
+set(CPACK_RPM_TRACING_POST_UNINSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
+set(CPACK_RPM_DECODER_LIBS_POST_INSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
+set(CPACK_RPM_DECODER_LIBS_POST_UNINSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
+set(CPACK_RPM_SNAPSHOT_POST_INSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
+set(CPACK_RPM_SNAPSHOT_POST_UNINSTALL_SCRIPT_FILE "${LDCONFIG_SCRIPTLET}")
+
+# Exclude standard directories from auto filelist
+# Use hardcoded /usr paths — CMAKE_INSTALL_PREFIX defaults to /usr/local
+# but RPMs always install to /usr via CPACK_PACKAGING_INSTALL_PREFIX
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
+    "/usr/${CMAKE_INSTALL_LIBDIR}/cmake"
+    "/usr/${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+)
+
+# Output location
 set(CPACK_OUTPUT_FILE_PREFIX "${CMAKE_BINARY_DIR}/packages")
 
 include(CPack)
+
+# --- SRPM from real source tree ---
+# CPack's CPACK_SOURCE_GENERATOR=RPM packages the install tree, not actual source.
+# We build a proper SRPM using git archive + rpmbuild -bs with our spec file.
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/clltk.spec.in"
+    "${CMAKE_BINARY_DIR}/clltk.spec"
+    @ONLY
+)
+
+add_custom_target(srpm
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/cmake/build_srpm.sh"
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_BINARY_DIR}"
+        "${CLLTK_VERSION_STRING}"
+    COMMENT "Building SRPM from source tree"
+    VERBATIM
+)

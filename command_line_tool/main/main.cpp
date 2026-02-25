@@ -56,6 +56,9 @@ static std::unique_ptr<CLI::App> createMainApp(void)
 		->envname("CLLTK_TRACING_PATH")
 		->type_name("PATH");
 
+	// Hidden alias for backwards compatibility with older versions that used -C
+	app->add_option_function("-C,--clltk_tracing_path"s, std::function(set_path), "")->group("");
+
 	auto *const version =
 		app->add_flag_callback("-V,--version", print_version, "Print version information and exit");
 

@@ -1,6 +1,36 @@
-1.2.53
+1.2.56
 
 # Change log
+## 1.2.56
+- cmd: fix gzip-to-stdout closing fd 1 on destruction (dup before gzdopen)
+- cmd: fix silent truncation of gzip output lines longer than 8 KB
+- cmd: fix --no-recursive ignored by snapshot when no --filter is given
+- cmd: fix clltk clear with no arguments giving a confusing empty-name error
+- cmd: add -o/--output and -z/--compress to list and meta commands
+- snapshot: fix fd 0 treated as invalid (m_fd check was > 0, should be >= 0)
+- decoder: fix write_digits producing garbage characters for negative year values
+## 1.2.55
+- packaging: add RPM subpackages (tracing, decoder, snapshot, devel, cmd, python-decoder)
+- packaging: add CMake package config (find_package(CLLTK)) and pkg-config support
+- packaging: add proper SRPM via git archive + rpmbuild -bs with Fedora-style spec
+- packaging: add comprehensive packaging test suite (89 tests)
+- packaging: merge static libraries into clltk-devel, rename clltk-tools to clltk-cmd
+## 1.2.54
+- docs: add AGENTS.md for AI coding agent instructions
+- cli: add backwards-compatible -C flag alias for tracing path
+- ci: auto-detect non-interactive terminal in container script
+- ci: add missing pytz dependency to container
+- test: add CLLTK_ASAN_ENABLED CMake define and simplify ASAN guards
+- test: skip stdbuf in live tests when ASAN is enabled
+- fix: memory leak in vector test (missing vector_free)
+- cmake: fix broken OBJECT_LIBRARY type check in command_line_tool
+- cmake: replace no-op directory properties with proper CMake variables
+- cmake: create CompileWarnings.cmake interface library for warning flags
+- cmake: replace directory-scoped compile options with interface libraries
+- cmake: add BUILD_INTERFACE/INSTALL_INTERFACE generator expressions
+- cmake: replace raw pthread/Boost variables with imported targets
+- cmake: add CONFIGURE_DEPENDS to all file(GLOB) calls
+- cmake: remove no-op target_link_directories from command_line_tool
 ## 1.2.53
 - ci: use GitHub Container Registry for faster CI container caching
 - ci: consolidate Python tests into single directory structure

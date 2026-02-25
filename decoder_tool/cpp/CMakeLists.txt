@@ -26,7 +26,6 @@ target_include_directories(clltk_decoder_object
     PRIVATE
     source
     source/low_level
-    ${Boost_INCLUDE_DIRS}
 )
 
 target_compile_definitions(clltk_decoder_object
@@ -35,7 +34,8 @@ target_compile_definitions(clltk_decoder_object
 )
 
 target_link_libraries(clltk_decoder_object
-    ${Boost_LIBRARIES}
+    PRIVATE
+    Boost::boost
     atomic
     archive
     ffi
@@ -105,7 +105,8 @@ set_target_properties(clltk_decoder_shared
 foreach(LIB_NAME clltk_decoder_static clltk_decoder_shared)
     target_include_directories(${LIB_NAME}
         PUBLIC
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     )
     target_link_libraries(${LIB_NAME}
         PRIVATE
@@ -142,11 +143,27 @@ set_target_properties(
         PUBLIC_HEADER "${PUBLIC_HEADERS}"
 )
 install(TARGETS
-    clltk_decoder_static
     clltk_decoder_shared
     EXPORT CLLTKTracingTargets
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT tracing
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT tracing
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT tracing
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/decoder/
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT decoder_libs
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT decoder_libs NAMELINK_COMPONENT devel
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/CommonLowLevelTracingKit/decoder/ COMPONENT devel
 )
+install(TARGETS
+    clltk_decoder_static
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT devel
+)
+
+# pkg-config (only when built from the main project tree where the .pc.in template exists)
+set(_CLLTK_DECODER_PC_IN "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/clltk_decoder.pc.in")
+if(EXISTS "${_CLLTK_DECODER_PC_IN}")
+    configure_file(
+        "${_CLLTK_DECODER_PC_IN}"
+        "${CMAKE_BINARY_DIR}/clltk_decoder.pc"
+        @ONLY
+    )
+    install(FILES "${CMAKE_BINARY_DIR}/clltk_decoder.pc"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+        COMPONENT devel
+    )
+endif()

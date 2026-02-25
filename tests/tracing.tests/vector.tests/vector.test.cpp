@@ -42,6 +42,7 @@ TEST(vector, three_entry)
 	vector_add(&vec, 3);
 	EXPECT_EQ(3, vector_size(vec));
 	EXPECT_GE(vector_get_alloc(vec), 3);
+	vector_free(&vec);
 }
 
 TEST(vector, add_until_relocated)

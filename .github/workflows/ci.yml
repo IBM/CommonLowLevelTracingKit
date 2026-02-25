@@ -85,3 +85,6 @@ jobs:
 
       - name: Package
         run: ./scripts/container.sh ./scripts/ci-cd/step_package.sh
+
+      - name: Package Validate
+        run: ./scripts/container.sh ./scripts/ci-cd/step_package_validate.sh --skip-srpm-rebuild
