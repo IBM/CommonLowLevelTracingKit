@@ -177,6 +177,11 @@ void typedef_example(void)
 	CLLTK_TRACEPOINT(COMPLEX_CPP, "%u", value);
 }
 
+#if defined(__GNUC__) && (__GNUC__ < 15)
+void inline_functions(void)
+{ /* not working with gcc < 15 */
+}
+#else
 CLLTK_TRACEBUFFER(INLINE_FUNCTIONS_CPP, 4096);
 inline void inline_func(void)
 {
@@ -213,6 +218,7 @@ void inline_functions(void)
 	inline_func();
 	static_inline_func();
 }
+#endif
 
 CLLTK_TRACEBUFFER(NAMESPACE_FUNCTIONS, 4096);
 namespace test

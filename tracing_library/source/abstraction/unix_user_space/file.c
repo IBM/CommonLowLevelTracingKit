@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 
 #include <dirent.h>
+#include <limits.h>
 #include <unistd.h>
 
 #include <inttypes.h>
@@ -231,9 +232,11 @@ file_t *file_create_temp(const char *final_name, const size_t file_size)
 		ERROR_AND_EXIT("fail to mmap temp file %s with %s", file->path, strerror(errno));
 	}
 
+#ifdef __linux__
 	if (madvise(file->mmapped.ptr, file_size, MADV_DODUMP) == -1) {
 		ERROR_AND_EXIT("fail to madvise temp file %s with %s", file->path, strerror(errno));
 	}
+#endif
 
 	file->mmapped.size = file_size;
 
@@ -332,7 +335,7 @@ file_t *file_temp_to_final(file_t **temp_file)
 	snprintf(path, sizeof(path), "%s/%.*s" EXTENSION, get_root_path(), name_len, name);
 
 	// rename file to final name
-	if (linkat(AT_FDCWD, old_file->path, AT_FDCWD, path, 0) == -1) {
+	if (linkat((int)AT_FDCWD, old_file->path, (int)AT_FDCWD, path, 0) == -1) {
 		if (errno != EEXIST) {
 			ERROR_AND_EXIT("renameing failed with \"%s\"(%d) for file %s to %s", strerror(errno),
 						   errno, old_file->path, path);
@@ -369,18 +372,20 @@ void file_reset(void)
 		return;
 	}
 	struct dirent *iterator = NULL;
-
+	struct stat file_stat;
 	// loop over all files in path
 	while ((iterator = readdir(directory)) != NULL) {
-		if (iterator->d_type != DT_REG)
-			continue;
-		const char *name = iterator->d_name;
-		const char *ending = strrchr(name, '.');
-		if (ending && !strcmp(ending, EXTENSION)) {
-			char path[PATH_MAX];
-			snprintf(path, sizeof(path), "%s/%s", root, name);
-			if (0 != unlink(path))
-				ERROR_AND_EXIT("remove %s at %s failed", name, root);
+		if (fstatat(dirfd(directory), iterator->d_name, &file_stat, AT_SYMLINK_NOFOLLOW) == 0) {
+			if (S_ISDIR(file_stat.st_mode))
+				continue;
+			const char *name = iterator->d_name;
+			const char *ending = strrchr(name, '.');
+			if (ending && !strcmp(ending, EXTENSION)) {
+				char path[PATH_MAX];
+				snprintf(path, sizeof(path), "%s/%s", root, name);
+				if (0 != unlink(path))
+					ERROR_AND_EXIT("remove %s at %s failed", name, root);
+			}
 		}
 	}
 	closedir(directory);

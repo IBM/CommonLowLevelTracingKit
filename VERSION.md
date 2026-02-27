@@ -1,6 +1,12 @@
-1.2.56
+1.2.57
 
 # Change log
+## 1.2.57
+- refactor: move linux userspace abstraction to unix userspace abstraction
+- fix: prevent complex_cpp to run if encounter known bad compiler
+- fix: illumos wrap gettid for illumos
+- fix: illumos do not generate _Generic case for iint8_t on non linux
+- fix: illumos change file api to use posix instead of linux extension
 ## 1.2.56
 - cmd: fix gzip-to-stdout closing fd 1 on destruction (dup before gzdopen)
 - cmd: fix silent truncation of gzip output lines longer than 8 KB

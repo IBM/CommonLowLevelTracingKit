@@ -7,13 +7,13 @@ target_include_directories(clltk_tracing_abstraction_interface
 
 find_package(Threads REQUIRED)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "SunOS")
     add_library(clltk_tracing_abstraction OBJECT
-        linux_user_space/file.c
-        linux_user_space/sync.c
-        linux_user_space/info.c
-        linux_user_space/error.c
-        linux_user_space/memory.c
+        unix_user_space/file.c
+        unix_user_space/sync.c
+        unix_user_space/info.c
+        unix_user_space/error.c
+        unix_user_space/memory.c
     )
     target_link_libraries(clltk_tracing_abstraction
         PRIVATE
