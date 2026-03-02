@@ -6,14 +6,22 @@
 #include <stdint.h>
 #include <string>
 #include <sys/wait.h>
-#include <syscall.h>
 #include <thread>
 #include <unistd.h>
 
+#ifdef __linux__
+#include <syscall.h>
 pid_t gettid(void)
 {
 	return (pid_t)syscall(SYS_gettid);
 }
+#elif defined(__illumos__)
+#include <sys/lwp.h>
+pid_t gettid(void)
+{
+	return (pid_t)_lwp_self();
+}
+#endif
 
 CLLTK_TRACEBUFFER(ProcessAndThread, 256 * 1024);
 

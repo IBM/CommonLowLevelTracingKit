@@ -131,6 +131,12 @@ __attribute__((always_inline)) static inline constexpr auto _clltk_cast(T value)
 	_VALUE_
 #endif
 
+#ifdef __linux__
+#define _CLLTK_ONLY_LINUX(...) __VA_ARGS__
+#else
+#define _CLLTK_ONLY_LINUX(...)
+#endif
+
 #define _CLLTK_STR_INTERNAL(...) #__VA_ARGS__
 #define _CLLTK_STR(...) _CLLTK_STR_INTERNAL(__VA_ARGS__)
 

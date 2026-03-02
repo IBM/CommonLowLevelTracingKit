@@ -8,6 +8,9 @@
 #include <sys/syscall.h>
 #include <time.h>
 #include <unistd.h>
+#ifdef __illumos__
+#include <sys/lwp.h>
+#endif
 
 __thread _Atomic uint32_t cached_pid;
 __thread _Atomic uint32_t cached_tid;
@@ -19,7 +22,11 @@ void update_cache(void)
 		atomic_store(&cached_pid, value);
 	}
 	{
+#ifdef __linux__
 		const uint32_t value = (uint32_t)syscall(SYS_gettid);
+#elif defined(__illumos__)
+		const uint32_t value = (uint32_t)_lwp_self();
+#endif
 		atomic_store(&cached_tid, value);
 	}
 }

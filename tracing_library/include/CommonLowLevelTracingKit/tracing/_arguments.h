@@ -52,50 +52,50 @@ struct _clltk_argument_types_t {
 /// supported c type to clltk type enum
 #ifndef CLLTK_FOR_CPP // for c
 #ifdef __KERNEL__
-#define _CLLTK_TYPE_TO_TYPE(_I_, _X_)                               \
-	_Generic((_X_),                                                 \
-		_CLLTK_GENERIC_CASE(bool, _clltk_argument_uint8),           \
-		_CLLTK_GENERIC_CASE(char, _clltk_argument_sint8),           \
-		_CLLTK_GENERIC_CASE(uint8_t, _clltk_argument_uint8),        \
-		_CLLTK_GENERIC_CASE(int8_t, _clltk_argument_sint8),         \
-		_CLLTK_GENERIC_CASE(uint16_t, _clltk_argument_uint16),      \
-		_CLLTK_GENERIC_CASE(int16_t, _clltk_argument_sint16),       \
-		_CLLTK_GENERIC_CASE(uint32_t, _clltk_argument_uint32),      \
-		_CLLTK_GENERIC_CASE(int32_t, _clltk_argument_sint32),       \
-		_CLLTK_GENERIC_CASE(uint64_t, _clltk_argument_uint64),      \
-		_CLLTK_GENERIC_CASE(int64_t, _clltk_argument_sint64),       \
-		_CLLTK_GENERIC_CASE(__uint128_t, _clltk_argument_uint128),  \
-		_CLLTK_GENERIC_CASE(__int128_t, _clltk_argument_sint128),   \
-		_CLLTK_GENERIC_CASE(float, _clltk_argument_float),          \
-		_CLLTK_GENERIC_CASE(double, _clltk_argument_double),        \
-		_CLLTK_GENERIC_CASE(void *, _clltk_argument_pointer),       \
-		_CLLTK_GENERIC_CASE(char *, _clltk_argument_string),        \
-		_CLLTK_GENERIC_CASE(const void *, _clltk_argument_pointer), \
-		_CLLTK_GENERIC_CASE(const char *, _clltk_argument_string),  \
+#define _CLLTK_TYPE_TO_TYPE(_I_, _X_)                                           \
+	_Generic((_X_),                                                             \
+		_CLLTK_GENERIC_CASE(bool, _clltk_argument_uint8),                       \
+		_CLLTK_GENERIC_CASE(char, _clltk_argument_sint8),                       \
+		_CLLTK_GENERIC_CASE(uint8_t, _clltk_argument_uint8),                    \
+		_CLLTK_ONLY_LINUX(_CLLTK_GENERIC_CASE(int8_t, _clltk_argument_sint8), ) \
+			_CLLTK_GENERIC_CASE(uint16_t, _clltk_argument_uint16),              \
+		_CLLTK_GENERIC_CASE(int16_t, _clltk_argument_sint16),                   \
+		_CLLTK_GENERIC_CASE(uint32_t, _clltk_argument_uint32),                  \
+		_CLLTK_GENERIC_CASE(int32_t, _clltk_argument_sint32),                   \
+		_CLLTK_GENERIC_CASE(uint64_t, _clltk_argument_uint64),                  \
+		_CLLTK_GENERIC_CASE(int64_t, _clltk_argument_sint64),                   \
+		_CLLTK_GENERIC_CASE(__uint128_t, _clltk_argument_uint128),              \
+		_CLLTK_GENERIC_CASE(__int128_t, _clltk_argument_sint128),               \
+		_CLLTK_GENERIC_CASE(float, _clltk_argument_float),                      \
+		_CLLTK_GENERIC_CASE(double, _clltk_argument_double),                    \
+		_CLLTK_GENERIC_CASE(void *, _clltk_argument_pointer),                   \
+		_CLLTK_GENERIC_CASE(char *, _clltk_argument_string),                    \
+		_CLLTK_GENERIC_CASE(const void *, _clltk_argument_pointer),             \
+		_CLLTK_GENERIC_CASE(const char *, _clltk_argument_string),              \
 		default: _clltk_argument_pointer) // everything else as (void*)
 #else
-#define _CLLTK_TYPE_TO_TYPE(_I_, _X_)                                    \
-	_Generic((_X_),                                                      \
-		_CLLTK_GENERIC_CASE(bool, _clltk_argument_uint8),                \
-		_CLLTK_GENERIC_CASE(char, _clltk_argument_sint8),                \
-		_CLLTK_GENERIC_CASE(uint8_t, _clltk_argument_uint8),             \
-		_CLLTK_GENERIC_CASE(int8_t, _clltk_argument_sint8),              \
-		_CLLTK_GENERIC_CASE(uint16_t, _clltk_argument_uint16),           \
-		_CLLTK_GENERIC_CASE(int16_t, _clltk_argument_sint16),            \
-		_CLLTK_GENERIC_CASE(uint32_t, _clltk_argument_uint32),           \
-		_CLLTK_GENERIC_CASE(int32_t, _clltk_argument_sint32),            \
-		_CLLTK_GENERIC_CASE(uint64_t, _clltk_argument_uint64),           \
-		_CLLTK_GENERIC_CASE(int64_t, _clltk_argument_sint64),            \
-		_CLLTK_GENERIC_CASE(unsigned long long, _clltk_argument_uint64), \
-		_CLLTK_GENERIC_CASE(signed long long, _clltk_argument_sint64),   \
-		_CLLTK_GENERIC_CASE(__uint128_t, _clltk_argument_uint128),       \
-		_CLLTK_GENERIC_CASE(__int128_t, _clltk_argument_sint128),        \
-		_CLLTK_GENERIC_CASE(float, _clltk_argument_float),               \
-		_CLLTK_GENERIC_CASE(double, _clltk_argument_double),             \
-		_CLLTK_GENERIC_CASE(void *, _clltk_argument_pointer),            \
-		_CLLTK_GENERIC_CASE(char *, _clltk_argument_string),             \
-		_CLLTK_GENERIC_CASE(const void *, _clltk_argument_pointer),      \
-		_CLLTK_GENERIC_CASE(const char *, _clltk_argument_string),       \
+#define _CLLTK_TYPE_TO_TYPE(_I_, _X_)                                           \
+	_Generic((_X_),                                                             \
+		_CLLTK_GENERIC_CASE(bool, _clltk_argument_uint8),                       \
+		_CLLTK_GENERIC_CASE(char, _clltk_argument_sint8),                       \
+		_CLLTK_GENERIC_CASE(uint8_t, _clltk_argument_uint8),                    \
+		_CLLTK_ONLY_LINUX(_CLLTK_GENERIC_CASE(int8_t, _clltk_argument_sint8), ) \
+			_CLLTK_GENERIC_CASE(uint16_t, _clltk_argument_uint16),              \
+		_CLLTK_GENERIC_CASE(int16_t, _clltk_argument_sint16),                   \
+		_CLLTK_GENERIC_CASE(uint32_t, _clltk_argument_uint32),                  \
+		_CLLTK_GENERIC_CASE(int32_t, _clltk_argument_sint32),                   \
+		_CLLTK_GENERIC_CASE(uint64_t, _clltk_argument_uint64),                  \
+		_CLLTK_GENERIC_CASE(int64_t, _clltk_argument_sint64),                   \
+		_CLLTK_GENERIC_CASE(unsigned long long, _clltk_argument_uint64),        \
+		_CLLTK_GENERIC_CASE(signed long long, _clltk_argument_sint64),          \
+		_CLLTK_GENERIC_CASE(__uint128_t, _clltk_argument_uint128),              \
+		_CLLTK_GENERIC_CASE(__int128_t, _clltk_argument_sint128),               \
+		_CLLTK_GENERIC_CASE(float, _clltk_argument_float),                      \
+		_CLLTK_GENERIC_CASE(double, _clltk_argument_double),                    \
+		_CLLTK_GENERIC_CASE(void *, _clltk_argument_pointer),                   \
+		_CLLTK_GENERIC_CASE(char *, _clltk_argument_string),                    \
+		_CLLTK_GENERIC_CASE(const void *, _clltk_argument_pointer),             \
+		_CLLTK_GENERIC_CASE(const char *, _clltk_argument_string),              \
 		default: _clltk_argument_pointer) // everything else as (void*)
 #endif
 
@@ -175,48 +175,48 @@ template <typename T> static CONST_INLINE constexpr _clltk_argument_t _CLLTK_TYP
 /// supported c type to clltk type enum
 #ifndef CLLTK_FOR_CPP // for c
 #ifdef __KERNEL__
-#define _CLLTK_TYPE_IS_FLEX(_I_, _X_)             \
-	_Generic((_X_),                               \
-		_CLLTK_GENERIC_CASE(char, false),         \
-		_CLLTK_GENERIC_CASE(uint8_t, false),      \
-		_CLLTK_GENERIC_CASE(int8_t, false),       \
-		_CLLTK_GENERIC_CASE(uint16_t, false),     \
-		_CLLTK_GENERIC_CASE(int16_t, false),      \
-		_CLLTK_GENERIC_CASE(uint32_t, false),     \
-		_CLLTK_GENERIC_CASE(int32_t, false),      \
-		_CLLTK_GENERIC_CASE(uint64_t, false),     \
-		_CLLTK_GENERIC_CASE(int64_t, false),      \
-		_CLLTK_GENERIC_CASE(__uint128_t, false),  \
-		_CLLTK_GENERIC_CASE(__int128_t, false),   \
-		_CLLTK_GENERIC_CASE(float, false),        \
-		_CLLTK_GENERIC_CASE(double, false),       \
-		_CLLTK_GENERIC_CASE(void *, false),       \
-		_CLLTK_GENERIC_CASE(char *, true),        \
-		_CLLTK_GENERIC_CASE(const void *, false), \
-		_CLLTK_GENERIC_CASE(const char *, true),  \
+#define _CLLTK_TYPE_IS_FLEX(_I_, _X_)                                           \
+	_Generic((_X_),                                                             \
+		_CLLTK_GENERIC_CASE(char, false),                                       \
+		_CLLTK_GENERIC_CASE(uint8_t, false),                                    \
+		_CLLTK_ONLY_LINUX(_CLLTK_GENERIC_CASE(int8_t, _clltk_argument_sint8), ) \
+			_CLLTK_GENERIC_CASE(uint16_t, false),                               \
+		_CLLTK_GENERIC_CASE(int16_t, false),                                    \
+		_CLLTK_GENERIC_CASE(uint32_t, false),                                   \
+		_CLLTK_GENERIC_CASE(int32_t, false),                                    \
+		_CLLTK_GENERIC_CASE(uint64_t, false),                                   \
+		_CLLTK_GENERIC_CASE(int64_t, false),                                    \
+		_CLLTK_GENERIC_CASE(__uint128_t, false),                                \
+		_CLLTK_GENERIC_CASE(__int128_t, false),                                 \
+		_CLLTK_GENERIC_CASE(float, false),                                      \
+		_CLLTK_GENERIC_CASE(double, false),                                     \
+		_CLLTK_GENERIC_CASE(void *, false),                                     \
+		_CLLTK_GENERIC_CASE(char *, true),                                      \
+		_CLLTK_GENERIC_CASE(const void *, false),                               \
+		_CLLTK_GENERIC_CASE(const char *, true),                                \
 		default: false)
 #else
-#define _CLLTK_TYPE_IS_FLEX(_I_, _X_)                   \
-	_Generic((_X_),                                     \
-		_CLLTK_GENERIC_CASE(char, false),               \
-		_CLLTK_GENERIC_CASE(uint8_t, false),            \
-		_CLLTK_GENERIC_CASE(int8_t, false),             \
-		_CLLTK_GENERIC_CASE(uint16_t, false),           \
-		_CLLTK_GENERIC_CASE(int16_t, false),            \
-		_CLLTK_GENERIC_CASE(uint32_t, false),           \
-		_CLLTK_GENERIC_CASE(int32_t, false),            \
-		_CLLTK_GENERIC_CASE(uint64_t, false),           \
-		_CLLTK_GENERIC_CASE(int64_t, false),            \
-		_CLLTK_GENERIC_CASE(signed long long, false),   \
-		_CLLTK_GENERIC_CASE(unsigned long long, false), \
-		_CLLTK_GENERIC_CASE(__uint128_t, false),        \
-		_CLLTK_GENERIC_CASE(__int128_t, false),         \
-		_CLLTK_GENERIC_CASE(float, false),              \
-		_CLLTK_GENERIC_CASE(double, false),             \
-		_CLLTK_GENERIC_CASE(void *, false),             \
-		_CLLTK_GENERIC_CASE(char *, true),              \
-		_CLLTK_GENERIC_CASE(const void *, false),       \
-		_CLLTK_GENERIC_CASE(const char *, true),        \
+#define _CLLTK_TYPE_IS_FLEX(_I_, _X_)                                           \
+	_Generic((_X_),                                                             \
+		_CLLTK_GENERIC_CASE(char, false),                                       \
+		_CLLTK_GENERIC_CASE(uint8_t, false),                                    \
+		_CLLTK_ONLY_LINUX(_CLLTK_GENERIC_CASE(int8_t, _clltk_argument_sint8), ) \
+			_CLLTK_GENERIC_CASE(uint16_t, false),                               \
+		_CLLTK_GENERIC_CASE(int16_t, false),                                    \
+		_CLLTK_GENERIC_CASE(uint32_t, false),                                   \
+		_CLLTK_GENERIC_CASE(int32_t, false),                                    \
+		_CLLTK_GENERIC_CASE(uint64_t, false),                                   \
+		_CLLTK_GENERIC_CASE(int64_t, false),                                    \
+		_CLLTK_GENERIC_CASE(signed long long, false),                           \
+		_CLLTK_GENERIC_CASE(unsigned long long, false),                         \
+		_CLLTK_GENERIC_CASE(__uint128_t, false),                                \
+		_CLLTK_GENERIC_CASE(__int128_t, false),                                 \
+		_CLLTK_GENERIC_CASE(float, false),                                      \
+		_CLLTK_GENERIC_CASE(double, false),                                     \
+		_CLLTK_GENERIC_CASE(void *, false),                                     \
+		_CLLTK_GENERIC_CASE(char *, true),                                      \
+		_CLLTK_GENERIC_CASE(const void *, false),                               \
+		_CLLTK_GENERIC_CASE(const char *, true),                                \
 		default: false)
 #endif
 

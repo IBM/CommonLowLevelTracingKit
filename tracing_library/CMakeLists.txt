@@ -115,10 +115,13 @@ foreach(LIB_NAME clltk_tracing_static clltk_tracing_shared)
             ${clltk_private_compiler_flags}
     )
 
-    target_link_options(${LIB_NAME}
-        PRIVATE
-            -Wl,--gc-sections
-    )
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_link_options(${LIB_NAME}
+            PRIVATE
+                -Wl,--gc-sections
+        )
+    endif()
 endforeach()
 
 set_target_properties(clltk_tracing_static
