@@ -54,6 +54,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup ccache
+        run: mkdir -p ~/.ccache
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ runner.os }}-build-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-build-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}-
+            ccache-${{ runner.os }}-build-
+
       - name: Load CI-Container
         uses: ./.github/actions/load-container
         with:
@@ -61,6 +73,9 @@ jobs:
 
       - name: Build
         run: ./scripts/container.sh ./scripts/ci-cd/step_build.sh
+
+      - name: Show ccache stats
+        run: ./scripts/container.sh ccache --show-stats || true
 
       - name: Test
         run: ./scripts/container.sh ./scripts/ci-cd/step_test.sh
@@ -78,6 +93,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup ccache
+        run: mkdir -p ~/.ccache
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ runner.os }}-package-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-package-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}-
+            ccache-${{ runner.os }}-package-
+            ccache-${{ runner.os }}-build-
+
       - name: Load CI-Container
         uses: ./.github/actions/load-container
         with:
@@ -86,35 +114,17 @@ jobs:
       - name: Package
         run: ./scripts/container.sh ./scripts/ci-cd/step_package.sh
 
+      - name: Show ccache stats
+        run: ./scripts/container.sh ccache --show-stats || true
+
       - name: Package Validate
         run: ./scripts/container.sh ./scripts/ci-cd/step_package_validate.sh --skip-srpm-rebuild
 
-      - name: Upload SRPM artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: srpm
-          path: build/packages/*.src.rpm
-          retention-days: 1
-
-  # ============================================
-  # Release (only on push to main)
-  # ============================================
-  release:
-    runs-on: ubuntu-latest
-    needs: package
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download SRPM artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: srpm
-          path: packages
-
+      # ==========================================
+      # Create GitHub Release (only on push to main)
+      # ==========================================
       - name: Get version and generate release info
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: release_info
         env:
           COMMIT_SHA: ${{ github.sha }}
@@ -127,11 +137,11 @@ jobs:
           echo "tag=v${VERSION}+${SHORT_SHA}" >> $GITHUB_OUTPUT
           
           # Generate checksums
-          cd packages
+          cd build/packages
           sha256sum *.src.rpm > SHA256SUMS
           
           # Build release body with checksums embedded
-          cd ..
+          cd ../..
           cat > release_body.md << EOF
           Release of Common Low Level Tracing Kit
           
@@ -145,16 +155,17 @@ jobs:
           
           ## Checksums (SHA256)
           \`\`\`
-          $(cat packages/SHA256SUMS)
+          $(cat build/packages/SHA256SUMS)
           \`\`\`
           EOF
 
       - name: Create Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_info.outputs.tag }}
           name: ${{ steps.release_info.outputs.version }}
           body_path: release_body.md
           files: |
-            packages/*.src.rpm
-            packages/SHA256SUMS
+            build/packages/*.src.rpm
+            build/packages/SHA256SUMS

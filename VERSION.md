@@ -1,6 +1,8 @@
-1.2.58
+1.2.59
 
 # Change log
+## 1.2.59
+- ci: use ccache with GitHub cache to speed up builds
 ## 1.2.58
 - cli: show features, git hash, license, and URL in --version output
 - ci: auto-publish SRPM to GitHub releases when PRs are merged
