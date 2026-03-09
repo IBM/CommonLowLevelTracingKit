@@ -60,7 +60,8 @@ class TestClltkCmdBase(unittest.TestCase):
         """Test clltk --version shows version string."""
         result = clltk("--version")
         self.assertEqual(result.returncode, 0)
-        self.assertRegex(result.stdout, r"Common Low Level Tracing Kit \d+\.\d+\.\d+")
+        self.assertIn("Common Low Level Tracing Kit", result.stdout)
+        self.assertRegex(result.stdout, r"Version:\s+\d+\.\d+\.\d+")
 
 
 class TestClltkTraceBuffer(unittest.TestCase):
