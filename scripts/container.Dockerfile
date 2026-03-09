@@ -18,6 +18,7 @@ RUN dnf -y install \
     make \
     gcc \
     g++ \
+    ccache \
     clang-tools-extra \
     valgrind \
     lcov \
