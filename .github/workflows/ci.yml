@@ -13,9 +13,9 @@ env:
   CONTAINER_CMD: docker
   CONTAINER_NON_INTERACTIVE: true
 
-# Required for pushing to ghcr.io
+# Required for pushing to ghcr.io and creating releases
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -88,3 +88,73 @@ jobs:
 
       - name: Package Validate
         run: ./scripts/container.sh ./scripts/ci-cd/step_package_validate.sh --skip-srpm-rebuild
+
+      - name: Upload SRPM artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: srpm
+          path: build/packages/*.src.rpm
+          retention-days: 1
+
+  # ============================================
+  # Release (only on push to main)
+  # ============================================
+  release:
+    runs-on: ubuntu-latest
+    needs: package
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download SRPM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: srpm
+          path: packages
+
+      - name: Get version and generate release info
+        id: release_info
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          VERSION=$(head -n1 VERSION.md)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Create a unique tag using version + short commit hash
+          SHORT_SHA=$(echo "$COMMIT_SHA" | cut -c1-7)
+          echo "tag=v${VERSION}+${SHORT_SHA}" >> $GITHUB_OUTPUT
+          
+          # Generate checksums
+          cd packages
+          sha256sum *.src.rpm > SHA256SUMS
+          
+          # Build release body with checksums embedded
+          cd ..
+          cat > release_body.md << EOF
+          Release of Common Low Level Tracing Kit
+          
+          **Commit:** ${COMMIT_SHA}
+          
+          ## Install from SRPM
+          \`\`\`bash
+          rpmbuild --rebuild clltk-${VERSION}-*.src.rpm
+          sudo dnf install ~/rpmbuild/RPMS/x86_64/clltk-*.rpm
+          \`\`\`
+          
+          ## Checksums (SHA256)
+          \`\`\`
+          $(cat packages/SHA256SUMS)
+          \`\`\`
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag }}
+          name: ${{ steps.release_info.outputs.version }}
+          body_path: release_body.md
+          files: |
+            packages/*.src.rpm
+            packages/SHA256SUMS

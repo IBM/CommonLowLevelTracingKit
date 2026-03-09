@@ -29,6 +29,7 @@ target_link_libraries(clltk-cmd
     PRIVATE
         clltk-cmd-interface
         clltk-version
+        clltk-build-info
 )
 
 # Check that all commands are OBJECT or SHARED libraries

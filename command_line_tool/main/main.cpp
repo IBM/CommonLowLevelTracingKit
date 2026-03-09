@@ -1,6 +1,7 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
+#include "CommonLowLevelTracingKit/build_info.gen.h"
 #include "CommonLowLevelTracingKit/version.gen.h"
 #include "commands/interface.hpp"
 #include <cstdlib>
@@ -33,7 +34,27 @@ static void set_path(const std::string &input)
 
 static void print_version(void)
 {
-	std::cout << "Common Low Level Tracing Kit " CLLTK_VERSION_STR << std::endl;
+	std::cout << CLLTK_BUILD_FULL_NAME << "\n";
+	std::cout << "\n";
+	std::cout << "Version:    " << CLLTK_BUILD_VERSION_STR;
+#if CLLTK_BUILD_GIT_DIRTY
+	std::cout << " (" << CLLTK_BUILD_GIT_HASH << "-dirty)";
+#else
+	std::cout << " (" << CLLTK_BUILD_GIT_HASH << ")";
+#endif
+	std::cout << "\n";
+	std::cout << "License:    " << CLLTK_BUILD_LICENSE << "\n";
+	std::cout << "Maintainer: " << CLLTK_BUILD_MAINTAINER << "\n";
+	std::cout << "URL:        " << CLLTK_BUILD_URL << "\n";
+	std::cout << "\n";
+	std::cout << "Features:\n";
+	std::cout << "  tracing:        " << (CLLTK_HAS_TRACING ? "enabled" : "disabled") << "\n";
+	std::cout << "  snapshot:       " << (CLLTK_HAS_SNAPSHOT ? "enabled" : "disabled") << "\n";
+	std::cout << "  cpp-decoder:    " << (CLLTK_HAS_CPP_DECODER ? "enabled" : "disabled") << "\n";
+	std::cout << "  python-decoder: " << (CLLTK_HAS_PYTHON_DECODER ? "enabled" : "disabled")
+			  << "\n";
+	std::cout << "  kernel-tracing: " << (CLLTK_HAS_KERNEL_TRACING ? "enabled" : "disabled")
+			  << "\n";
 }
 
 static std::unique_ptr<CLI::App> createMainApp(void)

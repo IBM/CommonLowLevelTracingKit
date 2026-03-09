@@ -49,11 +49,11 @@ class TestVersionOption(unittest.TestCase):
         """Test version string matches expected pattern (X.Y.Z format)."""
         result = clltk("--version")
         self.assertEqual(result.returncode, 0)
-        # Version should match semantic versioning pattern
+        # Version should match semantic versioning pattern on the Version: line
         self.assertRegex(
             result.stdout,
-            r"Common Low Level Tracing Kit \d+\.\d+\.\d+",
-            "Version string should match 'Common Low Level Tracing Kit X.Y.Z' format",
+            r"Version:\s+\d+\.\d+\.\d+",
+            "Version string should match 'Version: X.Y.Z' format",
         )
 
     def test_version_output_format(self):
@@ -79,6 +79,62 @@ class TestVersionOption(unittest.TestCase):
         result_long = clltk("--version")
         self.assertEqual(result_short.returncode, result_long.returncode)
         self.assertEqual(result_short.stdout, result_long.stdout)
+
+    def test_version_shows_git_hash(self):
+        """Test --version shows git commit hash."""
+        result = clltk("--version")
+        self.assertEqual(result.returncode, 0)
+        # Should contain git hash in format (abc1234) or (abc1234-dirty)
+        self.assertRegex(
+            result.stdout,
+            r"\([a-f0-9]+(-dirty)?\)",
+            "Version should include git hash in parentheses",
+        )
+
+    def test_version_shows_license(self):
+        """Test --version shows license information."""
+        result = clltk("--version")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("License:", result.stdout)
+        self.assertIn("BSD-2-Clause-Patent", result.stdout)
+
+    def test_version_shows_maintainer(self):
+        """Test --version shows maintainer information."""
+        result = clltk("--version")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Maintainer:", result.stdout)
+
+    def test_version_shows_url(self):
+        """Test --version shows project URL."""
+        result = clltk("--version")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("URL:", result.stdout)
+        self.assertIn("github.com", result.stdout)
+
+    def test_version_shows_features(self):
+        """Test --version shows feature flags section."""
+        result = clltk("--version")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Features:", result.stdout)
+        # Check for known features (at least these should always be present)
+        self.assertIn("tracing:", result.stdout)
+        self.assertIn("snapshot:", result.stdout)
+        self.assertIn("cpp-decoder:", result.stdout)
+        self.assertIn("python-decoder:", result.stdout)
+        self.assertIn("kernel-tracing:", result.stdout)
+
+    def test_version_features_show_status(self):
+        """Test --version feature flags show enabled/disabled status."""
+        result = clltk("--version")
+        self.assertEqual(result.returncode, 0)
+        # Each feature should show either "enabled" or "disabled"
+        features_section = (
+            result.stdout.split("Features:")[1] if "Features:" in result.stdout else ""
+        )
+        self.assertTrue(
+            "enabled" in features_section or "disabled" in features_section,
+            "Features section should contain 'enabled' or 'disabled' status",
+        )
 
 
 class TestPathOption(unittest.TestCase):

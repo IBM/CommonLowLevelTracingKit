@@ -1,6 +1,9 @@
-1.2.57
+1.2.58
 
 # Change log
+## 1.2.58
+- cli: show features, git hash, license, and URL in --version output
+- ci: auto-publish SRPM to GitHub releases when PRs are merged
 ## 1.2.57
 - refactor: move linux userspace abstraction to unix userspace abstraction
 - fix: prevent complex_cpp to run if encounter known bad compiler

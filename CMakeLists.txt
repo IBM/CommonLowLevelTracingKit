@@ -71,6 +71,10 @@ if(CLLTK_TESTS AND EXISTS ./tests/)
     add_subdirectory(./tests/)
 endif()
 
+# Generate build info header (for command line tool)
+# Note: Must be after all CLLTK_* options are defined since build_info uses them
+include(cmake/CreateBuildInfo.cmake)
+
 # --- CMake package config for find_package(CLLTK) ---
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)

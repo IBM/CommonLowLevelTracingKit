@@ -1,0 +1,31 @@
+// Copyright (c) 2024, International Business Machines
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+//
+// Auto-generated file - do not edit manually
+
+#ifndef _CLLTK_BUILD_INFO_GEN_H_
+#define _CLLTK_BUILD_INFO_GEN_H_
+
+// Version information (also available in version.gen.h)
+#define CLLTK_BUILD_VERSION_STR "$CLLTK_VERSION_MAJOR.$CLLTK_VERSION_MINOR.$CLLTK_VERSION_PATCH"
+
+// Git information
+#define CLLTK_BUILD_GIT_HASH "$CLLTK_GIT_HASH"
+#define CLLTK_BUILD_GIT_DIRTY $CLLTK_GIT_DIRTY
+
+// Project information
+#define CLLTK_BUILD_TOOL_NAME "clltk"
+#define CLLTK_BUILD_FULL_NAME "Common Low Level Tracing Kit"
+#define CLLTK_BUILD_MAINTAINER "International Business Machines"
+#define CLLTK_BUILD_LICENSE "BSD-2-Clause-Patent"
+#define CLLTK_BUILD_URL "https://github.com/IBM/CommonLowLevelTracingKit"
+
+// Feature flags (1 = enabled, 0 = disabled)
+#define CLLTK_HAS_TRACING $CLLTK_HAS_TRACING
+#define CLLTK_HAS_SNAPSHOT $CLLTK_HAS_SNAPSHOT
+#define CLLTK_HAS_CPP_DECODER $CLLTK_HAS_CPP_DECODER
+#define CLLTK_HAS_PYTHON_DECODER $CLLTK_HAS_PYTHON_DECODER
+#define CLLTK_HAS_KERNEL_TRACING $CLLTK_HAS_KERNEL_TRACING
+
+#endif // _CLLTK_BUILD_INFO_GEN_H_
+

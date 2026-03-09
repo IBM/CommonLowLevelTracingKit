@@ -1,4 +1,9 @@
+# Copyright (c) 2024, International Business Machines
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 
+# Parse version from VERSION.md - this must happen early so that
+# CLLTK_VERSION_STRING, CLLTK_VERSION_MAJOR, etc. are available
+# when library subdirectories are processed (for SOVERSION)
 
 file(READ "${CMAKE_CURRENT_LIST_DIR}/../VERSION.md" VERSION_CONTENTS)
 string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" CLLTK_VERSION_STRING "${VERSION_CONTENTS}")
