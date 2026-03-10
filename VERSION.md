@@ -1,6 +1,8 @@
-1.2.59
+1.2.60
 
 # Change log
+## 1.2.60
+- fix: release workflow now finds packages in correct container output path
 ## 1.2.59
 - ci: use ccache with GitHub cache to speed up builds
 ## 1.2.58
