@@ -20,10 +20,90 @@ permissions:
 
 jobs:
   # ============================================
+  # Detect what changed (fast, no container)
+  # ============================================
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+      tests: ${{ steps.filter.outputs.tests }}
+      docs: ${{ steps.filter.outputs.docs }}
+      ci: ${{ steps.filter.outputs.ci }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: filter
+        run: |
+          set -euo pipefail
+          
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            # Push event: compare with parent commit
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+            
+            # Handle first push or force push (before is all zeros)
+            if [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+              # Compare against parent of HEAD
+              BASE="${HEAD}^"
+            fi
+          fi
+          
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD" 2>/dev/null || echo "")
+          
+          # Default all to false
+          CODE=false
+          TESTS=false
+          DOCS=false
+          CI_FILES=false
+          
+          # Check each pattern (only if CHANGED is non-empty)
+          if [ -n "$CHANGED" ]; then
+            if echo "$CHANGED" | grep -qE '^(tracing_library/|decoder_tool/|command_line_tool/|snapshot_library/|kernel_tracing_library/|cmake/|CMakeLists\.txt|CMakePresets\.json)'; then
+              CODE=true
+            fi
+            
+            if echo "$CHANGED" | grep -qE '^(tests/|examples/)'; then
+              TESTS=true
+            fi
+            
+            if echo "$CHANGED" | grep -qE '^docs/|\.md$'; then
+              DOCS=true
+            fi
+            
+            if echo "$CHANGED" | grep -qE '^(\.github/|scripts/)'; then
+              CI_FILES=true
+            fi
+          fi
+          
+          echo "code=$CODE" >> $GITHUB_OUTPUT
+          echo "tests=$TESTS" >> $GITHUB_OUTPUT
+          echo "docs=$DOCS" >> $GITHUB_OUTPUT
+          echo "ci=$CI_FILES" >> $GITHUB_OUTPUT
+          
+          echo "Changed files:"
+          echo "$CHANGED"
+          echo ""
+          echo "Detected: code=$CODE tests=$TESTS docs=$DOCS ci=$CI_FILES"
+
+  # ============================================
   # Quick checks (format, version) - fail fast
+  # Skip only for docs-only changes
   # ============================================
   checks:
     runs-on: ubuntu-latest
+    needs: changes
+    if: |
+      github.event_name == 'push' ||
+      needs.changes.outputs.code == 'true' ||
+      needs.changes.outputs.tests == 'true' ||
+      needs.changes.outputs.ci == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -46,10 +126,17 @@ jobs:
 
   # ============================================
   # Build and Test
+  # Skip only for docs-only changes
   # ============================================
   build-and-test:
     runs-on: ubuntu-latest
-    needs: checks
+    needs: [changes, checks]
+    if: |
+      !failure() && !cancelled() &&
+      (github.event_name == 'push' ||
+       needs.changes.outputs.code == 'true' ||
+       needs.changes.outputs.tests == 'true' ||
+       needs.changes.outputs.ci == 'true')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -84,11 +171,16 @@ jobs:
         run: ./scripts/container.sh ./scripts/ci-cd/step_memcheck.sh
 
   # ============================================
-  # Packaging
+  # Packaging (only for code/ci changes, or push to main)
   # ============================================
   package:
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: [changes, build-and-test]
+    if: |
+      !failure() && !cancelled() &&
+      (github.event_name == 'push' ||
+       needs.changes.outputs.code == 'true' ||
+       needs.changes.outputs.ci == 'true')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

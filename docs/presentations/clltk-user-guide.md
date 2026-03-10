@@ -2,6 +2,11 @@
 marp: true
 theme: default
 paginate: true
+style: |
+  section {
+    transform: scale(0.9);
+    transform-origin: top left;
+  }
 ---
 
 # CLLTK - Common Low Level Tracing Kit
