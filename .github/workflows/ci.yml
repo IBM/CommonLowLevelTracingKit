@@ -129,39 +129,50 @@ jobs:
         env:
           COMMIT_SHA: ${{ github.sha }}
         run: |
+          set -e
+          
           VERSION=$(head -n1 VERSION.md)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
           # Create a unique tag using version + short commit hash
           SHORT_SHA=$(echo "$COMMIT_SHA" | cut -c1-7)
-          echo "tag=v${VERSION}+${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION}-${SHORT_SHA}" >> $GITHUB_OUTPUT
           
           # Find packages directory (container.sh puts it under build/in_container/*/build/packages)
           PACKAGES_DIR=$(find build -type d -name packages | head -1)
-          echo "packages_dir=$PACKAGES_DIR" >> $GITHUB_OUTPUT
+          if [ -z "$PACKAGES_DIR" ]; then
+            echo "ERROR: No packages directory found"
+            exit 1
+          fi
           
-          # Generate checksums
-          cd "$PACKAGES_DIR"
+          # Check that SRPM exists
+          if ! ls "$PACKAGES_DIR"/*.src.rpm 1>/dev/null 2>&1; then
+            echo "ERROR: No SRPM found in $PACKAGES_DIR"
+            exit 1
+          fi
+          
+          # Copy SRPM to current directory and generate checksums there
+          # (packages dir may be owned by root from container)
+          cp "$PACKAGES_DIR"/*.src.rpm .
           sha256sum *.src.rpm > SHA256SUMS
           
           # Build release body with checksums embedded
-          cd -
-          cat > release_body.md << EOF
-          Release of Common Low Level Tracing Kit
-          
-          **Commit:** ${COMMIT_SHA}
-          
-          ## Install from SRPM
-          \`\`\`bash
-          rpmbuild --rebuild clltk-${VERSION}-*.src.rpm
-          sudo dnf install ~/rpmbuild/RPMS/x86_64/clltk-*.rpm
-          \`\`\`
-          
-          ## Checksums (SHA256)
-          \`\`\`
-          $(cat "$PACKAGES_DIR/SHA256SUMS")
-          \`\`\`
-          EOF
+          {
+            echo "Release of Common Low Level Tracing Kit"
+            echo ""
+            echo "**Commit:** ${COMMIT_SHA}"
+            echo ""
+            echo "## Install from SRPM"
+            echo "\`\`\`bash"
+            echo "rpmbuild --rebuild clltk-${VERSION}-*.src.rpm"
+            echo "sudo dnf install ~/rpmbuild/RPMS/x86_64/clltk-*.rpm"
+            echo "\`\`\`"
+            echo ""
+            echo "## Checksums (SHA256)"
+            echo "\`\`\`"
+            cat SHA256SUMS
+            echo "\`\`\`"
+          } > release_body.md
 
       - name: Create Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -171,5 +182,5 @@ jobs:
           name: ${{ steps.release_info.outputs.version }}
           body_path: release_body.md
           files: |
-            ${{ steps.release_info.outputs.packages_dir }}/*.src.rpm
-            ${{ steps.release_info.outputs.packages_dir }}/SHA256SUMS
+            *.src.rpm
+            SHA256SUMS

@@ -1,6 +1,8 @@
-1.2.60
+1.2.61
 
 # Change log
+## 1.2.61
+- fix: release workflow copies SRPM to workspace before creating checksums
 ## 1.2.60
 - fix: release workflow now finds packages in correct container output path
 ## 1.2.59
