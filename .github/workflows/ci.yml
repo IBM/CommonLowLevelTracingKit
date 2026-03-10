@@ -136,12 +136,16 @@ jobs:
           SHORT_SHA=$(echo "$COMMIT_SHA" | cut -c1-7)
           echo "tag=v${VERSION}+${SHORT_SHA}" >> $GITHUB_OUTPUT
           
+          # Find packages directory (container.sh puts it under build/in_container/*/build/packages)
+          PACKAGES_DIR=$(find build -type d -name packages | head -1)
+          echo "packages_dir=$PACKAGES_DIR" >> $GITHUB_OUTPUT
+          
           # Generate checksums
-          cd build/packages
+          cd "$PACKAGES_DIR"
           sha256sum *.src.rpm > SHA256SUMS
           
           # Build release body with checksums embedded
-          cd ../..
+          cd -
           cat > release_body.md << EOF
           Release of Common Low Level Tracing Kit
           
@@ -155,7 +159,7 @@ jobs:
           
           ## Checksums (SHA256)
           \`\`\`
-          $(cat build/packages/SHA256SUMS)
+          $(cat "$PACKAGES_DIR/SHA256SUMS")
           \`\`\`
           EOF
 
@@ -167,5 +171,5 @@ jobs:
           name: ${{ steps.release_info.outputs.version }}
           body_path: release_body.md
           files: |
-            build/packages/*.src.rpm
-            build/packages/SHA256SUMS
+            ${{ steps.release_info.outputs.packages_dir }}/*.src.rpm
+            ${{ steps.release_info.outputs.packages_dir }}/SHA256SUMS
