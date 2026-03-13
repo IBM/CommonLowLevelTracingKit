@@ -3,13 +3,14 @@
 
 #include "abstraction/error.h"
 #include <linux/kernel.h>
+#include <linux/objtool.h>
 #include <linux/printk.h>
 
 __attribute__((noreturn)) static void
 default_unrecoverbale_error_callback(const char *const message)
 {
 	pr_emerg("%s", message);
-	panic(message);
+	panic("%s", message);
 	while (1)
 		; // panic will never return.
 		  // To fix a error reported by objtool this loop is necessary
@@ -18,7 +19,8 @@ default_unrecoverbale_error_callback(const char *const message)
 void clltk_unrecoverbale_error_callback(const char *const)
 	__attribute__((weak, noreturn, alias("default_unrecoverbale_error_callback")));
 
-void unrecoverable_error(const char *file, size_t line, const char *func, const char *format, ...)
+__attribute__((noreturn)) void unrecoverable_error(const char *file, size_t line, const char *func,
+												   const char *format, ...)
 {
 	char clltk_format[1024];
 	char clltk_message[512];
@@ -36,7 +38,9 @@ void unrecoverable_error(const char *file, size_t line, const char *func, const 
 	va_end(args);
 
 	clltk_unrecoverbale_error_callback(clltk_message);
+	__builtin_unreachable();
 }
+STACK_FRAME_NON_STANDARD(unrecoverable_error);
 
 void recoverable_error(const char *file, size_t line, const char *func, const char *format, ...)
 {
