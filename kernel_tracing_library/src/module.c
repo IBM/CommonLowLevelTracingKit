@@ -20,3 +20,4 @@ static void __exit exit_clltk_kf(void) {}
 module_init(init_clltk_kf);
 module_exit(exit_clltk_kf);
 MODULE_LICENSE("Dual BSD/GPL");
+MODULE_DESCRIPTION("Common Low Level Tracing Kit (CLLTK) kernel tracing module");

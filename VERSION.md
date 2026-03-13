@@ -1,6 +1,8 @@
-1.2.61
+1.2.62
 
 # Change log
+## 1.2.62
+- fix: kernel module build warnings
 ## 1.2.61
 - fix: release workflow copies SRPM to workspace before creating checksums
 ## 1.2.60

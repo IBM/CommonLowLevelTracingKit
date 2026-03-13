@@ -1,16 +1,20 @@
 // Copyright (c) 2024, International Business Machines
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
-#include "CommonLowLevelTracingKit/tracing/tracing.h"
-
-#include "abstraction/memory.h"
-#include <c-vector/vec.h>
-
 #include <linux/elf.h>
 #include <linux/kallsyms.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/string.h>
+
+// Forward declarations for functions exported by this module
+void _clltk_init_tracing_for_this_module(const struct mod_kallsyms *const allsyms);
+void _clltk_deinit_tracing_for_this_module(const struct mod_kallsyms *const allsyms);
+
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
+
+#include "abstraction/memory.h"
+#include <c-vector/vec.h>
 
 typedef struct {
 	const char *name;
