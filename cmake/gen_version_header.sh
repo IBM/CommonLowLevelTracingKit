@@ -6,9 +6,10 @@ set -e
 
 SRC_TOPLEVEL="$(dirname "$0")/.."
 
-# Version header generation (optional if only generating build_info)
+# Version header generation - use defaults if no arguments provided
 TEMPLATE=""
 OUTPUT=""
+USE_DEFAULTS=0
 
 # Build info generation (optional, for command line tool)
 BUILD_INFO_TEMPLATE=""
@@ -75,11 +76,11 @@ while (($#)) ; do
     esac
 done
 
-# Validate that at least one output is requested
+# If no arguments provided, use defaults for version header generation
 if [[ -z "$TEMPLATE" && -z "$BUILD_INFO_TEMPLATE" ]]; then
-    echo "Error: At least one of -t/-o or -b/-B must be specified"
-    print_help
-    exit 1
+    USE_DEFAULTS=1
+    TEMPLATE="$SRC_TOPLEVEL/cmake/version.h.template"
+    OUTPUT="$SRC_TOPLEVEL/tracing_library/include/CommonLowLevelTracingKit/version.gen.h"
 fi
 
 # Parse version from VERSION.md

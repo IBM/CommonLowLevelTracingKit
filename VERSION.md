@@ -1,6 +1,8 @@
-1.2.63
+1.2.64
 
 # Change log
+## 1.2.64
+- fix: gen_version_header.sh uses defaults when called without arguments
 ## 1.2.63
 - fix: kernel Makefile now generates version header automatically
 ## 1.2.62
