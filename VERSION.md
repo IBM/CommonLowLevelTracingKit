@@ -1,6 +1,8 @@
-1.2.62
+1.2.63
 
 # Change log
+## 1.2.63
+- fix: kernel Makefile now generates version header automatically
 ## 1.2.62
 - fix: kernel module build warnings
 ## 1.2.61
