@@ -48,6 +48,10 @@ set(CPACK_RPM_PACKAGE_RELEASE_DIST ON)
 set(CPACK_RPM_PACKAGE_LICENSE "BSD-2-Clause-Patent")
 set(CPACK_RPM_BUILD_SOURCE_DIRS_PREFIX "/clltk-debug")
 
+# Disable automatic source RPM generation
+# Source RPMs can still be built explicitly via the 'srpm' target
+set(CPACK_SOURCE_GENERATOR "")
+
 # Per-component RPM package names
 set(CPACK_RPM_TRACING_PACKAGE_NAME "clltk-tracing")
 set(CPACK_RPM_DECODER_LIBS_PACKAGE_NAME "clltk-decoder")

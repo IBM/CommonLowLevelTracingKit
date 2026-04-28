@@ -1,7 +1,11 @@
 # Copyright (c) 2024, International Business Machines
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
-
+# Check for required dependencies
+find_package(RapidJSON QUIET)
+if(NOT RapidJSON_FOUND)
+    message(FATAL_ERROR "command_line_tool requires rapidjson-devel package. Install it or disable with -DCLLTK_COMMAND_LINE_TOOL=OFF")
+endif()
 
 find_package(RapidJSON REQUIRED)
 find_package(CLI11 REQUIRED)
