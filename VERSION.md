@@ -1,6 +1,10 @@
-1.2.63
+1.2.64
 
 # Change log
+## 1.2.64
+- feat: add explicit dependency checks for optional components
+- feat: disable automatic source RPM generation
+- fix: prevent cryptic build failures when dependencies are missing
 ## 1.2.63
 - fix: kernel Makefile now generates version header automatically
 ## 1.2.62
