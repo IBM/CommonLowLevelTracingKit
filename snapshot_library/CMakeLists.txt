@@ -1,6 +1,12 @@
 # Copyright (c) 2024, International Business Machines
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 
+# Check for required libarchive dependency
+find_library(ARCHIVE_LIBRARY NAMES archive)
+if(NOT ARCHIVE_LIBRARY)
+    message(FATAL_ERROR "snapshot_library requires libarchive-devel package. Install it or disable with -DCLLTK_SNAPSHOT=OFF")
+endif()
+
 add_library(clltk_snapshot_static STATIC
     source/file.cpp
     source/snapshot.cpp

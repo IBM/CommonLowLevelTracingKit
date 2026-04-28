@@ -1,5 +1,11 @@
 
 
+# Check for required Boost dependency
+find_package(Boost QUIET CONFIG)
+if(NOT Boost_FOUND)
+    message(FATAL_ERROR "cpp decoder requires boost-devel package. Install it or disable with -DCLLTK_CPP_DECODER=OFF")
+endif()
+
 find_package(Boost REQUIRED CONFIG)
 
 set(TARGET_SOURCES
