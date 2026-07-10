@@ -106,10 +106,11 @@ namespace CommonLowLevelTracingKit::decoder {
 		printf = 1,
 		dump = 2,
 		span_begin = 3,
-		span_end = 4
+		span_end = 4,
+		fmt = 5
 	};
 	static constexpr CONST_INLINE MetaType toMetaType(uint8_t a) {
-		if (a <= static_cast<uint8_t>(MetaType::span_end)) return static_cast<MetaType>(a);
+		if (a <= static_cast<uint8_t>(MetaType::fmt)) return static_cast<MetaType>(a);
 		return MetaType::undefined;
 	}
 	class TracepointStatic final : public TraceEntryHead {

@@ -30,6 +30,7 @@ class MetaEntryType(Enum):
     Dump = 2
     SpanBegin = 3
     SpanEnd = 4
+    Fmt = 5
     
 class Endian(Enum):
     Big = "big"
@@ -436,7 +437,8 @@ class StaticTraceentry:
         self.type = get_int(meta.body, self.metaentry_in_metablob + 5, 1)
 
         assert self.type in [MetaEntryType.Printf.value, MetaEntryType.Dump.value,
-                              MetaEntryType.SpanBegin.value, MetaEntryType.SpanEnd.value], \
+                              MetaEntryType.SpanBegin.value, MetaEntryType.SpanEnd.value,
+                              MetaEntryType.Fmt.value], \
             f"invalid meta data, unsupported type {self.type}"
 
         self.meta_size = get_int(meta.body, self.metaentry_in_metablob + 1, 4)
@@ -499,6 +501,40 @@ class StaticTraceentry:
                 return
             self.formatted = f"<<< [span 0x{span_id:x}]"
             self.args = [span_id]
+            return
+
+        # Type 5 (Fmt): C++20 std::format-style {} placeholders.
+        # Supported subset: positional {} in order, and format specs that
+        # Python's str.format also understands ({:x}, {:08.3f}, {:>10}, etc.).
+        # Specs are passed through unchanged to str.format.
+        # Arguments are encoded identically to printf (type 1) entries; char*
+        # args are always length-prefixed strings (never pointer form).
+        # Falls back to "<fmt-error: <format> <args>>" when str.format raises
+        # for specs outside the common subset, so no crash on unknown specs.
+        if self.type == MetaEntryType.Fmt.value:
+            self.args = []
+            # Synthetic format dict for get_arg: char* is always a string in
+            # fmt mode (no %p variant), so pass conversion_specifier='s'.
+            _fmt_format_dict = {"conversion_specifier": "s"}
+            try:
+                offset = 0
+                for i in range(self.argument_count):
+                    (offset, value) = StaticTraceentry.get_arg(
+                        entry.args_raw, offset, self.arg_types[i], _fmt_format_dict)
+                    self.args.append(value)
+            except Exception as e:
+                error_str = (f'Extracting fmt argument failed "{self.format}" '
+                             f'from {self.file}:{self.line} with '
+                             f'{e.with_traceback(e.__traceback__)} in {traceback.format_exc()}')
+                logging.error(error_str)
+                self.formatted = error_str
+                return
+            logging.debug(f"fmt tp args = {self.args}")
+            try:
+                self.formatted = self.format.format(*self.args) if self.argument_count else self.format
+            except Exception as e:
+                self.formatted = f"fmt-error: {self.format} {self.args}"
+                logging.error(f'fmt format failed "{self.format}" from {self.file}:{self.line} with {e}')
             return
 
         formats = [m.groupdict() for m in format_regex.finditer(self.format)]
