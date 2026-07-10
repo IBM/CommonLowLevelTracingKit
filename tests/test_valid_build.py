@@ -185,6 +185,27 @@ class valid_build_tests(unittest.TestCase):
                                  sorted([begins["outer"][0], begins["inner"][0]]))
                 pass
 
+    def test_fmt_tracepoints(self: unittest.TestCase):
+        """CLLTK_TRACEPOINT_FMT uses {} placeholders (C++20 only), validated
+        at compile time and rendered by the decoders."""
+        file_content = """
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
+            CLLTK_TRACEBUFFER(BUFFER, 4096);
+            int main()
+            {
+                CLLTK_TRACEPOINT_FMT(BUFFER, "loaded {} in {}ms", "module-a", 42);
+                CLLTK_TRACEPOINT_FMT(BUFFER, "plain text no args");
+                CLLTK_TRACEPOINT_FMT(BUFFER, "hex {:x} float {:.2f}", 255u, 3.5);
+                return 0;
+            }
+            """
+        data = process(file_content, language=Language.CPP)
+        formatted = data["formatted"].tolist()
+        self.assertIn("loaded module-a in 42ms", formatted)
+        self.assertIn("plain text no args", formatted)
+        self.assertIn("hex ff float 3.50", formatted)
+        pass
+
     def test_empty(self: unittest.TestCase):
         for language in [Language.C, Language.CPP]:
             with self.subTest(language=language):
