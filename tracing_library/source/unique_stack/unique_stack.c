@@ -215,25 +215,37 @@ void unique_stack_add_batch(unique_stack_handler_t *handler, unique_stack_batch_
 		}
 	}
 
-	// append everything that is still unmatched; commit the new body size once
-	// at the end so a crash mid-batch leaves the previous consistent state
-	uint64_t stack_body_size = header.body_size;
+	// append everything that is still unmatched. All new entries are staged
+	// in one buffer and written with a single call instead of two writes per
+	// entry. The new body size is committed once at the end, so a crash
+	// mid-batch leaves the previous consistent state.
+	uint64_t append_size = 0;
 	for (size_t i = 0; i < count; i++) {
 		if (rep[i] != i || items[i].out_offset != 0)
 			continue;
-		entry_head_t entry_head = {
-			.md5_hash = hash_function(items[i].body, items[i].size),
-			.body_size = items[i].size,
-		};
-		entry_head.crc = crc8_continue(0, (const uint8_t *)&entry_head, sizeof(entry_head) - 1);
-		const uint64_t entry_head_offset = body_offset(handler) + stack_body_size;
-		const uint64_t entry_body_offset = entry_head_offset + sizeof(entry_head);
-		file_pwrite(handler->file, items[i].body, items[i].size, entry_body_offset);
-		file_pwrite(handler->file, &entry_head, sizeof(entry_head), entry_head_offset);
-		items[i].out_offset = entry_body_offset;
-		stack_body_size += sizeof(entry_head) + items[i].size;
+		append_size += sizeof(entry_head_t) + items[i].size;
 	}
-	if (stack_body_size != header.body_size) {
+	if (append_size > 0) {
+		uint8_t *const staging = memory_heap_allocation(append_size);
+		uint64_t staged = 0;
+		for (size_t i = 0; i < count; i++) {
+			if (rep[i] != i || items[i].out_offset != 0)
+				continue;
+			entry_head_t entry_head = {
+				.md5_hash = hash_function(items[i].body, items[i].size),
+				.body_size = items[i].size,
+			};
+			entry_head.crc = crc8_continue(0, (const uint8_t *)&entry_head, sizeof(entry_head) - 1);
+			memcpy(staging + staged, &entry_head, sizeof(entry_head));
+			memcpy(staging + staged + sizeof(entry_head), items[i].body, items[i].size);
+			items[i].out_offset =
+				body_offset(handler) + header.body_size + staged + sizeof(entry_head);
+			staged += sizeof(entry_head) + items[i].size;
+		}
+		file_pwrite(handler->file, staging, append_size, body_offset(handler) + header.body_size);
+		memory_heap_free(staging);
+
+		const uint64_t stack_body_size = header.body_size + append_size;
 		const uint64_t stack_body_size_offset =
 			handler->file_offset + offsetof(unique_stack_header_t, body_size);
 		file_pwrite(handler->file, &stack_body_size, sizeof(stack_body_size),
