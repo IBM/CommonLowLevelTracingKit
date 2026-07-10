@@ -131,11 +131,13 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			return isClltkMetaSection(name) || isClltkMetaPtrSection(name);
 		}
 
-		// Parse a pointer-layout discovery section: every entry is a virtual
-		// address of a meta entry located in some allocated section (e.g.
-		// .rodata). Resolve each address through the section table to a file
-		// offset and parse the self-describing meta entry found there.
-		// Duplicate addresses (e.g. from inlined call sites) are skipped.
+		// Parse a pointer-layout discovery section: every entry is a pointer
+		// pair {meta address, offset-cache address}. The meta address points
+		// into some allocated section (e.g. .rodata); the offset cache is
+		// runtime-only state and ignored here. Resolve each meta address
+		// through the section table to a file offset and parse the
+		// self-describing meta entry found there. Duplicate addresses (e.g.
+		// from inlined call sites) are skipped.
 		MetaEntryInfoCollection parsePointerSection(const std::vector<uint8_t> &data,
 													const std::vector<ElfSectionInfo> &sections,
 													const ElfSectionInfo &ptr_section,
@@ -143,9 +145,10 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			MetaEntryInfoCollection entries;
 
 			std::vector<uint64_t> seen;
-			const size_t count = ptr_section.size / pointer_size;
+			const size_t entry_stride = 2 * pointer_size;
+			const size_t count = ptr_section.size / entry_stride;
 			for (size_t i = 0; i < count; ++i) {
-				const size_t ptr_offset = ptr_section.offset + i * pointer_size;
+				const size_t ptr_offset = ptr_section.offset + i * entry_stride;
 				if (ptr_offset + pointer_size > data.size()) { break; }
 
 				uint64_t address = 0;

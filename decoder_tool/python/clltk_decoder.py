@@ -636,7 +636,9 @@ class Tracebuffer:
         version_minor = 0xFF & (file_version // 0x100)
         version_patch = 0xFF & (file_version // 0x1)
         assert version_major == 1, f"invalid major version {version_major}"
-        assert version_minor <= 2, f"invalid minor version {version_minor}"
+        # file format is unchanged since 1.2; 1.3 changed only the in-binary
+        # tracepoint discovery (ELF sections), not the trace file layout
+        assert version_minor <= 3, f"invalid minor version {version_minor}"
         self.version = f"{version_major}.{version_minor}.{version_patch}"
         
         global current_version

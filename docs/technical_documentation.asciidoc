@@ -123,8 +123,11 @@ printf_like_function(receiver, "%d", (long)1); // gcc warning [-Wformat]
 
 === Gathering meta data at compile-time
 Each tracepoint's meta data is created as an ordinary `static const` struct at the call site.
-To make all tracepoints of one tracebuffer discoverable at startup, a pointer to each meta
-struct is collected in a custom elf-section named `_clltk_<BUFFER>_metaptr`.
+To make all tracepoints of one tracebuffer discoverable at startup, every call site emits a
+pointer pair into a custom elf-section named `_clltk_<BUFFER>_metaptr`: the address of the meta
+struct and the address of the call site's file-offset cache. During startup registration the
+constructor writes the resolved file offset into the cache, so the first execution of a
+tracepoint does not need any lookup.
 
 The pointer is emitted with an inline-assembly data directive instead of the
 link:https://gcc.gnu.org/onlinedocs/gcc/Common-Variable-Attributes.html[gcc section attribute].
@@ -139,11 +142,13 @@ C and C++.
 ----
 // at every tracepoint call site (simplified):
 static const struct { ... } _meta __attribute__((used)) = { ... };
+static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;
 
 __asm__(".pushsection _clltk_MYBUFFER_metaptr,\"a\"\n\t"
         ".balign 8\n\t"
         ".dc.a %c0\n\t" // address of _meta (operand syntax differs per target)
-        ".popsection" :: "S"(&_meta));
+        ".dc.a %c1\n\t" // address of _clltk_offset
+        ".popsection" :: "S"(&_meta), "S"(&_clltk_offset));
 ----
 
 Access to this elf section is possible via the linker-generated start/stop symbols:
@@ -152,10 +157,12 @@ Access to this elf section is possible via the linker-generated start/stop symbo
 extern const void *const __start__clltk_MYBUFFER_metaptr;
 extern const void *const __stop__clltk_MYBUFFER_metaptr;
 
-// iterate all meta pointers of the buffer
+// iterate all {meta, offset cache} pairs of the buffer
 for (const void *const *p = &__start__clltk_MYBUFFER_metaptr;
-     p < &__stop__clltk_MYBUFFER_metaptr; p++) {
-    register_meta_entry(*p); // each entry is self-describing (magic + size prefix)
+     p + 1 < &__stop__clltk_MYBUFFER_metaptr; p += 2) {
+    // p[0] is self-describing (magic + size prefix); the resolved file
+    // offset is written into the cache at p[1]
+    *(_clltk_file_offset_t *)p[1] = register_meta_entry(p[0]);
 }
 ----
 ---
