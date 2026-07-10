@@ -177,6 +177,17 @@ rendering and correlation differ by meta type. Span ids come from
 32 bit counter, unique without cross-process coordination, never 0
 (0 means "no parent").
 
+=== fmt-style tracepoints
+`CLLTK_TRACEPOINT_FMT` (meta entry type 5) stores the {} format string
+verbatim and encodes arguments exactly like printf tracepoints - the library
+types arguments independently of the format syntax. Compile-time validation
+happens through a never-executed call to a helper taking
+`std::format_string<Args...>`, whose consteval constructor checks the literal
+against the argument types. The runtime call goes through an entry point
+without the printf format attribute, since {} strings must not be checked as
+printf formats. Decoders render type 5 with their native {} formatters
+(python `str.format`, C++ `std::vformat`).
+
 === caching process and thread id
 Each call to `syscall(SYS_getpid)` and `syscall(SYS_gettid)` requires a context switch to kernel and therefore burdens a heavy overhead. To remove this context switch, pid (process id) and tid (thread id) should be cached. +
 It's possible to detect if a code is executed inside a new thread with storage specifier `__thread` for tid and detect forking with `pthread_atfork`.
