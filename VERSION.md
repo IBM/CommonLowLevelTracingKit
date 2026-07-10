@@ -1,6 +1,16 @@
-1.2.64
+1.3.0
 
 # Change log
+## 1.3.0
+- fix: tracepoints in inline functions, templates, and class members no longer fail with
+  "causes a section type conflict" on GCC >= 15.2. Meta entries are now ordinary statics;
+  discovery works through pointers emitted into `_clltk_<BUFFER>_metaptr` sections via
+  assembler data directives (COMDAT-safe, validated for x86_64/aarch64/s390x with -fPIC).
+- feat: decoder/CLI read both the new `_metaptr` pointer sections and legacy inline `_meta`
+  sections from ELF binaries.
+- BREAKING (link-time): objects compiled with older headers cannot be mixed with objects
+  compiled with these headers in one binary; rebuild all translation units.
+- ci: add non-LTO build leg (`unittests-nolto` preset); LTO had masked the section conflict.
 ## 1.2.64
 - feat: add explicit dependency checks for optional components
 - feat: disable automatic source RPM generation

@@ -122,41 +122,41 @@ printf_like_function(receiver, "%d", (long)1); // gcc warning [-Wformat]
 ---
 
 === Gathering meta data at compile-time
-To get all meta data for one tracebuffer, all relevant information are stored in to a custom elf-section. This is possible due to a  
-link:https://gcc.gnu.org/onlinedocs/gcc-3.2/gcc/Function-Attributes.html#:~:text=section%20(%22section%2Dname%22)[gcc section attribute].
-By defining all meta data strings and data structures as `static const` and applying the section attribute, gcc will gathering all meta data into the same section. 
+Each tracepoint's meta data is created as an ordinary `static const` struct at the call site.
+To make all tracepoints of one tracebuffer discoverable at startup, a pointer to each meta
+struct is collected in a custom elf-section named `_clltk_<BUFFER>_metaptr`.
+
+The pointer is emitted with an inline-assembly data directive instead of the
+link:https://gcc.gnu.org/onlinedocs/gcc/Common-Variable-Attributes.html[gcc section attribute].
+The section attribute cannot be used here: inside inline functions and templates the compiler
+places function-local statics into the enclosing function's COMDAT group, and GCC (>= 15.2)
+rejects mixing COMDAT-grouped and ungrouped sections of the same name in one translation unit
+("causes a section type conflict"). Data emitted through assembler directives never joins a
+COMDAT group, so tracepoints work in any context: plain functions, inline functions, templates,
+C and C++.
 
 [source,C,linenums]
 ----
+// at every tracepoint call site (simplified):
+static const struct { ... } _meta __attribute__((used)) = { ... };
 
-// in first_file.cpp
-{
-    static const char filename[] __attribute__((used, section("my_section"))) = {__FILE__};
-    static const char format[] __attribute__((used, section("my_section"))) = {"first format string %s"};
-}
-
-// second_file.cpp
-{
-    static const char filename[] __attribute__((used, section("my_section"))) =  {__FILE__};
-    static const char format[] __attribute__((used, section("my_section"))) =  {"second format string %d"};
-}
-
-/* elf section "my_section" 
-.filename_0 "first_file.cpp\0"
-.format_0 "first format string %s\0"
-.filename_1 "second_file.cpp\0"
-.format_1 "second format string %s\0"
-*/
+__asm__(".pushsection _clltk_MYBUFFER_metaptr,\"a\"\n\t"
+        ".balign 8\n\t"
+        ".dc.a %c0\n\t" // address of _meta (operand syntax differs per target)
+        ".popsection" :: "S"(&_meta));
 ----
 
-Access to this elf section is possible via the following code;
+Access to this elf section is possible via the linker-generated start/stop symbols:
 [source,C,linenums]
 ----
-extern const void __start_my_section;
-extern const void __stop_my_section;
+extern const void *const __start__clltk_MYBUFFER_metaptr;
+extern const void *const __stop__clltk_MYBUFFER_metaptr;
 
-const void *const begin = &__start_my_section;  // pointer to first address of my_section
-const void *const end = &__stop_my_section;     // pointer to first address after my_section
+// iterate all meta pointers of the buffer
+for (const void *const *p = &__start__clltk_MYBUFFER_metaptr;
+     p < &__stop__clltk_MYBUFFER_metaptr; p++) {
+    register_meta_entry(*p); // each entry is self-describing (magic + size prefix)
+}
 ----
 ---
 === caching process and thread id

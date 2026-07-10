@@ -214,25 +214,10 @@ _clltk_file_offset_t _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_ha
 														   const void *const this_meta,
 														   const uint32_t this_meta_size)
 {
-	const uintptr_t elf_sec_start = (uintptr_t)buffer->meta.start;
-	const uintptr_t elf_sec_stop = (uintptr_t)buffer->meta.stop;
-	const uint32_t elf_sec_size = (uint32_t)(elf_sec_stop - elf_sec_start);
-	const uintptr_t this_start = (uintptr_t)this_meta;
-	const uintptr_t this_stop = (uintptr_t)this_meta + (uintptr_t)this_meta_size;
-
-	if ((buffer->runtime.file_offset == _clltk_file_offset_unset) && (elf_sec_size > 0))
-		buffer->runtime.file_offset =
-			_clltk_tracebuffer_add_to_stack(buffer, (const void *)elf_sec_start, elf_sec_size);
-
-	if (buffer->runtime.file_offset == _clltk_file_offset_invalid)
-		return _clltk_file_offset_invalid;
-
-	if ((elf_sec_start <= this_start) && (this_stop <= elf_sec_stop)) {
-		// if meta for this tracepoint is in section
-		return buffer->runtime.file_offset + (_clltk_file_offset_t)(this_start - elf_sec_start);
-	}
-	// if meta for this tracepoint is not in section
-	// this will happen with template functions
+	// meta entries live outside the discovery section (which holds only
+	// pointers to them). Every entry is added individually; the unique stack
+	// deduplicates by content, so an entry already registered by the
+	// constructor walk returns its existing offset.
 	return _clltk_tracebuffer_add_to_stack(buffer, this_meta, this_meta_size);
 }
 
