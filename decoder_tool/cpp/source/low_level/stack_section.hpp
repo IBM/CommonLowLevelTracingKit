@@ -21,8 +21,11 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 		constexpr size_t ENTRY_MD5_OFFSET = 0;
 		constexpr size_t ENTRY_MD5_SIZE = 16;
-		constexpr size_t ENTRY_RESERVED_OFFSET = 16;
-		constexpr size_t ENTRY_RESERVED_SIZE = 8;
+		constexpr size_t ENTRY_KIND_TAG_OFFSET = 16;
+		constexpr size_t ENTRY_KIND_TAG_SIZE = 8;
+		// entries carrying this tag are persisted lookup index slabs of the
+		// writer (since 1.7.0); their bodies contain no meta data
+		constexpr char ENTRY_KIND_INDEX_TAG[ENTRY_KIND_TAG_SIZE + 1] = "CLLTKIDX";
 		constexpr size_t ENTRY_BODY_SIZE_OFFSET = 24;
 		constexpr size_t ENTRY_CRC_OFFSET = 28;
 		constexpr size_t ENTRY_HEADER_SIZE = 29;
