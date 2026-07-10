@@ -137,6 +137,10 @@ docs/               AsciiDoc documentation, file format spec, diagrams.
 ## Version Management
 
 - Version is the first line of `VERSION.md` (format: `MAJOR.MINOR.PATCH`).
+- Semantics: every merged change set bumps at least PATCH. Any change to the
+  trace file layout (new sections, new entry or meta types, changed field
+  meaning) bumps MINOR. Changes that older decoders cannot safely skip bump
+  MAJOR.
 - `cmake/gen_version_header.sh` generates `version.gen.h` at build time. Do NOT edit the `.gen.h` file.
 - Version bump: edit first line of `VERSION.md`, add changelog entry below.
 

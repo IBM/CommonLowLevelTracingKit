@@ -15,10 +15,15 @@ design discussion.
 A feature is not finished when the code works. Every accepted feature ships
 in one piece with:
 
-* *Library*: userspace C API (C11) with C++ conveniences where they fit; the
-  kernel module follows in a separate step unless stated otherwise.
+* *Library*: userspace C API (C11) with C++ conveniences where they fit.
+* *Kernel*: every feature explicitly evaluates the kernel tracing module -
+  which kernel versions are affected, whether the feature applies there, and
+  either implements it or records why not. Silent userspace-only is not an
+  outcome.
 * *Decoders*: python decoder and C++ decoder/CLI handle the new data - a
   feature only one decoder understands does not exist.
+* *Versioning*: every shipped feature bumps at least PATCH; any trace file
+  layout change bumps MINOR (see AGENTS.md, Version Management).
 * *File format*: `file_specification.asciidoc` updated in the same change
   that introduces the format addition; old decoders must skip unknown data
   gracefully.
@@ -28,6 +33,13 @@ in one piece with:
   usage - the example is the API review.
 * *Docs*: README usage section, `technical_documentation.asciidoc`, and the
   AGENTS.md gotchas where the feature has sharp edges.
+
+Engineering principle: features integrate into the existing structure at the
+right places - extend the meta type enum, add a macro beside the existing
+ones, teach the existing parsers one more case. A feature that requires
+rewriting existing machinery is a signal the design is wrong; redesigns of
+existing machinery (like the registration index) are their own explicit
+roadmap items, never a side effect of a feature.
 
 === Integration matrix for the accepted features
 
