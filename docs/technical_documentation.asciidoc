@@ -188,6 +188,15 @@ without the printf format attribute, since {} strings must not be checked as
 printf formats. Decoders render type 5 with their native {} formatters
 (python `str.format`, C++ `std::vformat`).
 
+=== unique stack lookup index
+Registration lookups (deduplicating meta entries) go through an in-memory
+open-addressing table per tracebuffer: content hash to entry offset, with
+candidates verified against the file (md5 in the entry head, or byte
+comparison on the batch path). The table loads from the last persisted slab
+in the stack plus a tail scan and is republished as a tagged, nibble-encoded
+stack entry when enough new entries accumulated. The append-only stack stays
+the source of truth; the slab is discardable cache.
+
 === caching process and thread id
 Each call to `syscall(SYS_getpid)` and `syscall(SYS_gettid)` requires a context switch to kernel and therefore burdens a heavy overhead. To remove this context switch, pid (process id) and tid (thread id) should be cached. +
 It's possible to detect if a code is executed inside a new thread with storage specifier `__thread` for tid and detect forking with `pthread_atfork`.

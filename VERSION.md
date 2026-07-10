@@ -1,6 +1,14 @@
-1.6.0
+1.7.0
 
 # Change log
+## 1.7.0
+- perf: registration lookups use a persisted open-addressing index instead of scanning the
+  stack linearly. The index lives in memory per tracebuffer and is periodically persisted
+  as tagged entries inside the stack; slabs are nibble-encoded so pre-1.7.0 decoders can
+  never misparse them, the last valid slab wins, and a missing or torn slab degrades to
+  rebuild-by-scan (the append-only stack stays the source of truth). Stack entry heads now
+  carry a kind tag in the previously reserved bytes: file layout change, hence the minor
+  bump.
 ## 1.6.0
 - feat: fmt-style tracepoints (C++20 only). `CLLTK_TRACEPOINT_FMT(buffer, "loaded {} in {}ms",
   name, ms)` uses std::format {} placeholders, validated against the argument types at compile

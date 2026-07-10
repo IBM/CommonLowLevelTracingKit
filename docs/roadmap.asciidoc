@@ -147,7 +147,8 @@ buffer.
 
 == Registration index (unique stack evolution)
 
-Status: *accepted* - as an in-file growable open-addressing table.
+Status: *implemented* (1.7.0) - as an in-file open-addressing table persisted
+in tagged, nibble-encoded stack entries.
 
 Today every runtime registration (dynamic tracepoints, and any feature that
 registers meta at runtime) scans the stack region linearly per lookup, with
