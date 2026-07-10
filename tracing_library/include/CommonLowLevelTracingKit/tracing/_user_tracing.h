@@ -24,6 +24,22 @@
 
 #define _CLLTK_TRACEBUFFER_MACRO_VALUE(_NAME_) _NAME_
 
+/* fmt-style tracepoints ({} placeholders) are C++20 only: std::format_string
+ * validates the format against the argument types at compile time. */
+#if defined(CLLTK_FOR_CPP) && defined(__has_include)
+#if __has_include(<format>)
+#include <format>
+#include <type_traits>
+#if defined(__cpp_lib_format)
+#define _CLLTK_HAS_FMT 1
+template <typename... _Args>
+inline void _clltk_fmt_check(std::format_string<std::type_identity_t<_Args>...>, _Args &&...)
+{
+}
+#endif
+#endif
+#endif
+
 #if !defined(_CLLTK_INTERNAL)
 
 _CLLTK_EXTERN_C_BEGIN
@@ -175,6 +191,51 @@ _CLLTK_EXTERN_C_END
 		_clltk_static_tracepoint_with_args(_tb, _clltk_offset, __FILE__, __LINE__, &_clltk_types, \
 										   _FORMAT_ _CLLTK_CAST(__VA_ARGS__));                    \
 	} while (0)
+
+#if defined(_CLLTK_HAS_FMT)
+#define _CLLTK_STATIC_TRACEPOINT_FMT(_BUFFER_, _FORMAT_, ...)                                  \
+	do {                                                                                       \
+		/* ------- compile time stuff ------- */                                               \
+		if (false) { /* never executed: validates {} format against arg types */               \
+			_clltk_fmt_check(_FORMAT_ __VA_OPT__(, ) __VA_ARGS__);                             \
+		}                                                                                      \
+		_CLLTK_STATIC_ASSERT(_CLLTK_NARGS(__VA_ARGS__) <= 10,                                  \
+							 "only supporting up to 10 arguments");                            \
+		_CLLTK_CHECK_FOR_ARGUMENTS(__VA_ARGS__);                                               \
+                                                                                               \
+		/* create meta data for this tracepoint, the per-call-site offset      */              \
+		/* cache (filled by the startup registration), and a discovery entry  */               \
+		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                  \
+		_CLLTK_CREATE_META_ENTRY_TYPED(_meta, _CLLTK_PLACE_IN(_BUFFER_),                       \
+									   _clltk_meta_enty_type_fmt, _FORMAT_, __VA_ARGS__);      \
+		_CLLTK_EMIT_META_PTR(_BUFFER_, _meta, _clltk_offset);                                  \
+                                                                                               \
+		static _clltk_argument_types_t _clltk_types = _CLLTK_CREATE_TYPES(__VA_ARGS__);        \
+                                                                                               \
+		static _clltk_tracebuffer_handler_t *const _tb = &_clltk_##_BUFFER_;                   \
+                                                                                               \
+		/* ------- runtime time stuff ------- */                                               \
+                                                                                               \
+		if ((_tb->runtime.tracebuffer == NULL)) {                                              \
+			if (!_clltk_tracebuffer_init(_tb)) {                                               \
+				break;                                                                         \
+			}                                                                                  \
+		}                                                                                      \
+                                                                                               \
+		if (_clltk_offset == _clltk_file_offset_unset) {                                       \
+			_clltk_offset = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta)); \
+		}                                                                                      \
+                                                                                               \
+		_clltk_static_tracepoint_with_args_unchecked(_tb, _clltk_offset, __FILE__, __LINE__,   \
+													 &_clltk_types,                            \
+													 _FORMAT_ _CLLTK_CAST(__VA_ARGS__));       \
+	} while (0)
+#else
+#define _CLLTK_STATIC_TRACEPOINT_FMT(_BUFFER_, _FORMAT_, ...)                         \
+	do {                                                                              \
+		_CLLTK_STATIC_ASSERT(0, "CLLTK_TRACEPOINT_FMT requires C++20 with <format>"); \
+	} while (0)
+#endif
 
 /* shared compile-time core for span events: meta entry with the given type,
  * discovery entry, tracebuffer init, and resolved file offset. The

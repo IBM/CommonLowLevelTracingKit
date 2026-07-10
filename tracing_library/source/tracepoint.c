@@ -114,11 +114,11 @@ EXPORT_SYMBOL(_clltk_static_tracepoint_span_end);
 
 _CLLTK_PRAGMA_DIAG(push)
 _CLLTK_PRAGMA_DIAG(ignored "-Wstack-protector")
-void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
-										const _clltk_file_offset_t in_file_offset,
-										const char *const file, const uint32_t line,
-										_clltk_argument_types_t *types, const char *const format,
-										...)
+static void static_tracepoint_with_args_v(_clltk_tracebuffer_handler_t *handler,
+										  const _clltk_file_offset_t in_file_offset,
+										  const char *const file, const uint32_t line,
+										  _clltk_argument_types_t *types, const char *const format,
+										  va_list args_in)
 {
 	if (unlikely(false == _CLLTK_FILE_OFFSET_IS_STATIC(in_file_offset))) {
 		ERROR_LOG("invalid in_file_offset(%llu) at %s:%d for %s",
@@ -139,9 +139,8 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 	};
 
 	size_t raw_entry_size = sizeof(traceentry_head);
-	// open va_arg
 	va_list args;
-	va_start(args, format);
+	va_copy(args, args_in);
 
 	uint32_t arg_sizes[10] = {0};
 	raw_entry_size += get_argument_sizes(format, arg_sizes, types, args);
@@ -176,8 +175,35 @@ void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
 		memory_heap_free(raw_entry_buffer);
 	}
 }
+
+void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
+										const _clltk_file_offset_t in_file_offset,
+										const char *const file, const uint32_t line,
+										_clltk_argument_types_t *types, const char *const format,
+										...)
+{
+	va_list args;
+	va_start(args, format);
+	static_tracepoint_with_args_v(handler, in_file_offset, file, line, types, format, args);
+	va_end(args);
+}
 #ifdef __KERNEL__
 EXPORT_SYMBOL(_clltk_static_tracepoint_with_args);
+#endif
+
+void _clltk_static_tracepoint_with_args_unchecked(_clltk_tracebuffer_handler_t *handler,
+												  const _clltk_file_offset_t in_file_offset,
+												  const char *const file, const uint32_t line,
+												  _clltk_argument_types_t *types,
+												  const char *const format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	static_tracepoint_with_args_v(handler, in_file_offset, file, line, types, format, args);
+	va_end(args);
+}
+#ifdef __KERNEL__
+EXPORT_SYMBOL(_clltk_static_tracepoint_with_args_unchecked);
 #endif
 
 void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_handler_t *handler,
