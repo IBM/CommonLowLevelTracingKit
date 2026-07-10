@@ -81,6 +81,7 @@ docs/               AsciiDoc documentation, file format spec, diagrams.
 - Macros use `__VA_OPT__` (C++20/C23/GCC extension). NEVER replace with `##__VA_ARGS__` -- they are not equivalent.
 - `CLLTK_TRACEPOINT_DUMP` takes `(buffer, message, address, size)` -- NOT a printf format. Do not confuse with `CLLTK_TRACEPOINT`.
 - `CLLTK_DYN_TRACEPOINT` takes a string buffer name (not an identifier) and binds at runtime. Slower than static tracepoints.
+- `CLLTK_SPAN_BEGIN` is a GNU statement expression that evaluates to the new span id (`clltk_span_id_t`, a plain uint64; 0 = no parent). Span begin/end are meta entry types 3/4 and carry their ids as ordinary uint64 arguments; decoders correlate begin/end by id, not by nesting.
 
 ### ELF Sections
 - Meta entries are ordinary `static const` objects; each call site emits a pointer pair `{meta, file-offset cache}` into the custom ELF section `_clltk_<BUFFER_NAME>_metaptr` via an inline-asm `.pushsection` data directive. The constructor registers every meta at startup and writes the resolved file offset into the cache, so the first tracepoint execution needs no lookup (NOT via `__attribute__((section(...)))` -- the attribute would join the enclosing function's COMDAT group inside inline functions and templates, and GCC >= 15.2 rejects mixing grouped and ungrouped sections of the same name). Buffer names MUST be valid C identifiers.

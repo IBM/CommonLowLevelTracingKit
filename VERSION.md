@@ -1,6 +1,13 @@
-1.4.0
+1.5.0
 
 # Change log
+## 1.5.0
+- feat: span tracking with carryable ids. `CLLTK_SPAN_BEGIN(buffer, parent, name)` evaluates
+  to a plain uint64 span id that can be passed as a function argument, across threads, or
+  through APIs; `CLLTK_SPAN_END(buffer, id)` records the end. Both decoders pair begin/end
+  by id, resolve parent relations, and report spans that never ended (e.g. after a crash)
+  as still open. Available in userspace (C and C++) and kernel modules. New meta entry
+  types 3 (span begin) and 4 (span end): file layout change, hence the minor bump.
 ## 1.4.0
 - feat: cross-endian decoding. Trace files and ELF binaries written on a machine with the
   opposite byte order (e.g. s390x files read on x86_64/aarch64 and vice versa) are

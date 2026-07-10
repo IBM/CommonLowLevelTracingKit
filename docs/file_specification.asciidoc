@@ -225,7 +225,16 @@ A magic is placed at the beginning of the meta entry for debugging propose and t
 
 The size of the whole structure could be used as the flexible step width while iterate over multiple meta entries.
 
-The meta_entry_type is used to differentiate between printf-like tracepoints (1) or a dump tracepoint (2) and could be extended to support other styles, like key value pairs (3).
+The meta_entry_type differentiates the tracepoint styles:
+
+* 1 = printf-like tracepoint (format string with printf specifiers)
+* 2 = dump tracepoint (message string, one flex-size binary argument)
+* 3 = span begin (the string is the span name; two uint64 arguments: span id,
+  parent span id or 0)
+* 4 = span end (empty string; one uint64 argument: span id)
+
+Decoders skip entries with unknown types, so the list can grow without
+breaking old decoders.
 
 The line holds the line number.
 
