@@ -1,6 +1,7 @@
 #include "formatter.hpp"
 
 #include "CommonLowLevelTracingKit/decoder/Common.hpp"
+#include "file.hpp"
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -42,8 +43,9 @@ CONST_INLINE static constexpr ffi_type *clltk_type_to_ffi_type(const char clltk_
 	default: CLLTK_DECODER_THROW(FormattingFailed, "unknown type");
 	}
 }
-CONST_INLINE static constexpr size_t
-clltk_arg_to_size(const char clltk_type, const uintptr_t clltk_arg, size_t remaining) {
+CONST_INLINE static constexpr size_t clltk_arg_to_size(const char clltk_type,
+													   const uintptr_t clltk_arg, size_t remaining,
+													   bool foreign_endian) {
 	switch (clltk_type) {
 	case 'c': return sizeof(uint8_t);
 	case 'C': return sizeof(int8_t);
@@ -60,6 +62,9 @@ clltk_arg_to_size(const char clltk_type, const uintptr_t clltk_arg, size_t remai
 		if (sizeof(size) > remaining) [[unlikely]]
 			CLLTK_DECODER_THROW(FormattingFailed, "no space for string arg size left");
 		memcpy(&size, std::bit_cast<void *>(clltk_arg), sizeof(size));
+		if (foreign_endian) {
+			size = CommonLowLevelTracingKit::decoder::source::internal::byteswapValue(size);
+		}
 		size += sizeof(uint32_t);
 		if (size > remaining) [[unlikely]]
 			CLLTK_DECODER_THROW(FormattingFailed, "string arg bigger than raw args");
@@ -75,31 +80,36 @@ clltk_arg_to_size(const char clltk_type, const uintptr_t clltk_arg, size_t remai
 	}
 }
 template <typename T, typename ProxyT = T>
-static INLINE const any get_native(uintptr_t p, size_t remaining) {
+static INLINE const any get_native(uintptr_t p, size_t remaining, bool foreign_endian) {
 	if (sizeof(T) > remaining) [[unlikely]]
 		CLLTK_DECODER_THROW(FormattingFailed, "out of range access for formatter");
 	T value{};
 	memcpy(&value, std::bit_cast<void *>(p), sizeof(T));
+	if constexpr (CommonLowLevelTracingKit::decoder::source::internal::ByteSwappable<T>) {
+		if (foreign_endian) {
+			value = CommonLowLevelTracingKit::decoder::source::internal::byteswapValue(value);
+		}
+	}
 	static_assert(sizeof(ProxyT) == sizeof(void *));
 	ProxyT xvalue = (ProxyT)value;
 	return xvalue;
 }
 INLINE static constexpr any clltk_arg_to_native(const char clltk_type, const uintptr_t clltk_arg,
-												size_t remaining) {
+												size_t remaining, bool foreign_endian) {
 	switch (clltk_type) {
-	case 'c': return get_native<uint8_t, uint64_t>(clltk_arg, remaining);
-	case 'C': return get_native<int8_t, int64_t>(clltk_arg, remaining);
-	case 'w': return get_native<uint16_t, uint64_t>(clltk_arg, remaining);
-	case 'W': return get_native<int16_t, int64_t>(clltk_arg, remaining);
-	case 'i': return get_native<uint32_t, uint64_t>(clltk_arg, remaining);
-	case 'I': return get_native<int32_t, int64_t>(clltk_arg, remaining);
-	case 'l': return get_native<uint64_t>(clltk_arg, remaining);
-	case 'L': return get_native<int64_t>(clltk_arg, remaining);
+	case 'c': return get_native<uint8_t, uint64_t>(clltk_arg, remaining, foreign_endian);
+	case 'C': return get_native<int8_t, int64_t>(clltk_arg, remaining, foreign_endian);
+	case 'w': return get_native<uint16_t, uint64_t>(clltk_arg, remaining, foreign_endian);
+	case 'W': return get_native<int16_t, int64_t>(clltk_arg, remaining, foreign_endian);
+	case 'i': return get_native<uint32_t, uint64_t>(clltk_arg, remaining, foreign_endian);
+	case 'I': return get_native<int32_t, int64_t>(clltk_arg, remaining, foreign_endian);
+	case 'l': return get_native<uint64_t>(clltk_arg, remaining, foreign_endian);
+	case 'L': return get_native<int64_t>(clltk_arg, remaining, foreign_endian);
 	case 'f':
-		return get_native<float, double>(
-			clltk_arg, remaining); // use double as a proxy type to get valid data from raw args
-	case 'd': return get_native<double>(clltk_arg, remaining);
-	case 'p': return get_native<uint64_t>(clltk_arg, remaining);
+		// use double as a proxy type to get valid data from raw args
+		return get_native<float, double>(clltk_arg, remaining, foreign_endian);
+	case 'd': return get_native<double>(clltk_arg, remaining, foreign_endian);
+	case 'p': return get_native<uint64_t>(clltk_arg, remaining, foreign_endian);
 	case 's': return std::bit_cast<uint64_t>(clltk_arg + sizeof(uint32_t));
 	case InvalidStringArgType:
 		// the value in clltk_arg is a pointer to a now invalid/unusable memory address.
@@ -111,7 +121,7 @@ INLINE static constexpr any clltk_arg_to_native(const char clltk_type, const uin
 
 INLINE static std::array<any, total_arg_count>
 clltk_args_to_native_args(const std::string_view format, const std::span<const char> &clltk_types,
-						  const std::span<const uint8_t> &raw_clltk_args) {
+						  const std::span<const uint8_t> &raw_clltk_args, bool foreign_endian) {
 	std::array<any, total_arg_count> args{};
 	args[0] = std::bit_cast<uint64_t>(nullptr);
 	args[1] = std::bit_cast<uint64_t>(0lu);
@@ -123,9 +133,9 @@ clltk_args_to_native_args(const std::string_view format, const std::span<const c
 			CLLTK_DECODER_THROW(FormattingFailed, "out of range access for formatter");
 		const uintptr_t current = std::bit_cast<uintptr_t>(&raw_clltk_args[raw_arg_offset]);
 		const size_t remaining = raw_clltk_args.size() - raw_arg_offset;
-		const any value = clltk_arg_to_native(type, current, remaining);
+		const any value = clltk_arg_to_native(type, current, remaining, foreign_endian);
 		args[fix_arg_count + i] = value;
-		const size_t arg_size = clltk_arg_to_size(type, current, remaining);
+		const size_t arg_size = clltk_arg_to_size(type, current, remaining, foreign_endian);
 		raw_arg_offset += arg_size;
 	}
 
@@ -246,7 +256,7 @@ static INLINE std::string clean_up_str_view(const std::string_view str) {
 
 // call snprintf with ffi
 std::string formatter::printf(const std::string_view format, const std::span<const char> &types_raw,
-							  const std::span<const uint8_t> &args_raw) {
+							  const std::span<const uint8_t> &args_raw, bool foreign_endian) {
 	if (format.empty()) return "";
 	if (format.data()[format.size()] != '\0')
 		CLLTK_DECODER_THROW(FormattingFailed, "missing format termination");
@@ -260,7 +270,7 @@ std::string formatter::printf(const std::string_view format, const std::span<con
 					 arg_types.data()) != FFI_OK) [[unlikely]] {
 		return "ffi_prep_cif failed";
 	}
-	auto arg_values = clltk_args_to_native_args(format, fixed_types, args_raw);
+	auto arg_values = clltk_args_to_native_args(format, fixed_types, args_raw, foreign_endian);
 
 	// educated guess about the output size, used for first snprintf try
 	const size_t guessed_size = format.size() + fixed_types.size() * 8 + 1;
@@ -328,13 +338,16 @@ std::string formatter::printf(const std::string_view format, const std::span<con
 }
 
 std::string formatter::dump(const std::string_view format, const std::span<const char> &types_raw,
-							const std::span<const uint8_t> &args_raw) {
+							const std::span<const uint8_t> &args_raw, bool foreign_endian) {
 	if (types_raw.size() != 1 || types_raw[0] != 'x')
 		CLLTK_DECODER_THROW(InvalidMeta, "wrong meta for drump tracepoint");
 	const size_t format_size = format.size();
 	if (args_raw.size() < sizeof(uint32_t))
 		CLLTK_DECODER_THROW(FormattingFailed, "args_raw too small for dump size");
-	const uint32_t dump_size = (*std::bit_cast<const uint32_t *>(args_raw.data()));
+	uint32_t dump_size = (*std::bit_cast<const uint32_t *>(args_raw.data()));
+	if (foreign_endian) {
+		dump_size = CommonLowLevelTracingKit::decoder::source::internal::byteswapValue(dump_size);
+	}
 	if (args_raw.size() < sizeof(uint32_t) + dump_size)
 		CLLTK_DECODER_THROW(FormattingFailed, "args_raw too small for dump body");
 	const std::span<const uint8_t> dump_body{&args_raw[sizeof(uint32_t)], dump_size};

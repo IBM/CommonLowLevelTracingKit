@@ -75,7 +75,8 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			const uint64_t body_file_offset =
 				stack_entry.file_offset + stack_layout::ENTRY_HEADER_SIZE;
 
-			auto parsed = MetaParser::parse(body_span, body_file_offset);
+			auto parsed =
+				MetaParser::parse(body_span, body_file_offset, file_part.isForeignEndian());
 			for (auto &entry : parsed) { result.push_back(std::move(entry)); }
 		}
 

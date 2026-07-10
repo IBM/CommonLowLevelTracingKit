@@ -18,6 +18,15 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
+from helpers.base import run_command
+from helpers.clltk_cmd import clltk
+
+
+def setUpModule():
+    """Build clltk-cmd before running the CLI golden tests."""
+    run_command("cmake --preset default")
+    run_command("cmake --build --preset default --target clltk-cmd")
+
 GOLDEN_DIR = pathlib.Path(__file__).parent / "golden"
 PYTHON_DECODER = pathlib.Path(__file__).parent.parent / "decoder_tool" / "python" / "clltk_decoder.py"
 
@@ -59,6 +68,22 @@ def decode_with_python(fixture: pathlib.Path) -> list:
     return [m for m in messages if not m.startswith('{"tracebuffer info')]
 
 
+def decode_with_cli(fixture: pathlib.Path) -> list:
+    """Decode one fixture with the clltk CLI, return formatted messages."""
+    result = clltk("decode", str(fixture))
+    assert result.returncode == 0, result.stderr
+    messages = []
+    for line in result.stdout.splitlines():
+        # column layout: timestamp | time | tracebuffer | pid | tid | formatted | file | line
+        columns = line.split("|")
+        if len(columns) < 8:
+            continue
+        formatted = columns[5].strip()
+        if formatted in EXPECTED_MESSAGES:
+            messages.append(formatted)
+    return messages
+
+
 class golden_python_decoder(unittest.TestCase):
     def test_little_endian_fixtures(self):
         for name in LITTLE_ENDIAN_FIXTURES:
@@ -70,6 +95,38 @@ class golden_python_decoder(unittest.TestCase):
         for name in BIG_ENDIAN_FIXTURES:
             with self.subTest(fixture=name):
                 messages = decode_with_python(GOLDEN_DIR / name)
+                self.assertEqual(EXPECTED_MESSAGES, messages)
+
+
+class golden_elf_meta(unittest.TestCase):
+    """clltk meta extracts tracepoint metadata from committed big-endian
+    s390x ELF objects: the .so through virtual addresses, the .o through
+    relocation records."""
+
+    def _assert_meta(self, name: str):
+        result = clltk("meta", str(GOLDEN_DIR / name))
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("BE_ELF_TEST", result.stdout)
+        self.assertIn("big endian elf tracepoint %d", result.stdout)
+
+    def test_big_endian_shared_object(self):
+        self._assert_meta("golden-1.3.0-be-s390x.so")
+
+    def test_big_endian_relocatable_object(self):
+        self._assert_meta("golden-1.3.0-be-s390x.o")
+
+
+class golden_cli_decoder(unittest.TestCase):
+    def test_little_endian_fixtures(self):
+        for name in LITTLE_ENDIAN_FIXTURES:
+            with self.subTest(fixture=name):
+                messages = decode_with_cli(GOLDEN_DIR / name)
+                self.assertEqual(EXPECTED_MESSAGES, messages)
+
+    def test_big_endian_fixtures(self):
+        for name in BIG_ENDIAN_FIXTURES:
+            with self.subTest(fixture=name):
+                messages = decode_with_cli(GOLDEN_DIR / name)
                 self.assertEqual(EXPECTED_MESSAGES, messages)
 
 

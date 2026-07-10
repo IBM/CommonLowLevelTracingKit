@@ -11,6 +11,10 @@
   first execution of a tracepoint needs no lookup.
 - feat: decoder/CLI read both the new `_metaptr` pointer sections and legacy inline `_meta`
   sections from ELF binaries.
+- feat: cross-endian decoding. Trace files and ELF binaries written on a machine with the
+  opposite byte order (e.g. s390x files read on x86_64/aarch64) are byte-swapped while
+  reading; the byte order is detected from the file magic / ELF identification. The python
+  decoder additionally fixes float/double arguments from foreign-endian files.
 - BREAKING (link-time): objects compiled with older headers cannot be mixed with objects
   compiled with these headers in one binary; rebuild all translation units.
 - ci: add non-LTO build leg (`unittests-nolto` preset); LTO had masked the section conflict.

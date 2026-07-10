@@ -32,10 +32,10 @@ void TracepointDeleter::operator()(Tracepoint *ptr) const noexcept {
 }
 
 TraceEntryHead::TraceEntryHead(uint64_t n, uint64_t t, const std::span<const uint8_t> &body,
-							   SourceType src)
+							   bool foreign_endian, SourceType src)
 	: Tracepoint(n, t, src)
-	, m_pid(get<uint32_t>(body, 6))
-	, m_tid(get<uint32_t>(body, 10)) {}
+	, m_pid(get<uint32_t>(body, 6, foreign_endian))
+	, m_tid(get<uint32_t>(body, 10, foreign_endian)) {}
 
 TraceEntryHead::TraceEntryHead(uint64_t n, uint64_t t, uint32_t pid, uint32_t tid, SourceType src)
 	: Tracepoint(n, t, src)
@@ -44,7 +44,8 @@ TraceEntryHead::TraceEntryHead(uint64_t n, uint64_t t, uint32_t pid, uint32_t ti
 
 TracepointDynamic::TracepointDynamic(std::string tb_name, source::Ringbuffer::EntryPtr entry,
 									 SourceType src)
-	: TraceEntryHead(entry->nr, get<uint64_t>(entry->body(), 14), entry->body(), src)
+	: TraceEntryHead(entry->nr, get<uint64_t>(entry->body(), 14, entry->foreignEndian()),
+					 entry->body(), entry->foreignEndian(), src)
 	, m_tracebuffer(std::move(tb_name))
 	, e(std::move(entry)) {
 	const size_t size = e->body().size();
@@ -78,6 +79,7 @@ TracepointDynamic::TracepointDynamic(std::string tb_name, source::Ringbuffer::En
 	}
 	const char *const line_start = current;
 	m_line = *std::bit_cast<const size_t *>(line_start);
+	if (e->foreignEndian()) { m_line = source::internal::byteswapValue(m_line); }
 	current += line_len;
 	remaining -= line_len;
 
@@ -90,13 +92,14 @@ using FilePtr = source::internal::FilePtr;
 TracepointStatic::TracepointStatic(std::string tb_name, source::Ringbuffer::EntryPtr &&entry,
 								   const std::span<const uint8_t> &arg_m, const FilePtr &&f,
 								   SourceType src)
-	: TraceEntryHead(entry->nr, get<uint64_t>(entry->body(), 14), entry->body(), src)
+	: TraceEntryHead(entry->nr, get<uint64_t>(entry->body(), 14, entry->foreignEndian()),
+					 entry->body(), entry->foreignEndian(), src)
 	, m_tracebuffer(std::move(tb_name))
 	, m(arg_m)
 	, e(std::move(entry))
 	, m_keep_memory(f)
 	, m_type(toMetaType(get<uint8_t>(m, 5)))
-	, m_line(get<uint32_t>(m, 6))
+	, m_line(get<uint32_t>(m, 6, e->foreignEndian()))
 	, m_arg_count(std::min((uint8_t)10, get<uint8_t>(m, 10)))
 	, m_arg_types((const char *)&m[11], m_arg_count)
 	, m_file()
@@ -132,9 +135,9 @@ const std::string_view TracepointStatic::msg() const {
 		const size_t arg_size = (e->size() > 22) ? (e->size() - 22) : 0;
 		std::span<const uint8_t> args_raw{arg_start, arg_size};
 		if (m_type == MetaType::printf) [[likely]] {
-			m_msg = source::formatter::printf(format(), m_arg_types, args_raw);
+			m_msg = source::formatter::printf(format(), m_arg_types, args_raw, e->foreignEndian());
 		} else if (m_type == MetaType::dump) {
-			m_msg = source::formatter::dump(format(), m_arg_types, args_raw);
+			m_msg = source::formatter::dump(format(), m_arg_types, args_raw, e->foreignEndian());
 		} else {
 			CLLTK_DECODER_THROW(
 				exception::InvalidMeta,

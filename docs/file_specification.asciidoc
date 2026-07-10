@@ -31,6 +31,15 @@ The following tables shows the location of different values, with offsets to sta
 
 The file header is exactly 56 bytes. The crc8 is calculated over the first 55 bytes (offset 0-54).
 
+==== Byte order
+All multi-byte fields are stored in the native byte order of the writing
+machine. The byte order is identified by the magic: the writer stores the
+magic as two native-endian 64 bit words, so a little-endian file starts with
+the bytes `?#$~tracebuffer\0` and a big-endian file (e.g. written on s390x)
+starts with `cart~$#?\0reffube`. Decoders detect the byte order from the
+magic and byte-swap all multi-byte fields when reading a file written with
+the opposite byte order.
+
 === Definition Section
 The definition section is located at a file offset defined inside the file header and consists of the path and name of the tracebuffer, along with optional extended metadata. Thereby, even after a file is renamed, the original tracebuffer name could be recovered.
 
