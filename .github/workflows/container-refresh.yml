@@ -1,0 +1,65 @@
+name: Container Refresh
+run-name: Weekly container refresh
+
+# The CI container is cached in ghcr.io keyed only by the Dockerfile hash,
+# but its toolchain comes from "dnf update" at image build time. Without a
+# periodic uncached rebuild, compiler updates (like the GCC 15.2 section
+# type conflict) only reach CI when the Dockerfile happens to change - and
+# break consumers first. This workflow rebuilds the image from scratch every
+# week, validates it with a full build and test run, and only then replaces
+# the cached image in the registry.
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # Monday 03:00 UTC
+  workflow_dispatch:
+
+env:
+  CI: true
+  CONTAINER_TARGET: ci
+  CONTAINER_CMD: docker
+  CONTAINER_NON_INTERACTIVE: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Calculate container tag
+        id: tag
+        run: |
+          MD5_SUM=$(md5sum ./scripts/container.Dockerfile | cut -d' ' -f1)
+          echo "local_tag=clltk_ci-ci-$MD5_SUM" >> $GITHUB_OUTPUT
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "registry_image=ghcr.io/${REPO_LOWER}/ci:${MD5_SUM}" >> $GITHUB_OUTPUT
+
+      - name: Build container without cache
+        run: |
+          docker build --no-cache \
+            --file ./scripts/container.Dockerfile \
+            --target ci \
+            --tag "${{ steps.tag.outputs.local_tag }}" .
+
+      - name: Validate refreshed container (build)
+        run: ./scripts/container.sh ./scripts/ci-cd/step_build.sh
+
+      - name: Validate refreshed container (test)
+        run: ./scripts/container.sh ./scripts/ci-cd/step_test.sh
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push refreshed container
+        run: |
+          docker tag "${{ steps.tag.outputs.local_tag }}" "${{ steps.tag.outputs.registry_image }}"
+          docker push "${{ steps.tag.outputs.registry_image }}"
