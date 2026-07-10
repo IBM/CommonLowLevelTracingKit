@@ -11,7 +11,7 @@ _Static_assert(112 == offsetof(unique_stack_header_t, body_size), "layout failed
 _Static_assert(120 == sizeof(unique_stack_header_t), "layout failed");
 
 _Static_assert(0 == offsetof(entry_head_t, md5_hash), "layout failed");
-_Static_assert(16 == offsetof(entry_head_t, _reserved_for_future_use), "layout failed");
+_Static_assert(16 == offsetof(entry_head_t, kind_tag), "layout failed");
 _Static_assert(24 == offsetof(entry_head_t, body_size), "layout failed");
 _Static_assert(28 == offsetof(entry_head_t, crc), "layout failed");
 _Static_assert(29 == sizeof(entry_head_t), "layout failed");

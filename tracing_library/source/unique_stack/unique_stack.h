@@ -26,20 +26,33 @@ struct __attribute__((packed, aligned(8))) unique_stack_header_t {
 	// body is not mmapped, therefore not defined here
 };
 
+// in-memory lookup index over the append-only stack: hash of entry body ->
+// file offset. Persisted periodically as tagged index entries inside the
+// stack (see unique_stack.c); always reconstructible by a scan.
+struct unique_stack_index_t;
+typedef struct unique_stack_index_t unique_stack_index_t;
+
 struct unique_stack_handler_t;
 typedef struct unique_stack_handler_t unique_stack_handler_t;
 struct unique_stack_handler_t {
 	bool valid;
 	file_t *file;
 	uint64_t file_offset;
+	unique_stack_index_t *index; // lazily created, owned by the handler
 };
 
-// placed in file at the begin of each stack entry
+// placed in file at the begin of each stack entry. The 8 reserved bytes tag
+// the entry kind: all zero = meta blob (the only kind before 1.7.0),
+// "CLLTKIDX" = persisted lookup index slab. Index slab bodies are 7-bit
+// encoded (every payload byte has the high bit set), so decoders older than
+// 1.7.0 that scan entry bodies for the meta magic '{' can never match inside
+// a slab and skip it safely.
+#define UNIQUE_STACK_INDEX_TAG "CLLTKIDX"
 struct entry_head_t;
 typedef struct entry_head_t entry_head_t;
 struct __attribute__((packed, aligned(1))) entry_head_t {
 	__uint128_t md5_hash;
-	uint8_t _reserved_for_future_use[8];
+	uint8_t kind_tag[8];
 	uint32_t body_size;
 	uint8_t crc;
 	uint8_t body[];
@@ -59,6 +72,12 @@ unique_stack_handler_t unique_stack_open(file_t *fh, uint64_t file_offset);
  * close stack handler and drop all allocated resources
  */
 void unique_stack_close(unique_stack_handler_t *handler);
+
+/**
+ * drop the in-memory lookup index (frees heap state; the handler stays
+ * usable, lookups rebuild the index lazily)
+ */
+void unique_stack_drop_index(unique_stack_handler_t *handler);
 
 /**
  * check if stack is valid and therefore usable
