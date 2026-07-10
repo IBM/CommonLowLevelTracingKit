@@ -47,6 +47,15 @@ def packages_exist() -> bool:
 
 def ensure_rpms_built() -> None:
     """Build RPMs if they don't exist yet."""
+    # remove packages from other versions first: they would either satisfy the
+    # existence check with stale artifacts or sit next to the current packages
+    # and get picked up by filename-based lookups
+    pkg_dir = get_packages_dir()
+    if pkg_dir.is_dir():
+        version = get_version_string()
+        for rpm in pkg_dir.glob("*.rpm"):
+            if f"-{version}-" not in rpm.name:
+                rpm.unlink()
     if packages_exist():
         return
     root = get_repo_root()
