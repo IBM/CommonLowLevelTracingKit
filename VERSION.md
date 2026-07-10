@@ -14,6 +14,14 @@
 - BREAKING (link-time): objects compiled with older headers cannot be mixed with objects
   compiled with these headers in one binary; rebuild all translation units.
 - ci: add non-LTO build leg (`unittests-nolto` preset); LTO had masked the section conflict.
+- feat: `clltk meta` reads tracepoint metadata from relocatable objects (.o) via relocation
+  records.
+- fix: handlers detach from the tracebuffer on every deinit; tracepoints firing after
+  teardown no longer touch freed memory.
+- perf: batched startup registration with a single stack scan and a single file write.
+- ci: fix container.sh quoting (argument array instead of eval); weekly uncached container
+  rebuild; RPM test cache invalidation on version change.
+- fix: python decoder accepts newer minor file versions (gate on major only).
 ## 1.2.64
 - feat: add explicit dependency checks for optional components
 - feat: disable automatic source RPM generation
