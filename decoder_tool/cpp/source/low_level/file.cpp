@@ -94,7 +94,8 @@ size_t internal::File::grow() const {
 source::FilePart::FilePart(const FilePart &a_filePart, const size_t a_offset)
 	: m_file(a_filePart.m_file)
 	, m_offset(a_filePart.m_offset + a_offset)
-	, m_base(m_file->data()) {
+	, m_base(m_file->data())
+	, m_foreign_endian(a_filePart.m_foreign_endian) {
 	const size_t max_access = m_offset;
 	if (max_access >= m_file->size()) [[unlikely]] {
 		m_file->grow();
