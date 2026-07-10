@@ -109,6 +109,25 @@ Status: *accepted*.
 * Pure decoder-side work with zero writer risk; the feature that makes spans
   visible as timelines in ui.perfetto.dev.
 
+== fmt-style format strings
+
+Status: *accepted* - C++ only.
+
+`CLLTK_TRACEPOINT_FMT(buffer, "loaded {} in {}ms", name, ms)`: format strings
+with `{}` placeholders as an alternative to printf syntax.
+
+* The library stores format strings verbatim and types arguments
+  independently of the format, so this is a new meta entry type (fmt) plus
+  decoder-side rendering - argument encoding is unchanged.
+* C++ only: C++20 `std::format_string` validates the format at compile time
+  (stronger than the printf attribute). C has no way to check `{}` syntax at
+  compile time, and an unchecked variant would betray the library's
+  compile-time-checked character. Kernel: not applicable (C API).
+* Decoders render via their native `{}` formatters (python `format`, C++20
+  `std::format`) using the argument type array; a defined subset of format
+  specs is supported and documented.
+* New meta type means a file layout change: MINOR version bump.
+
 == Dynamic tracebuffer selection for static tracepoints
 
 Status: *open*.
