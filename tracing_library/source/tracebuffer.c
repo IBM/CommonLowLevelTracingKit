@@ -304,16 +304,22 @@ void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
 	if (unlikely(buffer->runtime.tracebuffer == NULL))
 		return;
 
-	buffer->runtime.tracebuffer->used--;
-	if (buffer->runtime.tracebuffer->used > 0)
+	// always detach this handler. Handlers deinitialized while other handlers
+	// still hold the tracebuffer must not keep the pointer: it would dangle
+	// once the last handler frees the tracebuffer, and a tracepoint firing
+	// through it afterwards (late destructors, atexit) would use freed
+	// memory instead of hitting the NULL gate.
+	_clltk_tracebuffer_t *const tb = buffer->runtime.tracebuffer;
+	buffer->runtime.tracebuffer = NULL;
+	buffer->runtime.file_offset = 0;
+
+	tb->used--;
+	if (tb->used > 0)
 		return;
 
 	const vector_entry_match_t match =
 		vector_find(tracebufferes, tracebuffer_handler_matcher, buffer->definition.name);
 
-	_clltk_tracebuffer_t *const tb = buffer->runtime.tracebuffer;
-	buffer->runtime.tracebuffer = NULL;
-	buffer->runtime.file_offset = 0;
 	memory_heap_free(tb->name);
 	tb->used = 0;
 	tb->ringbuffer = NULL;
@@ -327,7 +333,6 @@ void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
 
 	if (match.found)
 		vector_remove(tracebufferes, match.position);
-	buffer->runtime.tracebuffer = NULL;
 
 	if (vector_size(tracebufferes) == 0) {
 		vector_free(&tracebufferes);
