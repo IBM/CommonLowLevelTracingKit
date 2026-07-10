@@ -102,8 +102,11 @@ surface for a feature this library deliberately does not want.
 
 Status: *accepted*.
 
-`clltk export --perfetto` (Chrome/Perfetto track event JSON or protobuf) and
-`--ctf` (Common Trace Format for babeltrace/TraceCompass).
+`clltk export` producing Chrome/Perfetto trace event JSON (implemented
+first: zero dependencies, opens directly in ui.perfetto.dev). CTF (Common
+Trace Format for babeltrace/TraceCompass) remains a follow-up item - it
+requires TSDL metadata generation and earns its complexity only on concrete
+demand.
 
 * Spans map directly to track events, counters to counter tracks.
 * Pure decoder-side work with zero writer risk; the feature that makes spans

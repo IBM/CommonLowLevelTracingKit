@@ -61,6 +61,18 @@ See `examples/spans_c` and `examples/spans_cpp`.
       `decoder_tool/python/clltk_decoder.py <path to tracebuffers>`
 8. View your traces in `output.csv`
 
+### Visual timelines
+
+`clltk export` converts trace files into Chrome/Perfetto trace event JSON:
+
+```bash
+clltk export /tmp/traces -o trace.json
+```
+
+Open the file in https://ui.perfetto.dev to see tracepoints as instant events
+and spans as async begin/end pairs on a timeline - including spans that were
+still open when the process ended.
+
 ## CLI Tool Commands
 
 The `clltk` command-line tool provides several commands for working with tracebuffers:
