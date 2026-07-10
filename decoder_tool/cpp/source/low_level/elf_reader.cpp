@@ -131,6 +131,89 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			return isClltkMetaSection(name) || isClltkMetaPtrSection(name);
 		}
 
+		// parse one self-describing meta entry (magic + size prefix) located
+		// at a file offset and append the result
+		void appendMetaEntryAt(const std::vector<uint8_t> &data, uint64_t entry_offset,
+							   MetaEntryInfoCollection &entries) {
+			if (entry_offset + MetaParser::MIN_ENTRY_SIZE > data.size()) { return; }
+
+			uint32_t entry_size = 0;
+			std::memcpy(&entry_size, data.data() + entry_offset + MetaParser::OFFSET_SIZE,
+						sizeof(entry_size));
+			if (entry_size < MetaParser::MIN_ENTRY_SIZE ||
+				entry_offset + entry_size > data.size()) {
+				return;
+			}
+
+			const std::span<const uint8_t> entry_data(data.data() + entry_offset, entry_size);
+			auto parsed = MetaParser::parse(entry_data, entry_offset);
+			entries.insert(entries.end(), std::make_move_iterator(parsed.begin()),
+						   std::make_move_iterator(parsed.end()));
+		}
+
+		bool isRelocatable(const std::vector<uint8_t> &data) {
+			if (data.size() < sizeof(Elf64_Ehdr)) { return false; }
+			// e_type sits at the same offset for ELFCLASS32 and ELFCLASS64
+			uint16_t e_type = 0;
+			std::memcpy(&e_type, data.data() + offsetof(Elf64_Ehdr, e_type), sizeof(e_type));
+			return e_type == ET_REL;
+		}
+
+		// In relocatable objects (.o) the pointer slots are zero; the meta
+		// locations live in the .rela<section> relocation records instead:
+		// each relocation names a symbol (whose section and value give the
+		// target location) plus an addend. Only entries at even slots are
+		// meta pointers; odd slots point at the runtime offset caches and
+		// are skipped. 64-bit RELA only, which covers all supported targets.
+		MetaEntryInfoCollection
+		parseRelocatedPointerSection(const std::vector<uint8_t> &data,
+									 const std::vector<ElfSectionInfo> &sections,
+									 const ElfSectionInfo &ptr_section, size_t pointer_size) {
+			MetaEntryInfoCollection entries;
+			if (!is64Bit(data)) { return entries; }
+
+			const ElfSectionInfo *symtab = nullptr;
+			const ElfSectionInfo *rela = nullptr;
+			const std::string rela_name = ".rela" + ptr_section.name;
+			for (const auto &section : sections) {
+				if (section.type == SHT_SYMTAB) { symtab = &section; }
+				if (section.type == SHT_RELA && section.name == rela_name) { rela = &section; }
+			}
+			if (symtab == nullptr || rela == nullptr) { return entries; }
+			if (rela->offset + rela->size > data.size()) { return entries; }
+
+			std::vector<uint64_t> seen;
+			const size_t entry_stride = 2 * pointer_size;
+			const size_t count = rela->size / sizeof(Elf64_Rela);
+			for (size_t i = 0; i < count; ++i) {
+				Elf64_Rela relocation = {};
+				std::memcpy(&relocation, data.data() + rela->offset + i * sizeof(relocation),
+							sizeof(relocation));
+				if (relocation.r_offset % entry_stride != 0) { continue; } // offset cache slot
+
+				const uint64_t sym_index = ELF64_R_SYM(relocation.r_info);
+				const uint64_t sym_offset = symtab->offset + sym_index * sizeof(Elf64_Sym);
+				if (sym_offset + sizeof(Elf64_Sym) > data.size() ||
+					(sym_index + 1) * sizeof(Elf64_Sym) > symtab->size) {
+					continue;
+				}
+				Elf64_Sym symbol = {};
+				std::memcpy(&symbol, data.data() + sym_offset, sizeof(symbol));
+				if (symbol.st_shndx == SHN_UNDEF || symbol.st_shndx >= sections.size()) {
+					continue;
+				}
+
+				const auto &target = sections[symbol.st_shndx];
+				const uint64_t entry_offset =
+					target.offset + symbol.st_value + (uint64_t)relocation.r_addend;
+				if (std::find(seen.begin(), seen.end(), entry_offset) != seen.end()) { continue; }
+				seen.push_back(entry_offset);
+				appendMetaEntryAt(data, entry_offset, entries);
+			}
+
+			return entries;
+		}
+
 		// Parse a pointer-layout discovery section: every entry is a pointer
 		// pair {meta address, offset-cache address}. The meta address points
 		// into some allocated section (e.g. .rodata); the offset cache is
@@ -153,7 +236,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 				uint64_t address = 0;
 				std::memcpy(&address, data.data() + ptr_offset, pointer_size);
-				if (address == 0) { continue; } // unresolved (relocatable object)
+				if (address == 0) { continue; }
 				if (std::find(seen.begin(), seen.end(), address) != seen.end()) { continue; }
 				seen.push_back(address);
 
@@ -162,27 +245,22 @@ namespace CommonLowLevelTracingKit::decoder::source {
 					if (address < section.addr || address >= section.addr + section.size) {
 						continue;
 					}
-					const uint64_t entry_offset = section.offset + (address - section.addr);
-					if (entry_offset + MetaParser::MIN_ENTRY_SIZE > data.size()) { break; }
-
-					uint32_t entry_size = 0;
-					std::memcpy(&entry_size, data.data() + entry_offset + MetaParser::OFFSET_SIZE,
-								sizeof(entry_size));
-					if (entry_size < MetaParser::MIN_ENTRY_SIZE ||
-						entry_offset + entry_size > data.size()) {
-						break;
-					}
-
-					const std::span<const uint8_t> entry_data(data.data() + entry_offset,
-															  entry_size);
-					auto parsed = MetaParser::parse(entry_data, entry_offset);
-					entries.insert(entries.end(), std::make_move_iterator(parsed.begin()),
-								   std::make_move_iterator(parsed.end()));
+					appendMetaEntryAt(data, section.offset + (address - section.addr), entries);
 					break;
 				}
 			}
 
 			return entries;
+		}
+
+		MetaEntryInfoCollection parseAnyPointerSection(const std::vector<uint8_t> &data,
+													   const std::vector<ElfSectionInfo> &sections,
+													   const ElfSectionInfo &ptr_section,
+													   size_t pointer_size) {
+			if (isRelocatable(data)) {
+				return parseRelocatedPointerSection(data, sections, ptr_section, pointer_size);
+			}
+			return parsePointerSection(data, sections, ptr_section, pointer_size);
 		}
 
 		size_t pointerSize(const std::vector<uint8_t> &data) {
@@ -252,7 +330,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			if (section.offset + section.size > data.size()) { continue; }
 
 			if (isClltkMetaPtrSection(section.name)) {
-				return parsePointerSection(data, sections, section, pointerSize(data));
+				return parseAnyPointerSection(data, sections, section, pointerSize(data));
 			}
 			const std::span<const uint8_t> section_data(data.data() + section.offset, section.size);
 			return MetaParser::parse(section_data, section.offset);
@@ -286,9 +364,9 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			}
 
 			if (isClltkMetaPtrSection(section.name)) {
-				info.entries = parsePointerSection(data, sections, section, pointerSize(data));
+				info.entries = parseAnyPointerSection(data, sections, section, pointerSize(data));
 				if (info.entries.empty() && section.size >= pointerSize(data)) {
-					info.error = "no resolvable meta pointers (relocatable object?)";
+					info.error = "no resolvable meta pointers";
 				}
 			} else {
 				const std::span<const uint8_t> section_data(data.data() + section.offset,

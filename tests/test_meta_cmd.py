@@ -383,5 +383,66 @@ class TestMetaFilterOptions(MetaTestCase):
         self.assertNotIn("CaseSensitive", result.stdout)
 
 
+class TestMetaFromElf(MetaTestCase):
+    """Tests reading tracepoint metadata directly from ELF files.
+
+    Covers both a linked executable (pointer slots hold virtual addresses)
+    and a relocatable object file (pointer slots are zero and the meta
+    locations come from the relocation records).
+    """
+
+    SOURCE = """
+        #include "CommonLowLevelTracingKit/tracing/tracing.h"
+        CLLTK_TRACEBUFFER(ELF_META_TEST, 4096);
+        void traced_function(void)
+        {
+            CLLTK_TRACEPOINT(ELF_META_TEST, "elf meta test tracepoint %d", 42);
+        }
+        int main(void)
+        {
+            traced_function();
+            return 0;
+        }
+        """
+
+    def setUp(self):
+        super().setUp()
+        repo_root = pathlib.Path(__file__).parent.parent
+        include_dir = repo_root / "tracing_library" / "include"
+        self.source_file = pathlib.Path(self.tmp_dir.name) / "elf_meta.c"
+        self.source_file.write_text(self.SOURCE)
+        self.include_flag = f"-I{include_dir}"
+
+    def _compile(self, *extra_args: str) -> None:
+        result = run_command(
+            f"gcc -std=c11 {self.include_flag} " + " ".join(extra_args),
+            cwd=self.tmp_dir.name,
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+    def test_meta_from_linked_executable(self):
+        """Meta entries are readable from a linked (but never run) binary."""
+        # compile only up to an executable; the library is not needed because
+        # main never runs, but linking needs the runtime symbols, so link the
+        # object into a shared library instead (fully linked, has addresses)
+        self._compile("-fPIC -shared elf_meta.c -o elf_meta.so")
+
+        result = clltk("meta", str(pathlib.Path(self.tmp_dir.name) / "elf_meta.so"))
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("ELF_META_TEST", result.stdout)
+        self.assertIn("elf meta test tracepoint %d", result.stdout)
+
+    def test_meta_from_relocatable_object(self):
+        """Meta entries are readable from a .o file via relocation records."""
+        self._compile("-c elf_meta.c -o elf_meta.o")
+
+        result = clltk("meta", str(pathlib.Path(self.tmp_dir.name) / "elf_meta.o"))
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("ELF_META_TEST", result.stdout)
+        self.assertIn("elf meta test tracepoint %d", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
