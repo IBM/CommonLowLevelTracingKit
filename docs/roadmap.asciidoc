@@ -10,6 +10,48 @@ are LTTng, ftrace, Perfetto/Tracy, OpenTelemetry, and journald.
 Nothing here is committed work; every section is a starting point for its own
 design discussion.
 
+== Definition of done
+
+A feature is not finished when the code works. Every accepted feature ships
+in one piece with:
+
+* *Library*: userspace C API (C11) with C++ conveniences where they fit; the
+  kernel module follows in a separate step unless stated otherwise.
+* *Decoders*: python decoder and C++ decoder/CLI handle the new data - a
+  feature only one decoder understands does not exist.
+* *File format*: `file_specification.asciidoc` updated in the same change
+  that introduces the format addition; old decoders must skip unknown data
+  gracefully.
+* *Tests*: unit tests (Google Test), python integration tests, and a golden
+  fixture exercising the new data through both decoders.
+* *Examples*: a runnable example under `examples/` demonstrating the intended
+  usage - the example is the API review.
+* *Docs*: README usage section, `technical_documentation.asciidoc`, and the
+  AGENTS.md gotchas where the feature has sharp edges.
+
+=== Integration matrix for the accepted features
+
+[cols="1,3"]
+|====
+| Spans
+| `tracing.h` span macros + id runtime; meta types in spec; both decoders
+  decode and reconstruct (trees, durations, open spans); gtest meta layout
+  tests; python roundtrip tests; golden span fixture (LE and BE); span
+  example in C and C++; README + technical doc sections.
+
+| Perfetto/CTF export
+| `clltk export` subcommand; decoder library API; python tests validating
+  output against the golden fixtures (including span fixtures); README
+  section with a ui.perfetto.dev walkthrough; example invocation in the span
+  example.
+
+| In-file registration index
+| unique_stack table segments + lookup; file specification section; crash
+  consistency tests (torn segment -> rebuild by scan); gtest unit tests for
+  the table; python tests over mixed old/new files (a file without a table
+  must still decode and gain one lazily); technical doc section.
+|====
+
 == Spans and sub-spans
 
 Status: *accepted* - with an explicit, carryable span id as the core design.
