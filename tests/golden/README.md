@@ -24,6 +24,7 @@ regenerated from source.
 | `golden-1.2.64-le-aarch64.clltk_trace` | library 1.2.64 (commit 1fa19d2), aarch64 |
 | `golden-1.3.0-le-aarch64.clltk_trace` | library 1.3.0, aarch64 |
 | `golden-1.3.0-be-s390x.clltk_trace` | library 1.3.0, s390x (big endian) |
+| `golden-1.3.0-be-s390x.o` / `.so` | ELF objects compiled with library 1.3.0 headers on s390x |
 
 `tests/test_golden.py` decodes every fixture and asserts the formatted
 tracepoint messages. When the trace file format changes, add a new fixture
