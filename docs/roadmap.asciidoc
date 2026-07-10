@@ -12,16 +12,26 @@ design discussion.
 
 == Spans and sub-spans
 
+Status: *accepted* - with an explicit, carryable span id as the core design.
+
 Scoped begin/end tracking with nesting and durations.
 
+* Span identity is an explicit value: `clltk_span_id_t` (a plain `uint64`).
+  `CLLTK_SPAN_BEGIN(buffer, parent_id, "name", ...)` returns the id;
+  `CLLTK_SPAN_END(buffer, id)` closes it; `0` means "no parent". Because the
+  id is a plain value it can be passed up and down as a function argument,
+  carried across threads, and embedded in APIs and RPC headers.
+* Cross-buffer and cross-process correlation: the decoder matches begin/end
+  by id across all buffers and files of a decode set, so a span begun in one
+  process and continued in another correlates automatically.
+* Uniqueness without coordination: per-process random 32 bit salt plus a
+  32 bit atomic counter.
 * Encoding: two events (span-begin, span-end) rather than one end-event with
   a duration. For a crash-oriented tracer this is the point: the decoder can
   show which spans were still *open* when the process died.
-* Span identity: thread id plus a per-thread counter. Nesting via a
-  thread-local span stack; a sub-span records its parent's id at begin time.
-* API: `CLLTK_SPAN(buffer, "name")` as an RAII guard in C++ and via
-  `__attribute__((cleanup))` in C (GCC/Clang only is already a project rule),
-  plus explicit `CLLTK_SPAN_BEGIN`/`CLLTK_SPAN_END` for non-scoped uses.
+* Convenience layers (RAII guard in C++, `__attribute__((cleanup))` in C,
+  optional thread-local "current span") build on top of the explicit id; the
+  id stays the primary API.
 * File format: two new meta entry types (span-begin, span-end). Entries are
   self-describing, so old decoders skip unknown types.
 * Decoder: reconstruct span trees, compute durations, list open spans at end
@@ -29,20 +39,14 @@ Scoped begin/end tracking with nesting and durations.
 
 == Trace levels and runtime control
 
-Per-tracepoint levels (error/info/debug/trace) with a per-buffer runtime
-threshold.
-
-* The threshold lives in a control word inside the mmapped tracebuffer file:
-  the hot-path cost is one relaxed load and a compare, and the level of a
-  *running* process can be changed externally (`clltk ctl <buffer> --level`),
-  which fits the post-mortem workflow (crank a misbehaving daemon to debug
-  without restarting it).
-* Later option: static-key style patching of disabled tracepoints (the
-  discovery section rework already established the assembler techniques).
-* Related: drop policies by level when the ringbuffer is under pressure
-  (drop debug entries before errors).
+Status: *rejected* - tracing is unconditional by design: always on, always
+everything. Levels, thresholds, and enablement switches contradict the
+post-mortem guarantee that the trace is complete, and add hot-path and API
+surface for a feature this library deliberately does not want.
 
 == Export to standard trace formats
+
+Status: *accepted*.
 
 `clltk export --perfetto` (Chrome/Perfetto track event JSON or protobuf) and
 `--ctf` (Common Trace Format for babeltrace/TraceCompass).
@@ -52,6 +56,8 @@ threshold.
   visible as timelines in ui.perfetto.dev.
 
 == Dynamic tracebuffer selection for static tracepoints
+
+Status: *open*.
 
 `CLLTK_TRACEPOINT_TO(handle, format, ...)`: compile-time meta, runtime-chosen
 buffer.
@@ -65,25 +71,28 @@ buffer.
 
 == Registration index (unique stack evolution)
 
+Status: *accepted* - as an in-file growable open-addressing table.
+
 Today every runtime registration (dynamic tracepoints, and any feature that
 registers meta at runtime) scans the stack region linearly per lookup, with
 md5 per candidate. Fine for the batched startup path, wrong once runtime
 registration becomes frequent.
 
-Two candidate designs:
+Design requirements for the in-file table (crash consistency by
+construction):
 
-* In-memory per-handler index over the append-only stack (fast hash plus byte
-  compare, incremental tail scans) - the mechanism the startup batch already
-  uses, kept alive for the process lifetime. No file format change; the file
-  stays a dumb append-only log, which is the crash-safe choice.
-* In-file growable open-addressing table (doubling segments appended to the
-  file). Shared across processes, but adds crash-consistency surface to the
-  format. Only worth it if cross-process registration rates demand it.
-
-Recommendation: in-memory first; revisit the in-file structure with real
-numbers.
+* The append-only stack region stays the source of truth; the table is an
+  index over it - discardable and reconstructible by a scan at any time.
+* Table segments are appended, never rewritten in place. Growth doubles into
+  a new segment, published by a single atomic header update.
+* Entries validate against the stack region they reference; a torn or
+  unpublished segment degrades to "rebuild by scan", never to a wrong
+  lookup.
+* Shared across processes under the existing stack mutex.
 
 == Per-thread ergonomics and performance
+
+Status: *open*.
 
 * Thread names: `clltk_set_thread_name()`, recorded once per (buffer, tid),
   shown by the decoder instead of raw ids. Small, high value.
@@ -96,19 +105,15 @@ numbers.
 
 == Smaller candidates
 
-* Counter/gauge events (numeric tracks; map to Perfetto counter tracks).
-* Per-call-site rate limiting (every Nth, or token bucket via one static).
-* Clock-domain correlation records (CLOCK_MONOTONIC vs REALTIME anchors) for
-  merging kernel and userspace traces and traces from multiple machines.
-* Structured key-value payload type (journald/OTel-style attributes) as an
-  additional meta type, for queryable fields beyond printf strings.
+Status: *rejected* (counters/gauges, rate limiting, clock-domain records,
+structured payloads) - not part of this library's scope for now.
 
 == Suggested phasing
 
 Each phase is independently shippable:
 
-. Levels + thread names + span events + decoder span reconstruction.
+. Span events with carryable ids + decoder span reconstruction.
 . Perfetto/CTF export (makes spans visible; drives adoption).
-. Dynamic buffer selection + in-memory registration index.
-. Per-thread lock-free buffers (touches the crash-safety core; last and
-  alone).
+. In-file open-addressing registration index.
+. Dynamic buffer selection (open) and per-thread buffers (open) as separate
+  design rounds if and when decided.
