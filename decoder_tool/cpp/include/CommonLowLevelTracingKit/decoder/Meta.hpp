@@ -15,7 +15,13 @@
 
 namespace CommonLowLevelTracingKit::decoder {
 
-	enum class MetaEntryType : uint8_t { Unknown = 0, Printf = 1, Dump = 2 };
+	enum class MetaEntryType : uint8_t {
+		Unknown = 0,
+		Printf = 1,
+		Dump = 2,
+		SpanBegin = 3,
+		SpanEnd = 4
+	};
 
 	struct EXPORT MetaEntryInfo {
 		uint64_t offset;

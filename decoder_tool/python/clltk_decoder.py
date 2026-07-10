@@ -28,6 +28,8 @@ getcontext().prec = 28 # set decimal precision
 class MetaEntryType(Enum):
     Printf = 1
     Dump = 2
+    SpanBegin = 3
+    SpanEnd = 4
     
 class Endian(Enum):
     Big = "big"
@@ -433,9 +435,9 @@ class StaticTraceentry:
         assert magic == b'{', f"{magic} =/= '{{'"
         self.type = get_int(meta.body, self.metaentry_in_metablob + 5, 1)
 
-        assert self.type in [MetaEntryType.Printf.value, MetaEntryType.Dump.value], f"invalid meta data," +\
-            " currently only type 1 and 2 is supported" +\
-            f"but got {self.type} at file_offset 0x{self.in_file:X}"
+        assert self.type in [MetaEntryType.Printf.value, MetaEntryType.Dump.value,
+                              MetaEntryType.SpanBegin.value, MetaEntryType.SpanEnd.value], \
+            f"invalid meta data, unsupported type {self.type}"
 
         self.meta_size = get_int(meta.body, self.metaentry_in_metablob + 1, 4)
         self.raw_meta = get(meta.body, self.metaentry_in_metablob, self.meta_size)
@@ -464,15 +466,45 @@ class StaticTraceentry:
         # get arguments
         if self.type == MetaEntryType.Dump.value:
             self.format += " =(dump)= \"%s\""
-        
+
         logging.debug(f"static tp type = {self.type} in file at 0x{entry.location_in_file:X}")
         logging.debug(f"static tp at {self.file}:{self.line}")
         logging.debug(f"static tp format = {self.format}")
-        
+
+        # span entries: read uint64 args directly and produce fixed-form output
+        if self.type == MetaEntryType.SpanBegin.value:
+            try:
+                span_id = get_int(entry.args_raw, 0, 8)
+                parent_id = get_int(entry.args_raw, 8, 8)
+            except Exception as e:
+                error_str = f'Extracting span_begin args failed at {self.file}:{self.line} with {e}'
+                logging.error(error_str)
+                self.formatted = error_str
+                return
+            name = self.format
+            if parent_id == 0:
+                self.formatted = f">>> {name} [span 0x{span_id:x}]"
+            else:
+                self.formatted = f">>> {name} [span 0x{span_id:x} parent 0x{parent_id:x}]"
+            self.args = [span_id, parent_id]
+            return
+
+        if self.type == MetaEntryType.SpanEnd.value:
+            try:
+                span_id = get_int(entry.args_raw, 0, 8)
+            except Exception as e:
+                error_str = f'Extracting span_end args failed at {self.file}:{self.line} with {e}'
+                logging.error(error_str)
+                self.formatted = error_str
+                return
+            self.formatted = f"<<< [span 0x{span_id:x}]"
+            self.args = [span_id]
+            return
+
         formats = [m.groupdict() for m in format_regex.finditer(self.format)]
 
         self.args = []
-        
+
         try:
             offset = 0
             for i in range(self.argument_count):
@@ -484,7 +516,7 @@ class StaticTraceentry:
                 f"argument types are {self.arg_types} \n"\
                     + f"but formats {formats} for type {self.type} and format \"{self.format}\""\
                     + f" at {self.file}:{self.line}"
-            
+
 
             # create formatted string
         except Exception as e:
@@ -493,7 +525,7 @@ class StaticTraceentry:
             self.formatted = error_str
             return
         logging.debug(f"static tp args = {self.args}")
-        
+
         try:
             self.formatted = ((clean_up_format(self.format) % tuple(self.args)) if self.argument_count else self.format)
         except Exception as e:

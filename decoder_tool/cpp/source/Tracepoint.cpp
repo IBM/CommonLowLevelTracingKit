@@ -138,11 +138,30 @@ const std::string_view TracepointStatic::msg() const {
 			m_msg = source::formatter::printf(format(), m_arg_types, args_raw, e->foreignEndian());
 		} else if (m_type == MetaType::dump) {
 			m_msg = source::formatter::dump(format(), m_arg_types, args_raw, e->foreignEndian());
+		} else if (m_type == MetaType::span_begin) {
+			const uint64_t id = get<uint64_t>(args_raw, 0, e->foreignEndian());
+			const uint64_t parent = get<uint64_t>(args_raw, 8, e->foreignEndian());
+			const auto hex64 = [](uint64_t v) {
+				char buf[17];
+				snprintf(buf, sizeof(buf), "%llx", (unsigned long long)v);
+				return std::string(buf);
+			};
+			if (parent == 0) {
+				m_msg = ">>> " + std::string(format()) + " [span 0x" + hex64(id) + "]";
+			} else {
+				m_msg = ">>> " + std::string(format()) + " [span 0x" + hex64(id) + " parent 0x" +
+						hex64(parent) + "]";
+			}
+		} else if (m_type == MetaType::span_end) {
+			const uint64_t id = get<uint64_t>(args_raw, 0, e->foreignEndian());
+			char buf[17];
+			snprintf(buf, sizeof(buf), "%llx", (unsigned long long)id);
+			m_msg = "<<< [span 0x" + std::string(buf) + "]";
 		} else {
 			CLLTK_DECODER_THROW(
 				exception::InvalidMeta,
 				"Invalid meta data type: " + std::to_string(static_cast<uint8_t>(m_type)) +
-					" (expected printf=1 or dump=2)");
+					" (expected printf=1, dump=2, span_begin=3, or span_end=4)");
 		}
 	}
 	return m_msg;

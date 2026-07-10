@@ -56,6 +56,10 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			entry.type = MetaEntryType::Printf;
 		} else if (type_byte == static_cast<uint8_t>(MetaEntryType::Dump)) {
 			entry.type = MetaEntryType::Dump;
+		} else if (type_byte == static_cast<uint8_t>(MetaEntryType::SpanBegin)) {
+			entry.type = MetaEntryType::SpanBegin;
+		} else if (type_byte == static_cast<uint8_t>(MetaEntryType::SpanEnd)) {
+			entry.type = MetaEntryType::SpanEnd;
 		} else {
 			entry.type = MetaEntryType::Unknown;
 		}
@@ -100,6 +104,8 @@ namespace CommonLowLevelTracingKit::decoder {
 		switch (t) {
 		case MetaEntryType::Printf: return "printf";
 		case MetaEntryType::Dump: return "dump";
+		case MetaEntryType::SpanBegin: return "span_begin";
+		case MetaEntryType::SpanEnd: return "span_end";
 		case MetaEntryType::Unknown:
 		default: return "unknown";
 		}
