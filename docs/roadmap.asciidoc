@@ -1,0 +1,114 @@
+= CLLTK feature roadmap (design exploration)
+:toc:
+
+This document collects candidate features for future CLLTK versions, each
+evaluated against the properties that define this library: crash-safe trace
+files, zero-infrastructure usage (two macros, no daemon, no linker scripts),
+a maximal-speed hot path, and post-mortem-first decoding. Reference points
+are LTTng, ftrace, Perfetto/Tracy, OpenTelemetry, and journald.
+
+Nothing here is committed work; every section is a starting point for its own
+design discussion.
+
+== Spans and sub-spans
+
+Scoped begin/end tracking with nesting and durations.
+
+* Encoding: two events (span-begin, span-end) rather than one end-event with
+  a duration. For a crash-oriented tracer this is the point: the decoder can
+  show which spans were still *open* when the process died.
+* Span identity: thread id plus a per-thread counter. Nesting via a
+  thread-local span stack; a sub-span records its parent's id at begin time.
+* API: `CLLTK_SPAN(buffer, "name")` as an RAII guard in C++ and via
+  `__attribute__((cleanup))` in C (GCC/Clang only is already a project rule),
+  plus explicit `CLLTK_SPAN_BEGIN`/`CLLTK_SPAN_END` for non-scoped uses.
+* File format: two new meta entry types (span-begin, span-end). Entries are
+  self-describing, so old decoders skip unknown types.
+* Decoder: reconstruct span trees, compute durations, list open spans at end
+  of trace.
+
+== Trace levels and runtime control
+
+Per-tracepoint levels (error/info/debug/trace) with a per-buffer runtime
+threshold.
+
+* The threshold lives in a control word inside the mmapped tracebuffer file:
+  the hot-path cost is one relaxed load and a compare, and the level of a
+  *running* process can be changed externally (`clltk ctl <buffer> --level`),
+  which fits the post-mortem workflow (crank a misbehaving daemon to debug
+  without restarting it).
+* Later option: static-key style patching of disabled tracepoints (the
+  discovery section rework already established the assembler techniques).
+* Related: drop policies by level when the ringbuffer is under pressure
+  (drop debug entries before errors).
+
+== Export to standard trace formats
+
+`clltk export --perfetto` (Chrome/Perfetto track event JSON or protobuf) and
+`--ctf` (Common Trace Format for babeltrace/TraceCompass).
+
+* Spans map directly to track events, counters to counter tracks.
+* Pure decoder-side work with zero writer risk; the feature that makes spans
+  visible as timelines in ui.perfetto.dev.
+
+== Dynamic tracebuffer selection for static tracepoints
+
+`CLLTK_TRACEPOINT_TO(handle, format, ...)`: compile-time meta, runtime-chosen
+buffer.
+
+* Enabled by the discovery rework: meta objects are ordinary statics and no
+  longer physically tied to a per-buffer ELF section - only the discovery
+  pointer is. The lazy registration path already accepts any handler.
+* Open design point: the per-call-site file-offset cache becomes
+  per-(call-site, buffer); either a small per-call-site map or accepting a
+  registry lookup per hit on this (slower) variant.
+
+== Registration index (unique stack evolution)
+
+Today every runtime registration (dynamic tracepoints, and any feature that
+registers meta at runtime) scans the stack region linearly per lookup, with
+md5 per candidate. Fine for the batched startup path, wrong once runtime
+registration becomes frequent.
+
+Two candidate designs:
+
+* In-memory per-handler index over the append-only stack (fast hash plus byte
+  compare, incremental tail scans) - the mechanism the startup batch already
+  uses, kept alive for the process lifetime. No file format change; the file
+  stays a dumb append-only log, which is the crash-safe choice.
+* In-file growable open-addressing table (doubling segments appended to the
+  file). Shared across processes, but adds crash-consistency surface to the
+  format. Only worth it if cross-process registration rates demand it.
+
+Recommendation: in-memory first; revisit the in-file structure with real
+numbers.
+
+== Per-thread ergonomics and performance
+
+* Thread names: `clltk_set_thread_name()`, recorded once per (buffer, tid),
+  shown by the decoder instead of raw ids. Small, high value.
+* Per-thread (or per-CPU) ringbuffers with a lock-free reserve/commit write
+  path, replacing the process-shared mutex on the hot path. The decoder
+  already merge-sorts by timestamp, so consuming N buffer files is natural.
+  This is the largest available hot-path win and the hardest change: the
+  crash-robustness of partially committed entries needs the same care the
+  current CRC-validated format provides. Should be designed last, alone.
+
+== Smaller candidates
+
+* Counter/gauge events (numeric tracks; map to Perfetto counter tracks).
+* Per-call-site rate limiting (every Nth, or token bucket via one static).
+* Clock-domain correlation records (CLOCK_MONOTONIC vs REALTIME anchors) for
+  merging kernel and userspace traces and traces from multiple machines.
+* Structured key-value payload type (journald/OTel-style attributes) as an
+  additional meta type, for queryable fields beyond printf strings.
+
+== Suggested phasing
+
+Each phase is independently shippable:
+
+. Levels + thread names + span events + decoder span reconstruction.
+. Perfetto/CTF export (makes spans visible; drives adoption).
+. Dynamic buffer selection + in-memory registration index.
+. Per-thread lock-free buffers (touches the crash-safety core; last and
+  alone).
