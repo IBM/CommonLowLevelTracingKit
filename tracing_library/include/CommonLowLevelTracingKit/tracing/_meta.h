@@ -24,6 +24,8 @@ extern "C" {
 typedef enum __attribute__((packed)) {
 	_clltk_meta_enty_type_printf = 1,
 	_clltk_meta_enty_type_dump = 2,
+	_clltk_meta_enty_type_span_begin = 3,
+	_clltk_meta_enty_type_span_end = 4,
 } _clltk_meta_enty_type;
 _CLLTK_STATIC_ASSERT(sizeof(_clltk_meta_enty_type) == 1, "should be of size 1");
 
@@ -35,7 +37,11 @@ typedef struct __attribute__((packed, aligned(1))) {
 } _clltk_meta_entry_head_t;
 _CLLTK_STATIC_ASSERT(sizeof(_clltk_meta_entry_head_t) == 5, "should be of size 5");
 
-#define _CLLTK_CREATE_META_ENTRY_ARGS(_VAR_, _ATTRIBUTE_, _STR_, ...)                            \
+#define _CLLTK_CREATE_META_ENTRY_ARGS(_VAR_, _ATTRIBUTE_, _STR_, ...)                       \
+	_CLLTK_CREATE_META_ENTRY_TYPED(_VAR_, _ATTRIBUTE_, _clltk_meta_enty_type_printf, _STR_, \
+								   __VA_ARGS__)
+
+#define _CLLTK_CREATE_META_ENTRY_TYPED(_VAR_, _ATTRIBUTE_, _TYPE_, _STR_, ...)                   \
                                                                                                  \
 	_CLLTK_STATIC_ASSERT(__LINE__ <= UINT32_MAX, "line fits not in uint32");                     \
 	static const struct __attribute__((packed, aligned(1))) {                                    \
@@ -49,7 +55,7 @@ _CLLTK_STATIC_ASSERT(sizeof(_clltk_meta_entry_head_t) == 5, "should be of size 5
 		const char str[sizeof(_STR_)];                                                           \
 	} _VAR_ _ATTRIBUTE_ = {/*.magic = */ '{',                                                    \
 						   /*.size = */ sizeof(_VAR_),                                           \
-						   /*.type = */ _clltk_meta_enty_type_printf,                            \
+						   /*.type = */ (_TYPE_),                                                \
 						   /*.line = */ __LINE__,                                                \
 						   /*.argument_count = */ _CLLTK_NARGS(__VA_ARGS__),                     \
 						   /*.argument_type_array = */ {_CLLTK_ARG_TYPES_TO_TYPES(__VA_ARGS__)}, \
