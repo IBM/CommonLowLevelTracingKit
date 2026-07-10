@@ -53,25 +53,10 @@ __attribute__((constructor(101), used)) static void _clltk_constructor(void)
 		if (!_clltk_tracebuffer_init(handler)) {
 			continue;
 		}
-		for (const uint8_t *const *entry_ptr = meta_start; entry_ptr + 1 < meta_stop;
-			 entry_ptr += 2) {
-			const _clltk_meta_entry_head_t *const head =
-				(const _clltk_meta_entry_head_t *)entry_ptr[0];
-			_clltk_file_offset_t *const offset_cache =
-				(_clltk_file_offset_t *)(uintptr_t)entry_ptr[1];
-			if (*offset_cache != _clltk_file_offset_unset) {
-				/* already registered, e.g. by another translation unit's
-				 * constructor walking the same merged section */
-				continue;
-			}
-			/* duplicates (e.g. from inlined call sites) are deduplicated by
-			 * the unique stack, which returns the existing offset */
-			const _clltk_file_offset_t offset =
-				_clltk_tracebuffer_add_to_stack(handler, entry_ptr[0], head->size);
-			if (_CLLTK_FILE_OFFSET_IS_STATIC(offset)) {
-				*offset_cache = offset;
-			}
-		}
+		/* registers all entries in one batch and fills each call site's
+		 * offset cache; already-resolved entries are skipped */
+		_clltk_tracebuffer_register_metaptrs(handler, (const void *const *)meta_start,
+											 (const void *const *)meta_stop);
 	}
 }
 

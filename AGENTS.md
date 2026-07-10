@@ -84,7 +84,7 @@ docs/               AsciiDoc documentation, file format spec, diagrams.
 
 ### ELF Sections
 - Meta entries are ordinary `static const` objects; each call site emits a pointer pair `{meta, file-offset cache}` into the custom ELF section `_clltk_<BUFFER_NAME>_metaptr` via an inline-asm `.pushsection` data directive. The constructor registers every meta at startup and writes the resolved file offset into the cache, so the first tracepoint execution needs no lookup (NOT via `__attribute__((section(...)))` -- the attribute would join the enclosing function's COMDAT group inside inline functions and templates, and GCC >= 15.2 rejects mixing grouped and ungrouped sections of the same name). Buffer names MUST be valid C identifiers.
-- Constructor/destructor priority is 101 (very early). User code with priority <= 101 cannot use tracing.
+- Constructor/destructor priority is 101 (very early). User code with priority < 101 cannot use tracing; at priority exactly 101 the order against clltk's own constructor/destructor is emission-order dependent (LTO flips it), so tracing there is undefined -- it may or may not be recorded.
 - `_CLLTK_INTERNAL` define gates macro expansion. The library itself compiles with `-D_CLLTK_INTERNAL`; consumer code must NOT define it.
 
 ### API Typo -- Do NOT Fix

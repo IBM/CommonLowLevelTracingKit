@@ -68,6 +68,26 @@ bool unique_stack_valid(const unique_stack_handler_t *handler);
 // add data to stack and return offset in file for data
 uint64_t unique_stack_add(unique_stack_handler_t *handler, const void *body, uint32_t size);
 
+// one batch item; out_offset receives the file offset of the entry body
+// (0 if the batch failed)
+struct unique_stack_batch_item_t;
+typedef struct unique_stack_batch_item_t unique_stack_batch_item_t;
+struct unique_stack_batch_item_t {
+	const void *body;
+	uint32_t size;
+	uint64_t out_offset;
+};
+
+/**
+ * add many entries at once. Reads the existing stack body once, matches items
+ * against it (and against each other) with a fast hash plus byte comparison,
+ * and appends only entries that are really new. The md5 entry head is only
+ * computed for appended entries. Equivalent to calling unique_stack_add per
+ * item, but O(existing + items) instead of O(existing * items).
+ */
+void unique_stack_add_batch(unique_stack_handler_t *handler, unique_stack_batch_item_t *items,
+							size_t count);
+
 #ifdef __cplusplus
 }
 #endif

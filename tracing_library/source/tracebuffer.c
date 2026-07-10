@@ -221,6 +221,59 @@ _clltk_file_offset_t _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_ha
 	return _clltk_tracebuffer_add_to_stack(buffer, this_meta, this_meta_size);
 }
 
+void _clltk_tracebuffer_register_metaptrs(_clltk_tracebuffer_handler_t *handler,
+										  const void *const *pairs_start,
+										  const void *const *pairs_stop)
+{
+	if (handler->runtime.tracebuffer == NULL)
+		return; // caller must have initialized the tracebuffer
+
+	if (pairs_stop <= pairs_start)
+		return;
+	const size_t pair_count = (size_t)(pairs_stop - pairs_start) / 2;
+	if (pair_count == 0)
+		return;
+
+	unique_stack_batch_item_t *const items = memory_heap_allocation(pair_count * sizeof(*items));
+	_clltk_file_offset_t **const caches = memory_heap_allocation(pair_count * sizeof(*caches));
+
+	size_t todo = 0;
+	for (size_t i = 0; i < pair_count; i++) {
+		const _clltk_meta_entry_head_t *const head =
+			(const _clltk_meta_entry_head_t *)pairs_start[2 * i];
+		_clltk_file_offset_t *const offset_cache =
+			(_clltk_file_offset_t *)(uintptr_t)pairs_start[2 * i + 1];
+		if (*offset_cache != _clltk_file_offset_unset) {
+			// already resolved, e.g. by another translation unit's
+			// constructor walking the same merged section
+			continue;
+		}
+		items[todo].body = head;
+		items[todo].size = head->size;
+		items[todo].out_offset = 0;
+		caches[todo] = offset_cache;
+		todo++;
+	}
+
+	if (todo > 0) {
+		_clltk_tracebuffer_t *const buffer = handler->runtime.tracebuffer;
+		SYNC_MEMORY_LOCK(lock, buffer->stack_mutex);
+		if (lock.locked == false) {
+			ERROR_LOG("could not lock stack update. ERROR was: %s", lock.error_msg);
+		} else {
+			unique_stack_add_batch(&buffer->stack, items, todo);
+			for (size_t i = 0; i < todo; i++) {
+				// leave the cache unset on failure so the lazy path retries
+				if (_CLLTK_FILE_OFFSET_IS_STATIC(items[i].out_offset))
+					*caches[i] = items[i].out_offset;
+			}
+		}
+	}
+
+	memory_heap_free(caches);
+	memory_heap_free(items);
+}
+
 bool _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 {
 	SYNC_GLOBAL_LOCK(global_lock);
