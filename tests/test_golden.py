@@ -46,10 +46,53 @@ LITTLE_ENDIAN_FIXTURES = [
     "golden-1.2.49-le-aarch64.clltk_trace",  # pre definition-V2 format (1.2.50)
     "golden-1.2.64-le-aarch64.clltk_trace",
     "golden-1.3.0-le-aarch64.clltk_trace",
+    "golden-1.5.0-le-aarch64.clltk_trace",  # first version with span events
 ]
 BIG_ENDIAN_FIXTURES = [
     "golden-1.3.0-be-s390x.clltk_trace",
+    "golden-1.5.0-be-s390x.clltk_trace",
 ]
+# fixtures containing span events (validated structurally: span ids are
+# random per generation, so exact strings differ between fixtures)
+SPAN_FIXTURES = [
+    "golden-1.5.0-le-aarch64.clltk_trace",
+    "golden-1.5.0-be-s390x.clltk_trace",
+]
+
+
+def split_span_rows(messages: list) -> tuple:
+    """Separate span begin/end rows from regular tracepoint rows."""
+    spans = [m for m in messages if m.startswith(">>>") or m.startswith("<<<")]
+    regular = [m for m in messages if m not in spans]
+    return regular, spans
+
+
+def validate_span_structure(test: unittest.TestCase, span_messages: list):
+    """The golden writer creates: outer span with an inner child (both
+    ended) and one span that never ends. Span ids are random per
+    generation, so validate the structure instead of exact strings."""
+    import re
+
+    begins = {}
+    ends = []
+    for message in span_messages:
+        m = re.match(r">>> (.+) \[span (0x[0-9a-f]+)(?: parent (0x[0-9a-f]+))?\]", message)
+        if m:
+            begins[m.group(1)] = (m.group(2), m.group(3))
+            continue
+        m = re.match(r"<<< \[span (0x[0-9a-f]+)\]", message)
+        if m:
+            ends.append(m.group(1))
+    test.assertEqual(
+        {"golden outer span", "golden inner span", "golden open span"}, set(begins)
+    )
+    test.assertEqual(begins["golden inner span"][1], begins["golden outer span"][0])
+    test.assertIsNone(begins["golden outer span"][1])
+    test.assertIsNone(begins["golden open span"][1])
+    test.assertEqual(
+        sorted(ends),
+        sorted([begins["golden outer span"][0], begins["golden inner span"][0]]),
+    )
 
 
 def decode_with_python(fixture: pathlib.Path) -> list:
@@ -68,6 +111,16 @@ def decode_with_python(fixture: pathlib.Path) -> list:
     return [m for m in messages if not m.startswith('{"tracebuffer info')]
 
 
+def assert_fixture(test: unittest.TestCase, name: str, messages: list):
+    """Regular rows must match exactly; span rows are validated structurally."""
+    regular, spans = split_span_rows(messages)
+    test.assertEqual(EXPECTED_MESSAGES, regular)
+    if name in SPAN_FIXTURES:
+        validate_span_structure(test, spans)
+    else:
+        test.assertEqual([], spans)
+
+
 def decode_with_cli(fixture: pathlib.Path) -> list:
     """Decode one fixture with the clltk CLI, return formatted messages."""
     result = clltk("decode", str(fixture))
@@ -79,8 +132,9 @@ def decode_with_cli(fixture: pathlib.Path) -> list:
         if len(columns) < 8:
             continue
         formatted = columns[5].strip()
-        if formatted in EXPECTED_MESSAGES:
-            messages.append(formatted)
+        if formatted.startswith("!timestamp") or formatted == "formatted":
+            continue
+        messages.append(formatted)
     return messages
 
 
@@ -89,13 +143,13 @@ class golden_python_decoder(unittest.TestCase):
         for name in LITTLE_ENDIAN_FIXTURES:
             with self.subTest(fixture=name):
                 messages = decode_with_python(GOLDEN_DIR / name)
-                self.assertEqual(EXPECTED_MESSAGES, messages)
+                assert_fixture(self, name, messages)
 
     def test_big_endian_fixtures(self):
         for name in BIG_ENDIAN_FIXTURES:
             with self.subTest(fixture=name):
                 messages = decode_with_python(GOLDEN_DIR / name)
-                self.assertEqual(EXPECTED_MESSAGES, messages)
+                assert_fixture(self, name, messages)
 
 
 class golden_elf_meta(unittest.TestCase):
@@ -121,13 +175,13 @@ class golden_cli_decoder(unittest.TestCase):
         for name in LITTLE_ENDIAN_FIXTURES:
             with self.subTest(fixture=name):
                 messages = decode_with_cli(GOLDEN_DIR / name)
-                self.assertEqual(EXPECTED_MESSAGES, messages)
+                assert_fixture(self, name, messages)
 
     def test_big_endian_fixtures(self):
         for name in BIG_ENDIAN_FIXTURES:
             with self.subTest(fixture=name):
                 messages = decode_with_cli(GOLDEN_DIR / name)
-                self.assertEqual(EXPECTED_MESSAGES, messages)
+                assert_fixture(self, name, messages)
 
 
 if __name__ == "__main__":

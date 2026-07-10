@@ -159,6 +159,49 @@ TEST(meta_macro, two_tracepoints)
 	}
 }
 
+CLLTK_TRACEBUFFER(META_MACRO_SPAN, 1024)
+TEST(meta_macro, span_meta_layout)
+{
+	clltk_span_id_t outer = CLLTK_SPAN_BEGIN(META_MACRO_SPAN, CLLTK_SPAN_NO_PARENT, "span name");
+	CLLTK_SPAN_END(META_MACRO_SPAN, outer);
+	EXPECT_NE(outer, (clltk_span_id_t)0);
+
+	clltk_span_id_t second = CLLTK_SPAN_BEGIN(META_MACRO_SPAN, outer, "span name");
+	CLLTK_SPAN_END(META_MACRO_SPAN, second);
+	EXPECT_NE(second, (clltk_span_id_t)0);
+	EXPECT_NE(second, outer);
+
+	// the meta section holds {meta, offset-cache} pointer pairs per call site
+	const char *const *const meta_ptrs = (const char *const *)_clltk_META_MACRO_SPAN.meta.start;
+
+	{ // first call site: span begin
+		const char *const meta = meta_ptrs[0];
+		const _clltk_meta_enty_type type =
+			*reinterpret_cast<const _clltk_meta_enty_type *>(&meta[5]);
+		const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
+		const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
+		const char *const name =
+			reinterpret_cast<const char *>(&meta[10 + arg_count + 2 + strlen(__FILE__) + 1]);
+
+		EXPECT_EQ(type, _clltk_meta_enty_type_span_begin);
+		EXPECT_EQ(arg_count, 2);
+		EXPECT_EQ(arg_types[0], _clltk_argument_uint64);
+		EXPECT_EQ(arg_types[1], _clltk_argument_uint64);
+		EXPECT_STREQ(name, "span name");
+	}
+	{ // second call site: span end
+		const char *const meta = meta_ptrs[2];
+		const _clltk_meta_enty_type type =
+			*reinterpret_cast<const _clltk_meta_enty_type *>(&meta[5]);
+		const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
+		const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
+
+		EXPECT_EQ(type, _clltk_meta_enty_type_span_end);
+		EXPECT_EQ(arg_count, 1);
+		EXPECT_EQ(arg_types[0], _clltk_argument_uint64);
+	}
+}
+
 CLLTK_TRACEBUFFER(META_MACRO_04, 1024)
 TEST(meta_macro, three_tracepoints)
 {
