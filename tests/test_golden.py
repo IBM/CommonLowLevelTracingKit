@@ -33,6 +33,8 @@ EXPECTED_MESSAGES = [
 ]
 
 LITTLE_ENDIAN_FIXTURES = [
+    "golden-1.2.39-le-aarch64.clltk_trace",  # oldest buildable, pre dump-format change (1.2.40)
+    "golden-1.2.49-le-aarch64.clltk_trace",  # pre definition-V2 format (1.2.50)
     "golden-1.2.64-le-aarch64.clltk_trace",
     "golden-1.3.0-le-aarch64.clltk_trace",
 ]
