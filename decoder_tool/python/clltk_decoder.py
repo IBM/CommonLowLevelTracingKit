@@ -163,11 +163,11 @@ def get_int(raw, offset, size, signed=False):
 
 
 def get_float(raw, offset):
-    return struct.unpack('f', get(raw, offset, 4))[0]
+    return struct.unpack('<f' if current_Endian == Endian.Little else '>f', get(raw, offset, 4))[0]
 
 
 def get_double(raw, offset):
-    return struct.unpack('d', get(raw, offset, 8))[0]
+    return struct.unpack('<d' if current_Endian == Endian.Little else '>d', get(raw, offset, 8))[0]
 
 
 class Definition:
