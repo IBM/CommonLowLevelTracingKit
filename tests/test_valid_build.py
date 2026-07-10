@@ -67,6 +67,77 @@ class valid_build_tests(unittest.TestCase):
                 self.assertLess(len(data[data["formatted"] == "42"]), 10)
                 pass
 
+    def test_tracepoint_in_comdat_and_plain_function_same_buffer(self: unittest.TestCase):
+        """Regression test for the GCC >= 15.2 hard error:
+
+            error: '_meta' causes a section type conflict with '_meta'
+                   in section '_clltk_BUFFER_meta'
+
+        A tracepoint inside a COMDAT context (inline function, function
+        template, or class template member) places its meta object into a
+        COMDAT-grouped ELF section, while a tracepoint in a plain function
+        uses an ungrouped section of the same name. GCC 15.2+ refuses to mix
+        the two in one translation unit. This only reproduces without LTO,
+        which is how consumers compile against the installed headers.
+        """
+        common_part = """
+            #include "CommonLowLevelTracingKit/tracing/tracing.h"
+            CLLTK_TRACEBUFFER(BUFFER, 4096);
+            void plain_function(void)
+            {
+                CLLTK_TRACEPOINT(BUFFER, "plain, longer format string %u", 42u);
+            }
+            """
+        comdat_cases = {
+            "inline function": """
+                inline void comdat_function(void)
+                {
+                    CLLTK_TRACEPOINT(BUFFER, "comdat %d", 1);
+                }
+                int main(void)
+                {
+                    comdat_function();
+                    plain_function();
+                    return 0;
+                }
+                """,
+            "function template": """
+                template <typename T> void comdat_function(T value)
+                {
+                    CLLTK_TRACEPOINT(BUFFER, "comdat %d", (int)value);
+                }
+                int main(void)
+                {
+                    comdat_function(1);
+                    plain_function();
+                    return 0;
+                }
+                """,
+            "class template member": """
+                template <typename T> struct Wrapper
+                {
+                    static void trace(void)
+                    {
+                        CLLTK_TRACEPOINT(BUFFER, "comdat %d", 1);
+                    }
+                };
+                int main(void)
+                {
+                    Wrapper<int>::trace();
+                    plain_function();
+                    return 0;
+                }
+                """,
+        }
+        for case_name, comdat_part in comdat_cases.items():
+            with self.subTest(case=case_name):
+                data = process(common_part + comdat_part, language=Language.CPP)
+                self.assertEqual(len(data[data["formatted"] == "comdat 1"]), 1)
+                self.assertEqual(
+                    len(data[data["formatted"] == "plain, longer format string 42"]), 1
+                )
+                pass
+
     def test_empty(self: unittest.TestCase):
         for language in [Language.C, Language.CPP]:
             with self.subTest(language=language):

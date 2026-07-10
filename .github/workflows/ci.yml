@@ -171,6 +171,46 @@ jobs:
         run: ./scripts/container.sh ./scripts/ci-cd/step_memcheck.sh
 
   # ============================================
+  # Build without LTO (consumer-like compile)
+  # The default presets build everything with IPO/LTO, which defers ELF
+  # section assignment and hides section conflicts (e.g. GCC 15 rejecting
+  # COMDAT vs plain sections of the same name) that break consumers who
+  # compile against the installed headers without LTO.
+  # ============================================
+  build-nolto:
+    runs-on: ubuntu-latest
+    needs: [changes, checks]
+    if: |
+      !failure() && !cancelled() &&
+      (github.event_name == 'push' ||
+       needs.changes.outputs.code == 'true' ||
+       needs.changes.outputs.tests == 'true' ||
+       needs.changes.outputs.ci == 'true')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup ccache
+        run: mkdir -p ~/.ccache
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ runner.os }}-nolto-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-nolto-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}-
+            ccache-${{ runner.os }}-nolto-
+
+      - name: Load CI-Container
+        uses: ./.github/actions/load-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (no LTO)
+        run: ./scripts/container.sh ./scripts/ci-cd/step_build.sh --preset unittests-nolto
+
+  # ============================================
   # Packaging (only for code/ci changes, or push to main)
   # ============================================
   package:
