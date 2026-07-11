@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cstring>
 #include <ffi.h>
+#include <format>
 #include <stdio.h>
 #include <variant>
 
@@ -335,6 +336,115 @@ std::string formatter::printf(const std::string_view format, const std::span<con
 	msg.resize(safe_cast<size_t>(rc));
 	clean_up_str(msg);
 	return msg;
+}
+
+// Variant type that can hold any decoded argument value for std::vformat.
+// std::make_format_args requires lvalues so we store into a variant array first.
+using fmt_arg_value = std::variant<uint64_t, int64_t, double, std::string>;
+
+// Read a POD value of type T from raw memory at clltk_arg, byte-swapping if needed.
+template <typename T>
+INLINE static T read_raw(uintptr_t clltk_arg, size_t remaining, bool foreign_endian) {
+	if (sizeof(T) > remaining) [[unlikely]]
+		CLLTK_DECODER_THROW(FormattingFailed, "out of range access for fmt formatter");
+	T value{};
+	memcpy(&value, reinterpret_cast<const void *>(clltk_arg), sizeof(T));
+	if constexpr (CommonLowLevelTracingKit::decoder::source::internal::ByteSwappable<T>) {
+		if (foreign_endian)
+			value = CommonLowLevelTracingKit::decoder::source::internal::byteswapValue(value);
+	}
+	return value;
+}
+
+INLINE static fmt_arg_value clltk_arg_to_fmt_value(const char clltk_type, const uintptr_t clltk_arg,
+												   size_t remaining, bool foreign_endian) {
+	switch (clltk_type) {
+	case 'c': return static_cast<uint64_t>(read_raw<uint8_t>(clltk_arg, remaining, foreign_endian));
+	case 'w':
+		return static_cast<uint64_t>(read_raw<uint16_t>(clltk_arg, remaining, foreign_endian));
+	case 'i':
+		return static_cast<uint64_t>(read_raw<uint32_t>(clltk_arg, remaining, foreign_endian));
+	case 'l':
+		return static_cast<uint64_t>(read_raw<uint64_t>(clltk_arg, remaining, foreign_endian));
+	case 'C': return static_cast<int64_t>(read_raw<int8_t>(clltk_arg, remaining, foreign_endian));
+	case 'W': return static_cast<int64_t>(read_raw<int16_t>(clltk_arg, remaining, foreign_endian));
+	case 'I': return static_cast<int64_t>(read_raw<int32_t>(clltk_arg, remaining, foreign_endian));
+	case 'L': return static_cast<int64_t>(read_raw<int64_t>(clltk_arg, remaining, foreign_endian));
+	case 'f': return static_cast<double>(read_raw<float>(clltk_arg, remaining, foreign_endian));
+	case 'd': return static_cast<double>(read_raw<double>(clltk_arg, remaining, foreign_endian));
+	case 'p':
+		return static_cast<uint64_t>(read_raw<uint64_t>(clltk_arg, remaining, foreign_endian));
+	case 's': {
+		// string: uint32 length prefix then null-terminated chars; skip the length prefix
+		return std::string{reinterpret_cast<const char *>(clltk_arg + sizeof(uint32_t))};
+	}
+	default: CLLTK_DECODER_THROW(FormattingFailed, "unknown type for fmt");
+	}
+}
+
+// Wrapper so one std::formatter specialization can format any decoded value.
+// Dispatching the concrete types at the make_format_args call site would need
+// nested std::visit over all argument slots, instantiating vformat for every
+// type combination (4^10). Instead the wrapper's formatter captures the format
+// spec during parse() and applies it to the variant's active alternative with
+// a single std::visit per argument.
+struct FmtDecodedArg {
+	fmt_arg_value value{};
+};
+
+template <> struct std::formatter<FmtDecodedArg, char> {
+	std::string spec;
+
+	constexpr auto parse(std::format_parse_context &ctx) {
+		auto it = ctx.begin();
+		const auto end = ctx.end();
+		while (it != end && *it != '}') { spec += *it++; }
+		return it;
+	}
+
+	auto format(const FmtDecodedArg &arg, std::format_context &ctx) const {
+		const std::string one_arg_format = "{:" + spec + "}";
+		return std::visit(
+			[&](const auto &value) {
+				return std::vformat_to(ctx.out(), one_arg_format, std::make_format_args(value));
+			},
+			arg.value);
+	}
+};
+
+std::string formatter::fmt(const std::string_view format, const std::span<const char> &types_raw,
+						   const std::span<const uint8_t> &args_raw, bool foreign_endian) {
+	if (format.empty()) return "";
+
+	// Decode all arguments into a variant array so we have lvalues for make_format_args.
+	static constexpr size_t max_fmt_args = 10;
+	std::array<FmtDecodedArg, max_fmt_args> decoded{};
+	const size_t arg_count = types_raw.size();
+	if (arg_count > max_fmt_args) CLLTK_DECODER_THROW(FormattingFailed, "too many fmt args");
+
+	size_t raw_offset = 0;
+	for (size_t i = 0; i < arg_count; ++i) {
+		const char type = types_raw[i];
+		if (raw_offset >= args_raw.size())
+			CLLTK_DECODER_THROW(FormattingFailed, "out of range access for fmt formatter");
+		const uintptr_t current = std::bit_cast<uintptr_t>(&args_raw[raw_offset]);
+		const size_t remaining = args_raw.size() - raw_offset;
+		// Validate and compute size first (clltk_arg_to_size checks string bounds).
+		const size_t arg_size = clltk_arg_to_size(type, current, remaining, foreign_endian);
+		decoded[i].value = clltk_arg_to_fmt_value(type, current, remaining, foreign_endian);
+		raw_offset += arg_size;
+	}
+	if (raw_offset != args_raw.size()) [[unlikely]]
+		CLLTK_DECODER_THROW(FormattingFailed, "raw args invalid");
+
+	// Pass all slots; std::vformat ignores arguments the format string does not
+	// reference, so the unused trailing (default-constructed) slots are harmless.
+	try {
+		return std::vformat(format,
+							std::make_format_args(decoded[0], decoded[1], decoded[2], decoded[3],
+												  decoded[4], decoded[5], decoded[6], decoded[7],
+												  decoded[8], decoded[9]));
+	} catch (const std::format_error &) { return std::string(format) + " fmt-error"; }
 }
 
 std::string formatter::dump(const std::string_view format, const std::span<const char> &types_raw,

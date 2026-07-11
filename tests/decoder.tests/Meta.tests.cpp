@@ -214,6 +214,9 @@ INSTANTIATE_TEST_SUITE_P(TypeMappings, MetaEntryTypeParamTest,
 						 ::testing::Values(std::make_tuple(0, MetaEntryType::Unknown),
 										   std::make_tuple(1, MetaEntryType::Printf),
 										   std::make_tuple(2, MetaEntryType::Dump),
+										   std::make_tuple(3, MetaEntryType::SpanBegin),
+										   std::make_tuple(4, MetaEntryType::SpanEnd),
+										   std::make_tuple(5, MetaEntryType::Fmt),
 										   std::make_tuple(99, MetaEntryType::Unknown),
 										   std::make_tuple(255, MetaEntryType::Unknown)));
 
@@ -229,6 +232,9 @@ TEST_F(MetaEntryInfoTest, typeToString)
 {
 	EXPECT_EQ(MetaEntryInfo::typeToString(MetaEntryType::Printf), "printf");
 	EXPECT_EQ(MetaEntryInfo::typeToString(MetaEntryType::Dump), "dump");
+	EXPECT_EQ(MetaEntryInfo::typeToString(MetaEntryType::SpanBegin), "span_begin");
+	EXPECT_EQ(MetaEntryInfo::typeToString(MetaEntryType::SpanEnd), "span_end");
+	EXPECT_EQ(MetaEntryInfo::typeToString(MetaEntryType::Fmt), "fmt");
 	EXPECT_EQ(MetaEntryInfo::typeToString(MetaEntryType::Unknown), "unknown");
 }
 

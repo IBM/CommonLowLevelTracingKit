@@ -46,7 +46,7 @@ target_link_libraries(main_cpp
 
 set_target_properties(main_cpp
     PROPERTIES
-        CXX_STANDARD 17
+        CXX_STANDARD 20
         CXX_EXTENSIONS OFF
         CXX_STANDARD_REQUIRED ON
         COMPILE_WARNING_AS_ERROR ON

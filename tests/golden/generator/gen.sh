@@ -20,4 +20,16 @@ gcc -std=c11 -O1 -I/src/tracing_library/include /tmp/writer.c "$LIB" -pthread -o
 rm -rf /tmp/traces && mkdir /tmp/traces
 CLLTK_TRACING_PATH=/tmp/traces /tmp/writer
 cp /tmp/traces/GOLDEN.clltk_trace /out/
+# fmt-style tracepoints (C++20, since 1.6.0): build the C++ writer when the
+# checked-out headers and compiler support it, skip gracefully otherwise
+if [ -f /src/tests/golden/generator/writer_fmt.cpp ]; then
+	if g++ -std=c++20 -O1 -I/src/tracing_library/include \
+		/src/tests/golden/generator/writer_fmt.cpp "$LIB" -pthread -o /tmp/writer_fmt \
+		2>/tmp/writer_fmt.log; then
+		CLLTK_TRACING_PATH=/tmp/traces /tmp/writer_fmt
+		cp /tmp/traces/GOLDEN_FMT.clltk_trace /out/
+	else
+		echo "fmt writer skipped (headers or compiler without C++20 fmt support)"
+	fi
+fi
 echo "fixture written: $(ls -l /out/GOLDEN.clltk_trace)"

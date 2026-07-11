@@ -136,6 +136,8 @@ const std::string_view TracepointStatic::msg() const {
 		std::span<const uint8_t> args_raw{arg_start, arg_size};
 		if (m_type == MetaType::printf) [[likely]] {
 			m_msg = source::formatter::printf(format(), m_arg_types, args_raw, e->foreignEndian());
+		} else if (m_type == MetaType::fmt) {
+			m_msg = source::formatter::fmt(format(), m_arg_types, args_raw, e->foreignEndian());
 		} else if (m_type == MetaType::dump) {
 			m_msg = source::formatter::dump(format(), m_arg_types, args_raw, e->foreignEndian());
 		} else if (m_type == MetaType::span_begin) {
@@ -161,7 +163,7 @@ const std::string_view TracepointStatic::msg() const {
 			CLLTK_DECODER_THROW(
 				exception::InvalidMeta,
 				"Invalid meta data type: " + std::to_string(static_cast<uint8_t>(m_type)) +
-					" (expected printf=1, dump=2, span_begin=3, or span_end=4)");
+					" (expected printf=1, dump=2, span_begin=3, span_end=4, or fmt=5)");
 		}
 	}
 	return m_msg;

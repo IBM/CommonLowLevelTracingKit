@@ -86,6 +86,12 @@ __attribute__((destructor(101), used)) static void _clltk_destructor(void)
 										   &_clltk_types, _FORMAT_ _CLLTK_CAST(__VA_ARGS__)); \
 	} while (0)
 
+/* fmt-style tracepoints are C++20 userspace only */
+#define _CLLTK_STATIC_TRACEPOINT_FMT(_BUFFER_, _FORMAT_, ...)                       \
+	do {                                                                            \
+		_CLLTK_STATIC_ASSERT(0, "CLLTK_TRACEPOINT_FMT is not available in kernel"); \
+	} while (0)
+
 /* shared compile-time core for span events in kernel modules; mirrors the
  * userspace variant with the kernel meta proxy registration */
 #define _CLLTK_STATIC_SPAN_EVENT(_TYPE_, _BUFFER_, _NAME_, _CALL_, ...)                            \

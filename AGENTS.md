@@ -81,6 +81,7 @@ docs/               AsciiDoc documentation, file format spec, diagrams.
 - Macros use `__VA_OPT__` (C++20/C23/GCC extension). NEVER replace with `##__VA_ARGS__` -- they are not equivalent.
 - `CLLTK_TRACEPOINT_DUMP` takes `(buffer, message, address, size)` -- NOT a printf format. Do not confuse with `CLLTK_TRACEPOINT`.
 - `CLLTK_DYN_TRACEPOINT` takes a string buffer name (not an identifier) and binds at runtime. Slower than static tracepoints.
+- `CLLTK_TRACEPOINT_FMT` (meta type 5) is C++20-only; a `char*` argument is always recorded as a string ({} has no %p/%s ambiguity) - cast to `void*` for the pointer value. Format validation happens at compile time via a never-executed `_clltk_fmt_check` call.
 - `CLLTK_SPAN_BEGIN` is a GNU statement expression that evaluates to the new span id (`clltk_span_id_t`, a plain uint64; 0 = no parent). Span begin/end are meta entry types 3/4 and carry their ids as ordinary uint64 arguments; decoders correlate begin/end by id, not by nesting.
 
 ### ELF Sections

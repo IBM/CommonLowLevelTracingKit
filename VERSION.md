@@ -1,6 +1,13 @@
-1.5.1
+1.6.0
 
 # Change log
+## 1.6.0
+- feat: fmt-style tracepoints (C++20 only). `CLLTK_TRACEPOINT_FMT(buffer, "loaded {} in {}ms",
+  name, ms)` uses std::format {} placeholders, validated against the argument types at compile
+  time via std::format_string. Argument encoding is unchanged; both decoders render the new
+  meta entry type 5 with their native {} formatters. A char* argument is always recorded as a
+  string (no %p/%s ambiguity). New meta type = file layout change, hence the minor bump.
+  Kernel: not applicable (C API).
 ## 1.5.1
 - feat: `clltk export` converts trace files into Chrome/Perfetto trace event JSON
   (open in ui.perfetto.dev): tracepoints as instant events, spans as async begin/end

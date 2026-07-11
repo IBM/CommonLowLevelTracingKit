@@ -26,6 +26,7 @@ typedef enum __attribute__((packed)) {
 	_clltk_meta_enty_type_dump = 2,
 	_clltk_meta_enty_type_span_begin = 3,
 	_clltk_meta_enty_type_span_end = 4,
+	_clltk_meta_enty_type_fmt = 5,
 } _clltk_meta_enty_type;
 _CLLTK_STATIC_ASSERT(sizeof(_clltk_meta_enty_type) == 1, "should be of size 1");
 

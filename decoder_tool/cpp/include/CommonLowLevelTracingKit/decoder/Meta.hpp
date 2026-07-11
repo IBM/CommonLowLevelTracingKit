@@ -20,7 +20,8 @@ namespace CommonLowLevelTracingKit::decoder {
 		Printf = 1,
 		Dump = 2,
 		SpanBegin = 3,
-		SpanEnd = 4
+		SpanEnd = 4,
+		Fmt = 5
 	};
 
 	struct EXPORT MetaEntryInfo {

@@ -52,6 +52,17 @@ BIG_ENDIAN_FIXTURES = [
     "golden-1.3.0-be-s390x.clltk_trace",
     "golden-1.5.0-be-s390x.clltk_trace",
 ]
+# fmt-style tracepoint fixtures (deterministic messages)
+FMT_FIXTURES = [
+    "golden-1.6.0-fmt-le-aarch64.clltk_trace",
+    "golden-1.6.0-fmt-be-s390x.clltk_trace",
+]
+EXPECTED_FMT_MESSAGES = [
+    "loaded module-a in 42ms",
+    "plain text no args",
+    "hex ff float 3.50",
+]
+
 # fixtures containing span events (validated structurally: span ids are
 # random per generation, so exact strings differ between fixtures)
 SPAN_FIXTURES = [
@@ -168,6 +179,20 @@ class golden_elf_meta(unittest.TestCase):
 
     def test_big_endian_relocatable_object(self):
         self._assert_meta("golden-1.3.0-be-s390x.o")
+
+
+class golden_fmt_fixtures(unittest.TestCase):
+    def test_python_decoder(self):
+        for name in FMT_FIXTURES:
+            with self.subTest(fixture=name):
+                messages = decode_with_python(GOLDEN_DIR / name)
+                self.assertEqual(EXPECTED_FMT_MESSAGES, messages)
+
+    def test_cli_decoder(self):
+        for name in FMT_FIXTURES:
+            with self.subTest(fixture=name):
+                messages = decode_with_cli(GOLDEN_DIR / name)
+                self.assertEqual(EXPECTED_FMT_MESSAGES, messages)
 
 
 class golden_cli_decoder(unittest.TestCase):

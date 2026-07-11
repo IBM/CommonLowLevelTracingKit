@@ -27,6 +27,15 @@ The name is used to associated tracepoint with this tracebuffer and is also the 
 The tracepoints `CLLTK_TRACEPOINT` defines first the target tracebuffer, than the format string, followed by the arguments.
 
 
+### fmt-style format strings (C++20)
+
+`CLLTK_TRACEPOINT_FMT` accepts std::format style `{}` placeholders, validated
+against the argument types at compile time:
+
+```cpp
+CLLTK_TRACEPOINT_FMT(MyFirstTracebuffer, "loaded {} in {}ms", name, duration);
+```
+
 ### Spans
 
 Spans track scoped work with begin/end events and a carryable id:

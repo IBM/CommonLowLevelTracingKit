@@ -232,6 +232,8 @@ The meta_entry_type differentiates the tracepoint styles:
 * 3 = span begin (the string is the span name; two uint64 arguments: span id,
   parent span id or 0)
 * 4 = span end (empty string; one uint64 argument: span id)
+* 5 = fmt tracepoint (format string with C++20 std::format {} placeholders;
+  argument encoding identical to printf tracepoints)
 
 Decoders skip entries with unknown types, so the list can grow without
 breaking old decoders.

@@ -57,6 +57,20 @@ example:
 	_CLLTK_STATIC_TRACEPOINT_DUMP(_BUFFER_, _MSG_, _ADDRESS_, _SIZE_)
 
 /*
+fmt-style static tracepoint (C++20 only)
+- format strings use {} placeholders, validated against the argument types at
+  compile time via std::format_string
+- same speed and mechanics as CLLTK_TRACEPOINT, only the format syntax differs
+- a char* argument is always recorded as a string ({} has no printf-style
+  %p/%s ambiguity); cast to void* to record the pointer value
+
+example:
+	CLLTK_TRACEPOINT_FMT(some_tracebuffer, "loaded {} in {}ms", name, duration);
+*/
+#define CLLTK_TRACEPOINT_FMT(_BUFFER_, _FORMAT_, ...) \
+	_CLLTK_STATIC_TRACEPOINT_FMT(_BUFFER_, _FORMAT_ __VA_OPT__(, ) __VA_ARGS__)
+
+/*
 span tracking with a carryable id
 - CLLTK_SPAN_BEGIN records a span-begin event and evaluates to the new span id
 - the id is a plain value: pass it as function argument, across threads, or

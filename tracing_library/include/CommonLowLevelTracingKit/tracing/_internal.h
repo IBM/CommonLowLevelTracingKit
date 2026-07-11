@@ -78,6 +78,16 @@ void _clltk_tracebuffer_register_metaptrs(_clltk_tracebuffer_handler_t *buffer,
 										  const void *const *pairs_stop)
 	__attribute__((nonnull(1), used, visibility("default")));
 
+/* identical to _clltk_static_tracepoint_with_args but without the printf
+ * format attribute: used by fmt-style tracepoints whose format strings use
+ * {} placeholders and must not be checked as printf formats */
+void _clltk_static_tracepoint_with_args_unchecked(_clltk_tracebuffer_handler_t *buffer,
+												  const _clltk_file_offset_t in_file_offset,
+												  const char *const file, const uint32_t line,
+												  _clltk_argument_types_t *types,
+												  const char *const format, ...)
+	__attribute__((nonnull(1, 3, 5), used, visibility("default")));
+
 /* span events carry fixed uint64 arguments and no printf format, so they use
  * their own entry points instead of the format-checked varargs function */
 void _clltk_static_tracepoint_span_begin(_clltk_tracebuffer_handler_t *buffer,
