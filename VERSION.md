@@ -1,6 +1,13 @@
-1.7.3
+1.7.4
 
 # Change log
+## 1.7.4
+- fix: kernel tracing registers via a module notifier, so it works on kernels built
+  without CONFIG_CONSTRUCTORS (the default for most production kernels). Registration
+  previously ran only from a module constructor, which such kernels never call - the
+  module loaded but tracing silently did nothing. The constructor path is kept for
+  CONFIG_CONSTRUCTORS kernels; both are idempotent.
+
 ## 1.7.3
 - docs: README fixes and additions - remove the (now lifted) in-class-member-function
   tracing limitation, correct the minimal-build feature flags and the decoder output
