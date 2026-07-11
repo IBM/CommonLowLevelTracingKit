@@ -240,6 +240,73 @@ jobs:
         run: ./scripts/container.sh ./scripts/ci-cd/step_build_kernel_module.sh
 
   # ============================================
+  # Static analysis (clang-tidy + cppcheck, semantic subset)
+  # Single-TU semantic lint. Cheap gate for confidently-wrong local
+  # mistakes; the cross-TU / runtime bugs are caught by the sanitizer legs.
+  # ============================================
+  static-analysis:
+    runs-on: ubuntu-latest
+    needs: [changes, checks]
+    if: |
+      !failure() && !cancelled() &&
+      (github.event_name == 'push' ||
+       needs.changes.outputs.code == 'true' ||
+       needs.changes.outputs.tests == 'true' ||
+       needs.changes.outputs.ci == 'true')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Load CI-Container
+        uses: ./.github/actions/load-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Static analysis (clang-tidy + cppcheck)
+        run: ./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --all --werror
+
+  # ============================================
+  # Sanitizers - runtime verification of the semantics static lint can't see
+  # (byte packing, endianness, 48-bit offsets, shared-memory sync).
+  #   asan = AddressSanitizer + UBSan   tsan = ThreadSanitizer
+  # ============================================
+  sanitizers:
+    runs-on: ubuntu-latest
+    needs: [changes, checks]
+    if: |
+      !failure() && !cancelled() &&
+      (github.event_name == 'push' ||
+       needs.changes.outputs.code == 'true' ||
+       needs.changes.outputs.tests == 'true' ||
+       needs.changes.outputs.ci == 'true')
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: [asan, tsan]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup ccache
+        run: mkdir -p ~/.ccache
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ runner.os }}-san-${{ matrix.kind }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-san-${{ matrix.kind }}-
+
+      - name: Load CI-Container
+        uses: ./.github/actions/load-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run ${{ matrix.kind }}
+        run: ./scripts/container.sh ./scripts/ci-cd/step_sanitizers.sh ${{ matrix.kind }}
+
+  # ============================================
   # Packaging (only for code/ci changes, or push to main)
   # ============================================
   package:
