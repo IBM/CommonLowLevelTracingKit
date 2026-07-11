@@ -112,7 +112,12 @@ prepare_kernel() {
         log "Creating kernel configuration"
         make defconfig
 
-        # Required for CLLTK kernel module
+        # Required for CLLTK kernel module. Registration runs from module
+        # gcc constructors, which the kernel only executes with
+        # CONFIG_CONSTRUCTORS - not user-selectable, pulled in via GCOV.
+        ./scripts/config --set-val CONFIG_DEBUG_FS y
+        ./scripts/config --set-val CONFIG_GCOV_KERNEL y
+        ./scripts/config --set-val CONFIG_CONSTRUCTORS y
         ./scripts/config --set-val CONFIG_MODULES y
         ./scripts/config --set-val CONFIG_MODULE_UNLOAD y
         ./scripts/config --set-val CONFIG_KALLSYMS y
@@ -443,7 +448,7 @@ if [[ "$RUN_QEMU" == "true" ]]; then
     rm -rf "$INITRD_DIR"
     INITRD=$(create_initramfs "$INITRD_DIR" "$TRACES_DIR" "${KO_FILES[@]}")
 
-    if run_qemu_test "$BZIMAGE" "$INITRD" "$TRACES_DIR"; then
+    if run_qemu_test "$BZIMAGE" "$INITRD" "$TRACES_DIR" "${CLLTK_QEMU_TIMEOUT:-120}"; then
         # Decode traces
         DECODER="$ROOT_PATH/decoder_tool/python/clltk_decoder.py"
         if [[ -f "$DECODER" ]]; then
