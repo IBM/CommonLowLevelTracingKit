@@ -1,6 +1,14 @@
-1.7.1
+1.7.2
 
 # Change log
+## 1.7.2
+- fix: data race on a tracepoint's shared static argument-type info. The one-time
+  lazy initialization (`first_time_check`) is now serialized under the global lock and
+  published with an acquire/release flag, so concurrent first callers no longer race
+  (ThreadSanitizer). Idempotent before, so no behavior change; patch level.
+- test: widen the live-stress drain window and drain-after-join in the parallel stress
+  tests so their tail checks are deterministic under CI load.
+
 ## 1.7.1
 - fix: unaligned access on the byte-packed trace format in the writer and both decoders
   (memcpy instead of typed-pointer loads/stores) - undefined behavior that faults on

@@ -3,6 +3,7 @@
 
 #include "arguments.h"
 #include "abstraction/optimization.h"
+#include "abstraction/sync.h"
 
 #if defined(__KERNEL__)
 #include <linux/limits.h>
@@ -61,8 +62,7 @@ void first_time_check(const char *const format, _clltk_argument_types_t *types)
 			any_flex_type |= (types->types[arg_index] == _clltk_argument_string);
 		types->flex_size = any_flex_type;
 	}
-
-	types->already_checked = true;
+	// publishing already_checked is the caller's responsibility (see below)
 }
 
 uint32_t get_argument_sizes(const char *const format, uint32_t sizes_out[],
@@ -71,8 +71,18 @@ uint32_t get_argument_sizes(const char *const format, uint32_t sizes_out[],
 	if (types == NULL || types->count == 0)
 		return 0;
 
-	if (unlikely(types->already_checked == false))
-		first_time_check(format, types);
+	// first_time_check mutates the tracepoint's shared, static type info
+	// (fixups in types[], flex_size). Concurrent first callers of the same
+	// tracepoint must not race on it: serialize the one-time init under the
+	// global lock and publish with a release store, paired with the acquire
+	// load below - so once warmed up the check is a plain lock-free load.
+	if (unlikely(__atomic_load_n(&types->already_checked, __ATOMIC_ACQUIRE) == false)) {
+		SYNC_GLOBAL_LOCK(init_lock);
+		if (types->already_checked == false) {
+			first_time_check(format, types);
+			__atomic_store_n(&types->already_checked, true, __ATOMIC_RELEASE);
+		}
+	}
 
 	uint32_t size = 0;
 	if (likely(types->flex_size == false)) {

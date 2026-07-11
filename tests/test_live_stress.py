@@ -600,7 +600,11 @@ class TestLiveExtremeStress(LiveTestCase):
             writer.start()
             writer.join(timeout=test_duration + 5)
 
-            time.sleep(1)
+            # Let the live decoder drain the last written entries before we stop
+            # it. One second is too tight under CI load and occasionally drops
+            # the final message (read_count == written - 1); give a generous,
+            # bounded window so the tail is caught deterministically in practice.
+            time.sleep(5)
 
             decoder_proc.send_signal(signal.SIGINT)
             stdout, stderr = decoder_proc.communicate(timeout=5)
