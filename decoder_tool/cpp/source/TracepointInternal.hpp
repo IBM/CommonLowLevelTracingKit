@@ -124,6 +124,7 @@ namespace CommonLowLevelTracingKit::decoder {
 		const std::string_view file() const noexcept override;
 		uint64_t line() const noexcept override { return m_line; }
 		const std::string_view msg() const override;
+		std::optional<SpanInfo> span_info() const noexcept override;
 
 	  private:
 		const std::string_view format() const noexcept;

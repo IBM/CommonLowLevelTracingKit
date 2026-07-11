@@ -167,6 +167,27 @@ const std::string_view TracepointStatic::msg() const {
 	return m_msg;
 }
 
+std::optional<SpanInfo> TracepointStatic::span_info() const noexcept {
+	if (m_type == MetaType::span_begin) {
+		const uint8_t *const arg_start = (e->size() > 22) ? &e->body()[22] : nullptr;
+		const size_t arg_size = (e->size() > 22) ? (e->size() - 22) : 0;
+		if (arg_size < 16) return {};
+		std::span<const uint8_t> args_raw{arg_start, arg_size};
+		const uint64_t id = get<uint64_t>(args_raw, 0, e->foreignEndian());
+		const uint64_t parent = get<uint64_t>(args_raw, 8, e->foreignEndian());
+		return SpanInfo{SpanInfo::Kind::Begin, id, parent, std::string(format())};
+	}
+	if (m_type == MetaType::span_end) {
+		const uint8_t *const arg_start = (e->size() > 22) ? &e->body()[22] : nullptr;
+		const size_t arg_size = (e->size() > 22) ? (e->size() - 22) : 0;
+		if (arg_size < 8) return {};
+		std::span<const uint8_t> args_raw{arg_start, arg_size};
+		const uint64_t id = get<uint64_t>(args_raw, 0, e->foreignEndian());
+		return SpanInfo{SpanInfo::Kind::End, id, 0, {}};
+	}
+	return {};
+}
+
 std::string Tracepoint::date_and_time_str() const noexcept {
 	return ToString::date_and_time(timestamp_ns);
 }

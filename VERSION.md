@@ -1,6 +1,11 @@
-1.5.0
+1.5.1
 
 # Change log
+## 1.5.1
+- feat: `clltk export` converts trace files into Chrome/Perfetto trace event JSON
+  (open in ui.perfetto.dev): tracepoints as instant events, spans as async begin/end
+  pairs correlated by id, open spans visible. The decoder library gains a typed
+  `span_info()` accessor on tracepoints.
 ## 1.5.0
 - feat: span tracking with carryable ids. `CLLTK_SPAN_BEGIN(buffer, parent, name)` evaluates
   to a plain uint64 span id that can be passed as a function argument, across threads, or
