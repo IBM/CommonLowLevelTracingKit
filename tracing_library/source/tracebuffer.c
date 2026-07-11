@@ -293,8 +293,12 @@ bool _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 			ERROR_LOG("could not open tracebuffer");
 			return false;
 		}
+		// count attachments, not init calls: every translation unit's
+		// constructor walks the merged discovery section, so init runs
+		// repeatedly per handler, while deinit detaches (and decrements)
+		// exactly once per handler
+		buffer->runtime.tracebuffer->used++;
 	}
-	buffer->runtime.tracebuffer->used++;
 	return true;
 }
 

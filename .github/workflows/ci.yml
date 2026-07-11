@@ -4,8 +4,9 @@ run-name: CI by ${{ github.actor }}
 on:
   push:
     branches: ['main']
+  # no branch filter: stacked PRs target feature branches and would
+  # otherwise get no CI at all
   pull_request:
-    branches: ['main']
 
 env:
   CI: true
@@ -209,6 +210,34 @@ jobs:
 
       - name: Build (no LTO)
         run: ./scripts/container.sh ./scripts/ci-cd/step_build.sh --preset unittests-nolto
+
+  # ============================================
+  # Kernel modules (compile + modpost link check)
+  # The kernel module shares sources with the userspace library but is
+  # built by Kbuild against real kernel headers - userspace builds cannot
+  # catch kernel-only failures (missing libgcc helpers, kernel API use).
+  # Runtime testing stays in scripts/ci-cd/test_kernelspace.sh (QEMU).
+  # ============================================
+  build-kernel-module:
+    runs-on: ubuntu-latest
+    needs: [changes, checks]
+    if: |
+      !failure() && !cancelled() &&
+      (github.event_name == 'push' ||
+       needs.changes.outputs.code == 'true' ||
+       needs.changes.outputs.tests == 'true' ||
+       needs.changes.outputs.ci == 'true')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Load CI-Container
+        uses: ./.github/actions/load-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build kernel modules
+        run: ./scripts/container.sh ./scripts/ci-cd/step_build_kernel_module.sh
 
   # ============================================
   # Packaging (only for code/ci changes, or push to main)

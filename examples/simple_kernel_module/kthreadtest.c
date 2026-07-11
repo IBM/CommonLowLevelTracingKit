@@ -24,10 +24,12 @@ static int thread_function(void *data)
 		return 1;
 	struct thread *const t = data;
 	wait_for_completion(t->start_signal);
+	const clltk_span_id_t span = CLLTK_SPAN_BEGIN(kthreadtest, CLLTK_SPAN_NO_PARENT, "thread");
 	while (!kthread_should_stop()) {
 		CLLTK_TRACEPOINT(kthreadtest, "tracepoint %llu", t->tid);
 		atomic64_inc(&t->tp_count);
 	}
+	CLLTK_SPAN_END(kthreadtest, span);
 	return 0;
 }
 
