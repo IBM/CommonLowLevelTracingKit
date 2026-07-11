@@ -68,7 +68,14 @@ See `examples/spans_c` and `examples/spans_cpp`.
       `decoder_tool/python/clltk_decoder.py <path to tracebuffers>`
     - copy tracebuffer with `cp` or create a archive to create a snapshot. And decode it later with:
       `decoder_tool/python/clltk_decoder.py <path to tracebuffers>`
-8. View your traces in `output.csv`
+8. Read the decoded traces. By default they are written to `output.txt`; pass
+   `-o <file>` to choose the destination, and a `.csv` extension to get CSV
+   instead of the aligned text format.
+
+Trace files are decoded on the machine you run the decoder on, regardless of
+the endianness they were written with: a little-endian host can decode a
+big-endian (for example s390x) trace file, and vice versa. This is an offline
+capability - the writer always uses the host's native byte order.
 
 ### Visual timelines
 
@@ -135,34 +142,9 @@ Due to the implementation, design decisions and compiler limitation there are so
   ``` 
 
 
-- **It's not possible** to tracing inside a member function defined inside a class or struct definition, like the following:
-
-  ```c++
-  // header
-  struct A
-  {
-    void foo(void)
-    {
-      CLLTK_TRACEPOINT(My_TB, "it is not possible to trace here"); // fill fail at link-time
-    }
-  }
-  ```
-
-  To still be able to trace in change this to:
-
-  ```c++
-  // header
-  struct A
-  {
-    void foo(void);
-  }
-
-  // source
-  void A::foo(void)
-  {
-    CLLTK_TRACEPOINT(My_TB, "now it is possible to trace here");
-  }
-  ```
+Tracing inside inline functions, function templates, and member functions
+defined inside a class or struct body works as well; the tracepoint meta data
+is discovered in a COMDAT-safe way.
 
 ## Build, Test and Packaging
 
@@ -205,16 +187,23 @@ The CI pipeline is designed so that everything running on GitHub Actions can als
 
 # Or run individual steps:
 ./scripts/container.sh ./scripts/ci-cd/step_format.sh       # Format check
-./scripts/container.sh ./scripts/ci-cd/step_build.sh        # Build
+./scripts/container.sh ./scripts/ci-cd/step_build.sh        # Build (also: --preset unittests-nolto for the consumer-like non-LTO build)
 ./scripts/container.sh ./scripts/ci-cd/step_test.sh         # Tests
 ./scripts/container.sh ./scripts/ci-cd/step_memcheck.sh     # Valgrind memory check
+./scripts/container.sh ./scripts/ci-cd/step_sanitizers.sh asan   # AddressSanitizer + LeakSanitizer
+./scripts/container.sh ./scripts/ci-cd/step_sanitizers.sh ubsan  # UndefinedBehaviorSanitizer
+./scripts/container.sh ./scripts/ci-cd/step_sanitizers.sh tsan   # ThreadSanitizer
+./scripts/container.sh ./scripts/ci-cd/step_build_kernel_module.sh  # Kernel module build + link check
 ./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --all  # Static analysis
 ./scripts/container.sh ./scripts/ci-cd/step_package.sh      # RPM packaging
 ```
 
 ### Static Analysis
 
-Static analysis tools (clang-tidy, cppcheck) are integrated into the CI pipeline:
+Static analysis tools (clang-tidy, cppcheck) are integrated into the CI
+pipeline. In CI, clang-tidy runs only on the lines changed by a pull request
+(`--diff <base>`), while cppcheck runs on the whole tree; locally you can run
+either against everything:
 
 ```bash
 # Run all static analysis
@@ -254,7 +243,7 @@ By default all Features, Extensions and debugging tools are build. A minimal bui
 ```
 mkdir build
 cd build
-cmake .. -DCLLTK_SNAPSHOT=OFF -DCLLTK_DECODER=OFF -DCLLTK_COMMAND_LINE_TOOL=OFF -DCLLTK_KERNEL_TRACING=OFF -DCLLTK_EXAMPLES=OFF -DCLLTK_TESTS=OFF
+cmake .. -DCLLTK_SNAPSHOT=OFF -DCLLTK_PYTHON_DECODER=OFF -DCLLTK_CPP_DECODER=OFF -DCLLTK_COMMAND_LINE_TOOL=OFF -DCLLTK_KERNEL_TRACING=OFF -DCLLTK_EXAMPLES=OFF -DCLLTK_TESTS=OFF
 ```
 
 > [!IMPORTANT] Be aware that this disables the build of snapshot and decoding tool. Mixing versions and using this tools from older build is highly discouraged!
