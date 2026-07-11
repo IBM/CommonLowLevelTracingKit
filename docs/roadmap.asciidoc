@@ -1,0 +1,173 @@
+= CLLTK feature roadmap (design exploration)
+:toc:
+
+This document collects candidate features for future CLLTK versions, each
+evaluated against the properties that define this library: crash-safe trace
+files, zero-infrastructure usage (two macros, no daemon, no linker scripts),
+a maximal-speed hot path, and post-mortem-first decoding. Reference points
+are LTTng, ftrace, Perfetto/Tracy, OpenTelemetry, and journald.
+
+Nothing here is committed work; every section is a starting point for its own
+design discussion.
+
+== Definition of done
+
+A feature is not finished when the code works. Every accepted feature ships
+in one piece with:
+
+* *Library*: userspace C API (C11) with C++ conveniences where they fit.
+* *Kernel*: every feature explicitly evaluates the kernel tracing module -
+  which kernel versions are affected, whether the feature applies there, and
+  either implements it or records why not. Silent userspace-only is not an
+  outcome.
+* *Decoders*: python decoder and C++ decoder/CLI handle the new data - a
+  feature only one decoder understands does not exist.
+* *Versioning*: every shipped feature bumps at least PATCH; any trace file
+  layout change bumps MINOR (see AGENTS.md, Version Management).
+* *File format*: `file_specification.asciidoc` updated in the same change
+  that introduces the format addition; old decoders must skip unknown data
+  gracefully.
+* *Tests*: unit tests (Google Test), python integration tests, and a golden
+  fixture exercising the new data through both decoders.
+* *Examples*: a runnable example under `examples/` demonstrating the intended
+  usage - the example is the API review.
+* *Docs*: README usage section, `technical_documentation.asciidoc`, and the
+  AGENTS.md gotchas where the feature has sharp edges.
+
+Engineering principle: features integrate into the existing structure at the
+right places - extend the meta type enum, add a macro beside the existing
+ones, teach the existing parsers one more case. A feature that requires
+rewriting existing machinery is a signal the design is wrong; redesigns of
+existing machinery (like the registration index) are their own explicit
+roadmap items, never a side effect of a feature.
+
+=== Integration matrix for the accepted features
+
+[cols="1,3"]
+|====
+| Spans
+| `tracing.h` span macros + id runtime; meta types in spec; both decoders
+  decode and reconstruct (trees, durations, open spans); gtest meta layout
+  tests; python roundtrip tests; golden span fixture (LE and BE); span
+  example in C and C++; README + technical doc sections.
+
+| Perfetto/CTF export
+| `clltk export` subcommand; decoder library API; python tests validating
+  output against the golden fixtures (including span fixtures); README
+  section with a ui.perfetto.dev walkthrough; example invocation in the span
+  example.
+
+| In-file registration index
+| unique_stack table segments + lookup; file specification section; crash
+  consistency tests (torn segment -> rebuild by scan); gtest unit tests for
+  the table; python tests over mixed old/new files (a file without a table
+  must still decode and gain one lazily); technical doc section.
+|====
+
+== Spans and sub-spans
+
+Status: *accepted* - with an explicit, carryable span id as the core design.
+
+Scoped begin/end tracking with nesting and durations.
+
+* Span identity is an explicit value: `clltk_span_id_t` (a plain `uint64`).
+  `CLLTK_SPAN_BEGIN(buffer, parent_id, "name", ...)` returns the id;
+  `CLLTK_SPAN_END(buffer, id)` closes it; `0` means "no parent". Because the
+  id is a plain value it can be passed up and down as a function argument,
+  carried across threads, and embedded in APIs and RPC headers.
+* Cross-buffer and cross-process correlation: the decoder matches begin/end
+  by id across all buffers and files of a decode set, so a span begun in one
+  process and continued in another correlates automatically.
+* Uniqueness without coordination: per-process random 32 bit salt plus a
+  32 bit atomic counter.
+* Encoding: two events (span-begin, span-end) rather than one end-event with
+  a duration. For a crash-oriented tracer this is the point: the decoder can
+  show which spans were still *open* when the process died.
+* Convenience layers (RAII guard in C++, `__attribute__((cleanup))` in C,
+  optional thread-local "current span") build on top of the explicit id; the
+  id stays the primary API.
+* File format: two new meta entry types (span-begin, span-end). Entries are
+  self-describing, so old decoders skip unknown types.
+* Decoder: reconstruct span trees, compute durations, list open spans at end
+  of trace.
+
+== Trace levels and runtime control
+
+Status: *rejected* - tracing is unconditional by design: always on, always
+everything. Levels, thresholds, and enablement switches contradict the
+post-mortem guarantee that the trace is complete, and add hot-path and API
+surface for a feature this library deliberately does not want.
+
+== Export to standard trace formats
+
+Status: *accepted*.
+
+`clltk export --perfetto` (Chrome/Perfetto track event JSON or protobuf) and
+`--ctf` (Common Trace Format for babeltrace/TraceCompass).
+
+* Spans map directly to track events, counters to counter tracks.
+* Pure decoder-side work with zero writer risk; the feature that makes spans
+  visible as timelines in ui.perfetto.dev.
+
+== Dynamic tracebuffer selection for static tracepoints
+
+Status: *open*.
+
+`CLLTK_TRACEPOINT_TO(handle, format, ...)`: compile-time meta, runtime-chosen
+buffer.
+
+* Enabled by the discovery rework: meta objects are ordinary statics and no
+  longer physically tied to a per-buffer ELF section - only the discovery
+  pointer is. The lazy registration path already accepts any handler.
+* Open design point: the per-call-site file-offset cache becomes
+  per-(call-site, buffer); either a small per-call-site map or accepting a
+  registry lookup per hit on this (slower) variant.
+
+== Registration index (unique stack evolution)
+
+Status: *accepted* - as an in-file growable open-addressing table.
+
+Today every runtime registration (dynamic tracepoints, and any feature that
+registers meta at runtime) scans the stack region linearly per lookup, with
+md5 per candidate. Fine for the batched startup path, wrong once runtime
+registration becomes frequent.
+
+Design requirements for the in-file table (crash consistency by
+construction):
+
+* The append-only stack region stays the source of truth; the table is an
+  index over it - discardable and reconstructible by a scan at any time.
+* Table segments are appended, never rewritten in place. Growth doubles into
+  a new segment, published by a single atomic header update.
+* Entries validate against the stack region they reference; a torn or
+  unpublished segment degrades to "rebuild by scan", never to a wrong
+  lookup.
+* Shared across processes under the existing stack mutex.
+
+== Per-thread ergonomics and performance
+
+Status: *open*.
+
+* Thread names: `clltk_set_thread_name()`, recorded once per (buffer, tid),
+  shown by the decoder instead of raw ids. Small, high value.
+* Per-thread (or per-CPU) ringbuffers with a lock-free reserve/commit write
+  path, replacing the process-shared mutex on the hot path. The decoder
+  already merge-sorts by timestamp, so consuming N buffer files is natural.
+  This is the largest available hot-path win and the hardest change: the
+  crash-robustness of partially committed entries needs the same care the
+  current CRC-validated format provides. Should be designed last, alone.
+
+== Smaller candidates
+
+Status: *rejected* (counters/gauges, rate limiting, clock-domain records,
+structured payloads) - not part of this library's scope for now.
+
+== Suggested phasing
+
+Each phase is independently shippable:
+
+. Span events with carryable ids + decoder span reconstruction.
+. Perfetto/CTF export (makes spans visible; drives adoption).
+. In-file open-addressing registration index.
+. Dynamic buffer selection (open) and per-thread buffers (open) as separate
+  design rounds if and when decided.
