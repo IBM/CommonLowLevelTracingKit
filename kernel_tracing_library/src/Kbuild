@@ -5,7 +5,12 @@ ccflags-y := \
 	-D _CLLTK_INTERNAL=1 \
 	-finline-functions \
 	-funroll-loops \
-	-I$(src) 
+	-I$(src)
+
+# gcc lowers _Atomic/__atomic to libgcc outline-atomics calls on aarch64
+# (__aarch64_ldadd8_acq_rel, ...) which do not exist in kernel space; force
+# inline atomic sequences instead. No-op on other architectures.
+ccflags-y += $(call cc-option,-mno-outline-atomics)
 
 # kernel module
 obj-m := clltk_kernel_tracing.o
