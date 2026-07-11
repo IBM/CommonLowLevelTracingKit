@@ -3,12 +3,13 @@
 
 #include "CommonLowLevelTracingKit/tracing/tracing.h"
 #include "gtest/gtest.h"
+#include <cstring>
 #include <memory>
 #include <stdint.h>
 #include <string.h>
-#include <cstring>
 
-namespace {
+namespace
+{
 template <typename T> T read_unaligned(const void *p)
 {
 	T v;
@@ -31,9 +32,10 @@ TEST(meta_macro, str)
 	const uint32_t line = read_unaligned<uint32_t>(&meta[6]);
 	const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 	const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
-	const char *const meta_file_name = reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
-	const char *const meta_format =
-		reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
+	const char *const meta_file_name =
+		reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
+	const char *const meta_format = reinterpret_cast<const char *>(
+		&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 	EXPECT_EQ(magic, '{');
 	EXPECT_EQ(size, 24 + strlen(__FILE__));
@@ -61,9 +63,10 @@ TEST(meta_macro, str_str)
 	const uint32_t line = read_unaligned<uint32_t>(&meta[6]);
 	const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 	const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
-	const char *const meta_file_name = reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
-	const char *const meta_format =
-		reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
+	const char *const meta_file_name =
+		reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
+	const char *const meta_format = reinterpret_cast<const char *>(
+		&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 	EXPECT_EQ(magic, '{');
 	EXPECT_EQ(size, 35 + strlen(__FILE__));
@@ -91,9 +94,10 @@ TEST(meta_macro, int64)
 	const uint32_t line = read_unaligned<uint32_t>(&meta[6]);
 	const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 	const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
-	const char *const meta_file_name = reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
-	const char *const meta_format =
-		reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
+	const char *const meta_file_name =
+		reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
+	const char *const meta_format = reinterpret_cast<const char *>(
+		&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 	EXPECT_EQ(magic, '{');
 	EXPECT_EQ(size, 25 + strlen(__FILE__));
@@ -120,15 +124,14 @@ TEST(meta_macro, two_tracepoints)
 		const static uint32_t ref_line = __LINE__;
 		const char magic = *reinterpret_cast<const char *>(&meta[0]);
 		const uint32_t size = read_unaligned<uint32_t>(&meta[1]);
-		const _clltk_meta_enty_type type =
-			read_unaligned<_clltk_meta_enty_type>(&meta[5]);
+		const _clltk_meta_enty_type type = read_unaligned<_clltk_meta_enty_type>(&meta[5]);
 		const uint32_t line = read_unaligned<uint32_t>(&meta[6]);
 		const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 		const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
 		const char *const meta_file_name =
 			reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
-		const char *const meta_format =
-			reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
+		const char *const meta_format = reinterpret_cast<const char *>(
+			&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 		EXPECT_EQ(magic, '{');
 		EXPECT_EQ(size, 25 + strlen(__FILE__));
@@ -147,15 +150,14 @@ TEST(meta_macro, two_tracepoints)
 		const static uint32_t ref_line = __LINE__;
 		const char magic = *reinterpret_cast<const char *>(&meta[0]);
 		const uint32_t size = read_unaligned<uint32_t>(&meta[1]);
-		const _clltk_meta_enty_type type =
-			read_unaligned<_clltk_meta_enty_type>(&meta[5]);
+		const _clltk_meta_enty_type type = read_unaligned<_clltk_meta_enty_type>(&meta[5]);
 		const uint32_t line = read_unaligned<uint32_t>(&meta[6]);
 		const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 		const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
 		const char *const meta_file_name =
 			reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
-		const char *const meta_format =
-			reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
+		const char *const meta_format = reinterpret_cast<const char *>(
+			&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 		EXPECT_EQ(magic, '{');
 		EXPECT_EQ(size, 25 + strlen(__FILE__));
@@ -186,12 +188,11 @@ TEST(meta_macro, span_meta_layout)
 
 	{ // first call site: span begin
 		const char *const meta = meta_ptrs[0];
-		const _clltk_meta_enty_type type =
-			read_unaligned<_clltk_meta_enty_type>(&meta[5]);
+		const _clltk_meta_enty_type type = read_unaligned<_clltk_meta_enty_type>(&meta[5]);
 		const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 		const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
-		const char *const name =
-			reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
+		const char *const name = reinterpret_cast<const char *>(
+			&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 		EXPECT_EQ(type, _clltk_meta_enty_type_span_begin);
 		EXPECT_EQ(arg_count, 2);
@@ -201,8 +202,7 @@ TEST(meta_macro, span_meta_layout)
 	}
 	{ // second call site: span end
 		const char *const meta = meta_ptrs[2];
-		const _clltk_meta_enty_type type =
-			read_unaligned<_clltk_meta_enty_type>(&meta[5]);
+		const _clltk_meta_enty_type type = read_unaligned<_clltk_meta_enty_type>(&meta[5]);
 		const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 		const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
 

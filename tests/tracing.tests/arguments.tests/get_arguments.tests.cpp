@@ -5,12 +5,13 @@
 #include "arguments.h"
 #include "gtest/gtest.h"
 #include <cstdint>
+#include <cstring>
 #include <stdarg.h>
 #include <string.h>
 #include <string>
-#include <cstring>
 
-namespace {
+namespace
+{
 template <typename T> T read_unaligned(const void *p)
 {
 	T v;

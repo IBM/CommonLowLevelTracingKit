@@ -16,7 +16,8 @@
 #include "file.hpp"
 #include "gtest/gtest.h"
 
-namespace {
+namespace
+{
 template <typename T> T read_unaligned(const void *p)
 {
 	T v;

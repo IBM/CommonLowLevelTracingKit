@@ -113,7 +113,8 @@ void md5Finalize(MD5Context *ctx)
 	for (unsigned int j = 0; j < 14; ++j) {
 		input[j] = (uint32_t)(ctx->input[((size_t)j * 4) + 3]) << 24 |
 				   (uint32_t)(ctx->input[((size_t)j * 4) + 2]) << 16 |
-				   (uint32_t)(ctx->input[((size_t)j * 4) + 1]) << 8 | (uint32_t)(ctx->input[((size_t)j * 4)]);
+				   (uint32_t)(ctx->input[((size_t)j * 4) + 1]) << 8 |
+				   (uint32_t)(ctx->input[((size_t)j * 4)]);
 	}
 	input[14] = (uint32_t)(ctx->size * 8);
 	input[15] = (uint32_t)((ctx->size * 8) >> 32);

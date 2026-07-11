@@ -9,10 +9,10 @@
 #include "CommonLowLevelTracingKit/decoder/ToString.hpp"
 #include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 #include "TracepointInternal.hpp"
-#include <cstring>
 #include "file.hpp"
 #include "formatter.hpp"
 #include "ringbuffer.hpp"
+#include <cstring>
 
 using namespace CommonLowLevelTracingKit::decoder;
 using ToString = CommonLowLevelTracingKit::decoder::source::low_level::ToString;
