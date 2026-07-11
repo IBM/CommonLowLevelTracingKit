@@ -29,3 +29,6 @@ output.xml
 report.html
 tmp/
 /*.clltk_trace
+
+# golden test fixtures are committed binaries, not build artifacts
+!tests/golden/*.o
