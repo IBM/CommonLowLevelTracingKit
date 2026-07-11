@@ -57,6 +57,30 @@ example:
 	_CLLTK_STATIC_TRACEPOINT_DUMP(_BUFFER_, _MSG_, _ADDRESS_, _SIZE_)
 
 /*
+span tracking with a carryable id
+- CLLTK_SPAN_BEGIN records a span-begin event and evaluates to the new span id
+- the id is a plain value: pass it as function argument, across threads, or
+  embed it in APIs; a sub-span passes the surrounding span's id as parent
+- CLLTK_SPAN_END records the matching end event
+- the decoder correlates begin/end by id across all buffers of a decode set
+  and shows spans that were still open when the process ended
+
+example:
+	clltk_span_id_t span = CLLTK_SPAN_BEGIN(some_tracebuffer,
+		CLLTK_SPAN_NO_PARENT, "request handling");
+	clltk_span_id_t sub = CLLTK_SPAN_BEGIN(some_tracebuffer, span, "parsing");
+	...
+	CLLTK_SPAN_END(some_tracebuffer, sub);
+	CLLTK_SPAN_END(some_tracebuffer, span);
+*/
+#define CLLTK_SPAN_BEGIN(_BUFFER_, _PARENT_, _NAME_) \
+	_CLLTK_STATIC_SPAN_BEGIN(_BUFFER_, _PARENT_, _NAME_)
+
+#define CLLTK_SPAN_END(_BUFFER_, _ID_) _CLLTK_STATIC_SPAN_END(_BUFFER_, _ID_)
+
+#define CLLTK_SPAN_NO_PARENT ((clltk_span_id_t)0)
+
+/*
 dynamic tracepoint
 - assigned to a tracebuffer at runtime time
 - slower than static tracepoint
@@ -72,6 +96,9 @@ example:
 #ifdef CLLTK_FOR_CPP
 extern "C" {
 #endif
+
+/* returns a new process-unique span id; never returns 0 (= no parent) */
+clltk_span_id_t clltk_next_span_id(void) __attribute__((used, visibility("default")));
 
 void clltk_dynamic_tracebuffer_creation(const char *buffer_name, size_t size)
 	__attribute__((used, visibility("default")));

@@ -138,6 +138,53 @@ class valid_build_tests(unittest.TestCase):
                 )
                 pass
 
+    def test_spans(self: unittest.TestCase):
+        """Spans write begin/end events with carryable ids: the decoder pairs
+        them by id, resolves the parent relation, and reports spans without an
+        end (e.g. after a crash) as still open."""
+        for language in [Language.C, Language.CPP]:
+            with self.subTest(language=language):
+                file_content = """
+                    #include "CommonLowLevelTracingKit/tracing/tracing.h"
+                    CLLTK_TRACEBUFFER(BUFFER, 4096);
+                    int main(void)
+                    {
+                        clltk_span_id_t outer =
+                            CLLTK_SPAN_BEGIN(BUFFER, CLLTK_SPAN_NO_PARENT, "outer");
+                        clltk_span_id_t inner = CLLTK_SPAN_BEGIN(BUFFER, outer, "inner");
+                        CLLTK_TRACEPOINT(BUFFER, "inside %u", 42);
+                        CLLTK_SPAN_END(BUFFER, inner);
+                        CLLTK_SPAN_END(BUFFER, outer);
+                        (void)CLLTK_SPAN_BEGIN(BUFFER, CLLTK_SPAN_NO_PARENT, "open");
+                        return 0;
+                    }
+                    """
+                data = process(file_content, language=language)
+                formatted = data["formatted"].tolist()
+
+                import re
+
+                begins = {}
+                ends = []
+                for message in formatted:
+                    m = re.match(r">>> (\S+) \[span (0x[0-9a-f]+)(?: parent (0x[0-9a-f]+))?\]", message)
+                    if m:
+                        begins[m.group(1)] = (m.group(2), m.group(3))
+                    m = re.match(r"<<< \[span (0x[0-9a-f]+)\]", message)
+                    if m:
+                        ends.append(m.group(1))
+
+                self.assertIn("inside 42", formatted)
+                self.assertEqual({"outer", "inner", "open"}, set(begins))
+                # inner's parent is outer; outer and open have no parent
+                self.assertEqual(begins["inner"][1], begins["outer"][0])
+                self.assertIsNone(begins["outer"][1])
+                self.assertIsNone(begins["open"][1])
+                # outer and inner ended, open did not
+                self.assertEqual(sorted(ends),
+                                 sorted([begins["outer"][0], begins["inner"][0]]))
+                pass
+
     def test_empty(self: unittest.TestCase):
         for language in [Language.C, Language.CPP]:
             with self.subTest(language=language):

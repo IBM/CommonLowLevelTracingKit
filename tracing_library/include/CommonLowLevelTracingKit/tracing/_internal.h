@@ -20,6 +20,9 @@ extern "C" {
 
 typedef struct _clltk_tracebuffer_t _clltk_tracebuffer_t;
 typedef uint64_t _clltk_file_offset_t;
+
+/* carryable span identifier; 0 means "no parent" / invalid */
+typedef uint64_t clltk_span_id_t;
 enum {
 	_clltk_file_offset_unset = 0x00,
 	_clltk_file_offset_dynamic = 0x01,
@@ -73,6 +76,18 @@ _clltk_file_offset_t _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_ha
 void _clltk_tracebuffer_register_metaptrs(_clltk_tracebuffer_handler_t *buffer,
 										  const void *const *pairs_start,
 										  const void *const *pairs_stop)
+	__attribute__((nonnull(1), used, visibility("default")));
+
+/* span events carry fixed uint64 arguments and no printf format, so they use
+ * their own entry points instead of the format-checked varargs function */
+void _clltk_static_tracepoint_span_begin(_clltk_tracebuffer_handler_t *buffer,
+										 const _clltk_file_offset_t in_file_offset,
+										 clltk_span_id_t id, clltk_span_id_t parent)
+	__attribute__((nonnull(1), used, visibility("default")));
+
+void _clltk_static_tracepoint_span_end(_clltk_tracebuffer_handler_t *buffer,
+									   const _clltk_file_offset_t in_file_offset,
+									   clltk_span_id_t id)
 	__attribute__((nonnull(1), used, visibility("default")));
 
 void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_handler_t *buffer,

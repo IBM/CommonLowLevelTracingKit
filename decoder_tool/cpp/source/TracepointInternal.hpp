@@ -101,9 +101,15 @@ namespace CommonLowLevelTracingKit::decoder {
 		std::string_view m_msg;
 	};
 
-	enum class MetaType : uint8_t { undefined = 0, printf = 1, dump = 2 };
+	enum class MetaType : uint8_t {
+		undefined = 0,
+		printf = 1,
+		dump = 2,
+		span_begin = 3,
+		span_end = 4
+	};
 	static constexpr CONST_INLINE MetaType toMetaType(uint8_t a) {
-		if (a <= static_cast<uint8_t>(MetaType::dump)) return static_cast<MetaType>(a);
+		if (a <= static_cast<uint8_t>(MetaType::span_end)) return static_cast<MetaType>(a);
 		return MetaType::undefined;
 	}
 	class TracepointStatic final : public TraceEntryHead {

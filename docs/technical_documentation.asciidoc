@@ -166,6 +166,17 @@ for (const void *const *p = &__start__clltk_MYBUFFER_metaptr;
 }
 ----
 ---
+=== span events
+Span begin/end reuse the complete static tracepoint machinery: a span-begin is
+a meta entry of type 3 whose string is the span name and whose arguments are
+two ordinary uint64 values (span id, parent id or 0); a span-end is type 4
+with one uint64 (span id). The trace entry layout is unchanged, so decoders
+read span arguments with the existing argument machinery and only the
+rendering and correlation differ by meta type. Span ids come from
+`clltk_next_span_id()`: a per-process random 32 bit salt combined with a
+32 bit counter, unique without cross-process coordination, never 0
+(0 means "no parent").
+
 === caching process and thread id
 Each call to `syscall(SYS_getpid)` and `syscall(SYS_gettid)` requires a context switch to kernel and therefore burdens a heavy overhead. To remove this context switch, pid (process id) and tid (thread id) should be cached. +
 It's possible to detect if a code is executed inside a new thread with storage specifier `__thread` for tid and detect forking with `pthread_atfork`.

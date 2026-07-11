@@ -86,6 +86,43 @@ __attribute__((destructor(101), used)) static void _clltk_destructor(void)
 										   &_clltk_types, _FORMAT_ _CLLTK_CAST(__VA_ARGS__)); \
 	} while (0)
 
+/* shared compile-time core for span events in kernel modules; mirrors the
+ * userspace variant with the kernel meta proxy registration */
+#define _CLLTK_STATIC_SPAN_EVENT(_TYPE_, _BUFFER_, _NAME_, _CALL_, ...)                            \
+	do {                                                                                           \
+		_CLLTK_CREATE_META_ENTRY_TYPED(_meta, __attribute__((used)), _TYPE_, _NAME_, __VA_ARGS__); \
+		static _clltk_tracebuffer_handler_t *const tb = &_clltktb_##_BUFFER_;                      \
+		static _clltk_kernel_meta_proxy_t _clltktp                                                 \
+			__attribute__((used)) = {.tracebuffer = tb,                                            \
+									 .in_section_offset = _clltk_file_offset_unset,                \
+									 .meta = {&_meta, sizeof(_meta)}};                             \
+		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                      \
+		if (_clltk_offset == _clltk_file_offset_unset) {                                           \
+			_clltk_offset = tb->runtime.file_offset + _clltktp.in_section_offset;                  \
+		}                                                                                          \
+		_CALL_;                                                                                    \
+	} while (0)
+
+#define _CLLTK_STATIC_SPAN_BEGIN(_BUFFER_, _PARENT_, _NAME_)                                 \
+	({                                                                                       \
+		const clltk_span_id_t _clltk_span_id = clltk_next_span_id();                         \
+		const clltk_span_id_t _clltk_span_parent = (_PARENT_);                               \
+		_CLLTK_STATIC_SPAN_EVENT(_clltk_meta_enty_type_span_begin, _BUFFER_, _NAME_,         \
+								 _clltk_static_tracepoint_span_begin(                        \
+									 tb, _clltk_offset, _clltk_span_id, _clltk_span_parent), \
+								 (clltk_span_id_t)0, (clltk_span_id_t)0);                    \
+		_clltk_span_id;                                                                      \
+	})
+
+#define _CLLTK_STATIC_SPAN_END(_BUFFER_, _ID_)                                    \
+	do {                                                                          \
+		const clltk_span_id_t _clltk_span_id = (_ID_);                            \
+		_CLLTK_STATIC_SPAN_EVENT(                                                 \
+			_clltk_meta_enty_type_span_end, _BUFFER_, "",                         \
+			_clltk_static_tracepoint_span_end(tb, _clltk_offset, _clltk_span_id), \
+			(clltk_span_id_t)0);                                                  \
+	} while (0)
+
 #define _CLLTK_STATIC_TRACEPOINT_DUMP(_BUFFER_, _MESSAGE_, _ADDRESS_, _SIZE_)                    \
 	do {                                                                                         \
 		/* ------- compile time stuff ------- */                                                 \

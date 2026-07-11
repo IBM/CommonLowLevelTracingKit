@@ -19,6 +19,17 @@ int main(void)
 	CLLTK_TRACEPOINT(GOLDEN, "pointer %p", (void *)0x123456789abcull);
 	const uint8_t dump_data[8] = {0xde, 0xad, 0xbe, 0xef, 0x01, 0x02, 0x03, 0x04};
 	CLLTK_TRACEPOINT_DUMP(GOLDEN, "golden dump", dump_data, sizeof(dump_data));
+#ifdef CLLTK_SPAN_BEGIN
+	/* spans exist since 1.5.0; guarded so the generator also compiles against
+	 * older library versions when regenerating historic fixtures */
+	{
+		clltk_span_id_t outer = CLLTK_SPAN_BEGIN(GOLDEN, CLLTK_SPAN_NO_PARENT, "golden outer span");
+		clltk_span_id_t inner = CLLTK_SPAN_BEGIN(GOLDEN, outer, "golden inner span");
+		CLLTK_SPAN_END(GOLDEN, inner);
+		CLLTK_SPAN_END(GOLDEN, outer);
+		(void)CLLTK_SPAN_BEGIN(GOLDEN, CLLTK_SPAN_NO_PARENT, "golden open span");
+	}
+#endif
 	if (never) {
 		CLLTK_TRACEPOINT(GOLDEN, "never fired %d", 1);
 	}

@@ -27,6 +27,25 @@ The name is used to associated tracepoint with this tracebuffer and is also the 
 The tracepoints `CLLTK_TRACEPOINT` defines first the target tracebuffer, than the format string, followed by the arguments.
 
 
+### Spans
+
+Spans track scoped work with begin/end events and a carryable id:
+
+```c
+clltk_span_id_t request = CLLTK_SPAN_BEGIN(MyFirstTracebuffer, CLLTK_SPAN_NO_PARENT, "handle request");
+clltk_span_id_t parsing = CLLTK_SPAN_BEGIN(MyFirstTracebuffer, request, "parsing");
+// ...
+CLLTK_SPAN_END(MyFirstTracebuffer, parsing);
+CLLTK_SPAN_END(MyFirstTracebuffer, request);
+```
+
+The id is a plain `uint64` value: pass it as a function argument, hand it to
+another thread, or embed it in an API to continue the span elsewhere - the
+decoder correlates begin and end by id across all buffers of a decode set.
+A span that never ends (for example because the process crashed) is reported
+as still open, which is often exactly the interesting information.
+See `examples/spans_c` and `examples/spans_cpp`.
+
 ## How to use it
 
 1. Add repository to your project. By cloning, downloading or with CMake-FetchContent.

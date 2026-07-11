@@ -37,6 +37,81 @@ static size_t strnlen_s(const char *str, size_t len)
 
 #endif
 
+clltk_span_id_t clltk_next_span_id(void)
+{
+	// 32 bit per-process salt plus 32 bit counter: unique within a process,
+	// collision-safe across processes and reboots for practical trace sets,
+	// with no cross-process coordination. Never returns 0 (= no parent).
+	static uint32_t salt = 0;
+	static uint64_t counter = 0;
+	if (unlikely(__atomic_load_n(&salt, __ATOMIC_RELAXED) == 0)) {
+		uint32_t fresh =
+			(uint32_t)(info_get_timestamp_ns() ^ ((uint64_t)info_get_process_id() << 20) ^
+					   (info_get_timestamp_ns() >> 32));
+		if (fresh == 0)
+			fresh = 1;
+		uint32_t expected = 0;
+		__atomic_compare_exchange_n(&salt, &expected, fresh, false, __ATOMIC_RELAXED,
+									__ATOMIC_RELAXED);
+	}
+	const uint64_t count = __atomic_add_fetch(&counter, 1, __ATOMIC_RELAXED);
+	return ((uint64_t)__atomic_load_n(&salt, __ATOMIC_RELAXED) << 32) | (uint32_t)count;
+}
+#if defined(__KERNEL__)
+EXPORT_SYMBOL(clltk_next_span_id);
+#endif
+
+// span events reuse the regular entry layout: head plus the ids as ordinary
+// uint64 arguments, so decoders read them with the existing argument
+// machinery and only render differently based on the meta entry type
+static void span_entry(_clltk_tracebuffer_handler_t *handler,
+					   const _clltk_file_offset_t in_file_offset, const uint64_t *values,
+					   size_t count)
+{
+	if (unlikely(false == _CLLTK_FILE_OFFSET_IS_STATIC(in_file_offset))) {
+		ERROR_LOG("invalid in_file_offset(%llu) for span in %s", (unsigned long long)in_file_offset,
+				  handler->definition.name);
+		return;
+	}
+
+	traceentry_head_t traceentry_head = {
+		.in_file_offset = in_file_offset & ((1ull << 48) - 1),
+		.pid = info_get_process_id(),
+		.tid = info_get_thread_id(),
+		.timestamp_ns = info_get_timestamp_ns(),
+	};
+
+	uint8_t raw_entry_buffer[sizeof(traceentry_head) + 2 * sizeof(uint64_t)];
+	const size_t raw_entry_size = sizeof(traceentry_head) + count * sizeof(uint64_t);
+	memcpy(raw_entry_buffer, &traceentry_head, sizeof(traceentry_head));
+	for (size_t i = 0; i < count; i++) {
+		memcpy(&raw_entry_buffer[sizeof(traceentry_head) + i * sizeof(uint64_t)], &values[i],
+			   sizeof(uint64_t));
+	}
+	add_to_ringbuffer(handler, raw_entry_buffer, raw_entry_size);
+}
+
+void _clltk_static_tracepoint_span_begin(_clltk_tracebuffer_handler_t *handler,
+										 const _clltk_file_offset_t in_file_offset,
+										 clltk_span_id_t id, clltk_span_id_t parent)
+{
+	const uint64_t values[2] = {id, parent};
+	span_entry(handler, in_file_offset, values, 2);
+}
+#if defined(__KERNEL__)
+EXPORT_SYMBOL(_clltk_static_tracepoint_span_begin);
+#endif
+
+void _clltk_static_tracepoint_span_end(_clltk_tracebuffer_handler_t *handler,
+									   const _clltk_file_offset_t in_file_offset,
+									   clltk_span_id_t id)
+{
+	span_entry(handler, in_file_offset, &id, 1);
+}
+#if defined(__KERNEL__)
+EXPORT_SYMBOL(_clltk_static_tracepoint_span_end);
+#endif
+
 _CLLTK_PRAGMA_DIAG(push)
 _CLLTK_PRAGMA_DIAG(ignored "-Wstack-protector")
 void _clltk_static_tracepoint_with_args(_clltk_tracebuffer_handler_t *handler,
