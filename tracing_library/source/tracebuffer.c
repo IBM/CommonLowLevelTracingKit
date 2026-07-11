@@ -328,6 +328,7 @@ void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
 	tb->used = 0;
 	tb->ringbuffer = NULL;
 	tb->ringbuffer_mutex = NULL;
+	unique_stack_drop_index(&tb->stack);
 	tb->stack.valid = false;
 	tb->stack.file = NULL;
 	tb->stack.file_offset = 0;

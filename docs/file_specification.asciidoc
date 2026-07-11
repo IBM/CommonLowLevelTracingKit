@@ -143,7 +143,18 @@ The body contains the data, which the ringbuffer entry should store and has the 
 
 === Stack Section
 The stack section implements a linear growable data structure with unique entries. The start of the stack data structure is located at the stack section offset, defined in the file header.
-While the ringbuffer holds the traceentries, the stack hold the corresponding meta data necessary to decode the traceentries. Multiple meta entry are combined into meta blobs which are than stored, each meta blob as one stack entry, inside the stack. 
+While the ringbuffer holds the traceentries, the stack hold the corresponding meta data necessary to decode the traceentries.
+
+Since 1.7.0 the 8 reserved bytes in every stack entry head tag the entry
+kind: all zero = meta blob (the only kind before 1.7.0), `CLLTKIDX` = a
+persisted lookup index slab written by the tracing library to avoid linear
+stack scans. Slab bodies are nibble-encoded - every byte has the high bit
+set - so decoders older than 1.7.0 that scan entry bodies for the meta magic
+`{` (0x7B) can never match inside a slab and skip it safely. Slabs are pure
+caches: the last valid slab wins, and a missing or unreadable slab only
+causes the writer to rebuild its index by scanning the stack. A crash while
+writing a slab leaves it beyond the committed stack body size and therefore
+invisible. Multiple meta entry are combined into meta blobs which are than stored, each meta blob as one stack entry, inside the stack. 
 
 Located at the start of the stack section lays the stack header with the following layout:
 [cols="1,1,6"]

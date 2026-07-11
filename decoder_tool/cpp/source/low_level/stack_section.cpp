@@ -46,6 +46,21 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			const uint64_t total_entry_size = stack_layout::ENTRY_HEADER_SIZE + entry.body_size;
 			if (offset + total_entry_size > body_size) { break; }
 
+			// skip writer-internal lookup index slabs (tagged entries)
+			bool is_index_slab = true;
+			for (size_t i = 0; i < stack_layout::ENTRY_KIND_TAG_SIZE; ++i) {
+				const auto byte = file_part.get<uint8_t>(entry_file_offset +
+														 stack_layout::ENTRY_KIND_TAG_OFFSET + i);
+				if (byte != (uint8_t)stack_layout::ENTRY_KIND_INDEX_TAG[i]) {
+					is_index_slab = false;
+					break;
+				}
+			}
+			if (is_index_slab) {
+				offset += total_entry_size;
+				continue;
+			}
+
 			if (entry.body_size > 0) {
 				entry.body.resize(entry.body_size);
 				const uint64_t body_offset = entry_file_offset + stack_layout::ENTRY_HEADER_SIZE;
