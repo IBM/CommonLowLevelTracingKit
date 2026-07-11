@@ -35,7 +35,14 @@
 #if defined(__KERNEL__)
 #define _CLLTK_PLACE_IN(_NAME_)
 #else
-#define _CLLTK_PLACE_IN(_NAME_) __attribute__((used, section("_clltk_" #_NAME_ "_meta")))
+/* Meta objects are ordinary statics; discovery happens through pointers
+ * emitted into the _clltk_<NAME>_metaptr section (see _CLLTK_EMIT_META_PTR
+ * in _user_tracing.h). Placing the object itself into a named section via
+ * the section attribute would join the enclosing function's COMDAT group
+ * inside inline functions and templates, and GCC (>= 15.2) rejects mixing
+ * grouped and ungrouped sections of the same name in one translation unit:
+ * "causes a section type conflict". */
+#define _CLLTK_PLACE_IN(_NAME_) __attribute__((used))
 #endif
 
 #if defined(__cplusplus)

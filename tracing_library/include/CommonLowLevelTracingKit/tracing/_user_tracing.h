@@ -42,18 +42,21 @@ __attribute__((constructor(101), used)) static void _clltk_constructor(void)
 	for (_clltk_tracebuffer_handler_t *const *handler_ptr = &__start__clltk_tracebuffer_handler_ptr;
 		 handler_ptr < &__stop__clltk_tracebuffer_handler_ptr; handler_ptr++) {
 		_clltk_tracebuffer_handler_t *const handler = *handler_ptr;
-		const uint32_t meta_size =
-			(uint32_t)((uint64_t)handler->meta.stop - (uint64_t)handler->meta.start);
-		if (meta_size <= 0) {
+		/* the discovery section holds pointer pairs per call site:
+		 * {meta entry, file-offset cache}; the objects themselves are
+		 * ordinary statics (see _CLLTK_EMIT_META_PTR) */
+		const uint8_t *const *const meta_start = (const uint8_t *const *)handler->meta.start;
+		const uint8_t *const *const meta_stop = (const uint8_t *const *)handler->meta.stop;
+		if (meta_stop <= meta_start) {
 			continue;
 		}
 		if (!_clltk_tracebuffer_init(handler)) {
 			continue;
 		}
-		if (handler->runtime.file_offset == _clltk_file_offset_unset) {
-			handler->runtime.file_offset =
-				_clltk_tracebuffer_add_to_stack(handler, handler->meta.start, meta_size);
-		}
+		/* registers all entries in one batch and fills each call site's
+		 * offset cache; already-resolved entries are skipped */
+		_clltk_tracebuffer_register_metaptrs(handler, (const void *const *)meta_start,
+											 (const void *const *)meta_stop);
 	}
 }
 
@@ -78,16 +81,16 @@ _CLLTK_EXTERN_C_END
 
 #define _CLLTK_STATIC_TRACEBUFFER(_NAME_, _SIZE_)                                            \
 	_CLLTK_EXTERN_C_BEGIN                                                                    \
-	extern const uint8_t *const __start__clltk_##_NAME_##_meta                               \
+	extern const uint8_t *const __start__clltk_##_NAME_##_metaptr                            \
 		__attribute__((weak, visibility("hidden")));                                         \
-	extern const uint8_t *const __stop__clltk_##_NAME_##_meta                                \
+	extern const uint8_t *const __stop__clltk_##_NAME_##_metaptr                             \
 		__attribute__((weak, visibility("hidden")));                                         \
                                                                                              \
 	static _clltk_tracebuffer_handler_t _clltk_##_NAME_                                      \
 		__attribute__((used)) = {{#_NAME_, _SIZE_},                                          \
 								 {                                                           \
-									 &__start__clltk_##_NAME_##_meta,                        \
-									 &__stop__clltk_##_NAME_##_meta,                         \
+									 &__start__clltk_##_NAME_##_metaptr,                     \
+									 &__stop__clltk_##_NAME_##_metaptr,                      \
 								 },                                                          \
 								 {NULL, _clltk_file_offset_unset}};                          \
                                                                                              \
@@ -95,6 +98,43 @@ _CLLTK_EXTERN_C_END
 		__attribute__((used, section("_clltk_tracebuffer_handler_ptr"))) = &_clltk_##_NAME_; \
                                                                                              \
 	_CLLTK_EXTERN_C_END
+
+/* Emit one discovery entry for a tracepoint call site into the section
+ * _clltk_<BUFFER>_metaptr. Each entry is a pointer pair:
+ *   [0] address of the call site's const meta object
+ *   [1] address of the call site's file-offset cache, which the constructor
+ *       fills during startup registration so the first tracepoint execution
+ *       needs no lookup
+ * An assembler data directive is used instead of __attribute__((section(...)))
+ * because the attribute would place the object into the enclosing function's
+ * COMDAT group inside inline functions and templates, and GCC (>= 15.2)
+ * rejects mixing grouped and ungrouped sections of the same name in one
+ * translation unit ("causes a section type conflict"). Assembler-emitted data
+ * never joins a COMDAT group. The constraint/operand pair to print a bare
+ * symbol address differs per target (each validated with -fPIC/-pie -Werror
+ * at -O0..-O2). */
+#if defined(__aarch64__)
+#define _CLLTK_ASM_SYM_CONSTRAINT "S"
+#define _CLLTK_ASM_SYM_OPERAND(_N_) "%c" _N_
+#elif defined(__x86_64__)
+#define _CLLTK_ASM_SYM_CONSTRAINT "Ws"
+#define _CLLTK_ASM_SYM_OPERAND(_N_) "%p" _N_
+#else /* s390x and other targets */
+#define _CLLTK_ASM_SYM_CONSTRAINT "i"
+#define _CLLTK_ASM_SYM_OPERAND(_N_) "%c" _N_
+#endif
+
+#define _CLLTK_EMIT_META_PTR(_BUFFER_, _META_, _OFFSET_)                                         \
+	__asm__(".pushsection _clltk_" #_BUFFER_ "_metaptr,\"a\"\n\t"                                \
+			".balign " _CLLTK_STR(                                                               \
+				__SIZEOF_POINTER__) "\n\t"                                                       \
+									".dc.a " _CLLTK_ASM_SYM_OPERAND(                             \
+										"0") "\n\t"                                              \
+											 ".dc.a " _CLLTK_ASM_SYM_OPERAND(                    \
+												 "1") "\n\t"                                     \
+													  ".popsection" ::_CLLTK_ASM_SYM_CONSTRAINT( \
+														  &_META_),                              \
+			_CLLTK_ASM_SYM_CONSTRAINT(&_OFFSET_))
 
 #define _CLLTK_STATIC_TRACEPOINT(_BUFFER_, _FORMAT_, ...)                                         \
 	do {                                                                                          \
@@ -104,9 +144,11 @@ _CLLTK_EXTERN_C_END
 							 "only supporting up to 10 arguments");                               \
 		_CLLTK_CHECK_FOR_ARGUMENTS(__VA_ARGS__);                                                  \
                                                                                                   \
-		/* create meta data for this tracepoint */                                                \
-		/* and add them to section */                                                             \
+		/* create meta data for this tracepoint, the per-call-site offset      */                 \
+		/* cache (filled by the startup registration), and a discovery entry  */                  \
+		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                     \
 		_CLLTK_CREATE_META_ENTRY_ARGS(_meta, _CLLTK_PLACE_IN(_BUFFER_), _FORMAT_, __VA_ARGS__);   \
+		_CLLTK_EMIT_META_PTR(_BUFFER_, _meta, _clltk_offset);                                     \
                                                                                                   \
 		/* create type information for va_list access at runtime. */                              \
 		/* it is not possible to use meta data because there is no */                             \
@@ -123,7 +165,8 @@ _CLLTK_EXTERN_C_END
 			}                                                                                     \
 		}                                                                                         \
                                                                                                   \
-		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                     \
+		/* normally already set by the constructor; fallback for call sites   */                  \
+		/* executed before startup registration (constructor priority <= 101) */                  \
 		if (_clltk_offset == _clltk_file_offset_unset) {                                          \
 			_clltk_offset = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta));    \
 		}                                                                                         \
@@ -137,9 +180,11 @@ _CLLTK_EXTERN_C_END
 	do {                                                                                          \
 		/* ------- compile time stuff ------- */                                                  \
                                                                                                   \
-		/* create meta data for this tracepoint */                                                \
-		/* and add them to section */                                                             \
+		/* create meta data for this tracepoint, the per-call-site offset      */                 \
+		/* cache (filled by the startup registration), and a discovery entry  */                  \
+		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                     \
 		_CLLTK_CREATE_META_ENTRY_DUMP(_meta, _CLLTK_PLACE_IN(_BUFFER_), _MESSAGE_);               \
+		_CLLTK_EMIT_META_PTR(_BUFFER_, _meta, _clltk_offset);                                     \
                                                                                                   \
 		static _clltk_tracebuffer_handler_t *const _tb = &_clltk_##_BUFFER_;                      \
                                                                                                   \
@@ -151,7 +196,8 @@ _CLLTK_EXTERN_C_END
 			}                                                                                     \
 		}                                                                                         \
                                                                                                   \
-		static _clltk_file_offset_t _clltk_offset = _clltk_file_offset_unset;                     \
+		/* normally already set by the constructor; fallback for call sites   */                  \
+		/* executed before startup registration (constructor priority <= 101) */                  \
 		if (_clltk_offset == _clltk_file_offset_unset) {                                          \
 			_clltk_offset = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta));    \
 		}                                                                                         \

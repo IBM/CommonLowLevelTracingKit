@@ -214,26 +214,64 @@ _clltk_file_offset_t _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_ha
 														   const void *const this_meta,
 														   const uint32_t this_meta_size)
 {
-	const uintptr_t elf_sec_start = (uintptr_t)buffer->meta.start;
-	const uintptr_t elf_sec_stop = (uintptr_t)buffer->meta.stop;
-	const uint32_t elf_sec_size = (uint32_t)(elf_sec_stop - elf_sec_start);
-	const uintptr_t this_start = (uintptr_t)this_meta;
-	const uintptr_t this_stop = (uintptr_t)this_meta + (uintptr_t)this_meta_size;
-
-	if ((buffer->runtime.file_offset == _clltk_file_offset_unset) && (elf_sec_size > 0))
-		buffer->runtime.file_offset =
-			_clltk_tracebuffer_add_to_stack(buffer, (const void *)elf_sec_start, elf_sec_size);
-
-	if (buffer->runtime.file_offset == _clltk_file_offset_invalid)
-		return _clltk_file_offset_invalid;
-
-	if ((elf_sec_start <= this_start) && (this_stop <= elf_sec_stop)) {
-		// if meta for this tracepoint is in section
-		return buffer->runtime.file_offset + (_clltk_file_offset_t)(this_start - elf_sec_start);
-	}
-	// if meta for this tracepoint is not in section
-	// this will happen with template functions
+	// meta entries live outside the discovery section (which holds only
+	// pointers to them). Every entry is added individually; the unique stack
+	// deduplicates by content, so an entry already registered by the
+	// constructor walk returns its existing offset.
 	return _clltk_tracebuffer_add_to_stack(buffer, this_meta, this_meta_size);
+}
+
+void _clltk_tracebuffer_register_metaptrs(_clltk_tracebuffer_handler_t *handler,
+										  const void *const *pairs_start,
+										  const void *const *pairs_stop)
+{
+	if (handler->runtime.tracebuffer == NULL)
+		return; // caller must have initialized the tracebuffer
+
+	if (pairs_stop <= pairs_start)
+		return;
+	const size_t pair_count = (size_t)(pairs_stop - pairs_start) / 2;
+	if (pair_count == 0)
+		return;
+
+	unique_stack_batch_item_t *const items = memory_heap_allocation(pair_count * sizeof(*items));
+	_clltk_file_offset_t **const caches = memory_heap_allocation(pair_count * sizeof(*caches));
+
+	size_t todo = 0;
+	for (size_t i = 0; i < pair_count; i++) {
+		const _clltk_meta_entry_head_t *const head =
+			(const _clltk_meta_entry_head_t *)pairs_start[2 * i];
+		_clltk_file_offset_t *const offset_cache =
+			(_clltk_file_offset_t *)(uintptr_t)pairs_start[2 * i + 1];
+		if (*offset_cache != _clltk_file_offset_unset) {
+			// already resolved, e.g. by another translation unit's
+			// constructor walking the same merged section
+			continue;
+		}
+		items[todo].body = head;
+		items[todo].size = head->size;
+		items[todo].out_offset = 0;
+		caches[todo] = offset_cache;
+		todo++;
+	}
+
+	if (todo > 0) {
+		_clltk_tracebuffer_t *const buffer = handler->runtime.tracebuffer;
+		SYNC_MEMORY_LOCK(lock, buffer->stack_mutex);
+		if (lock.locked == false) {
+			ERROR_LOG("could not lock stack update. ERROR was: %s", lock.error_msg);
+		} else {
+			unique_stack_add_batch(&buffer->stack, items, todo);
+			for (size_t i = 0; i < todo; i++) {
+				// leave the cache unset on failure so the lazy path retries
+				if (_CLLTK_FILE_OFFSET_IS_STATIC(items[i].out_offset))
+					*caches[i] = items[i].out_offset;
+			}
+		}
+	}
+
+	memory_heap_free(caches);
+	memory_heap_free(items);
 }
 
 bool _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
@@ -255,8 +293,12 @@ bool _clltk_tracebuffer_init(_clltk_tracebuffer_handler_t *buffer)
 			ERROR_LOG("could not open tracebuffer");
 			return false;
 		}
+		// count attachments, not init calls: every translation unit's
+		// constructor walks the merged discovery section, so init runs
+		// repeatedly per handler, while deinit detaches (and decrements)
+		// exactly once per handler
+		buffer->runtime.tracebuffer->used++;
 	}
-	buffer->runtime.tracebuffer->used++;
 	return true;
 }
 
@@ -266,16 +308,22 @@ void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
 	if (unlikely(buffer->runtime.tracebuffer == NULL))
 		return;
 
-	buffer->runtime.tracebuffer->used--;
-	if (buffer->runtime.tracebuffer->used > 0)
+	// always detach this handler. Handlers deinitialized while other handlers
+	// still hold the tracebuffer must not keep the pointer: it would dangle
+	// once the last handler frees the tracebuffer, and a tracepoint firing
+	// through it afterwards (late destructors, atexit) would use freed
+	// memory instead of hitting the NULL gate.
+	_clltk_tracebuffer_t *const tb = buffer->runtime.tracebuffer;
+	buffer->runtime.tracebuffer = NULL;
+	buffer->runtime.file_offset = 0;
+
+	tb->used--;
+	if (tb->used > 0)
 		return;
 
 	const vector_entry_match_t match =
 		vector_find(tracebufferes, tracebuffer_handler_matcher, buffer->definition.name);
 
-	_clltk_tracebuffer_t *const tb = buffer->runtime.tracebuffer;
-	buffer->runtime.tracebuffer = NULL;
-	buffer->runtime.file_offset = 0;
 	memory_heap_free(tb->name);
 	tb->used = 0;
 	tb->ringbuffer = NULL;
@@ -289,7 +337,6 @@ void _clltk_tracebuffer_deinit(_clltk_tracebuffer_handler_t *buffer)
 
 	if (match.found)
 		vector_remove(tracebufferes, match.position);
-	buffer->runtime.tracebuffer = NULL;
 
 	if (vector_size(tracebufferes) == 0) {
 		vector_free(&tracebufferes);

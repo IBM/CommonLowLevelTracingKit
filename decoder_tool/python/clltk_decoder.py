@@ -635,8 +635,11 @@ class Tracebuffer:
         version_major = 0xFF & (file_version // 0x10000)
         version_minor = 0xFF & (file_version // 0x100)
         version_patch = 0xFF & (file_version // 0x1)
+        # the trace file format is backward compatible within one major
+        # version: only gate on the major. Layout details that changed with a
+        # minor version are selected in get_const() with open-ended ranges,
+        # so newer minors decode fine and must not be rejected here.
         assert version_major == 1, f"invalid major version {version_major}"
-        assert version_minor <= 2, f"invalid minor version {version_minor}"
         self.version = f"{version_major}.{version_minor}.{version_patch}"
         
         global current_version

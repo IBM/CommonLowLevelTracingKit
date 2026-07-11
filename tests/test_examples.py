@@ -78,10 +78,15 @@ class complex_c(ExamplesTestCase):
         data: pd.DataFrame = self.decoded
         DESTRUCTOR = data[data.tracebuffer == "DESTRUCTOR"]
         formatted = DESTRUCTOR["formatted"].tolist()
-        self.assertNotIn("destructor101", formatted)
+        # destructors with priority > 101 reliably trace
         self.assertIn("destructor102", formatted)
         self.assertIn("destructor103", formatted)
-        self.assertEqual(2 + TRACEBUFFER_INFO_COUNT, len(DESTRUCTOR))
+        # a destructor at priority exactly 101 races clltk's own teardown
+        # destructor (also priority 101): same-priority .fini_array order is
+        # emission-order dependent (LTO flips it), so destructor101 may or may
+        # not be traced. Both outcomes are valid; assert nothing about it.
+        expected_reliable = 2 + TRACEBUFFER_INFO_COUNT
+        self.assertIn(len(DESTRUCTOR), (expected_reliable, expected_reliable + 1))
         pass
 
     pass
@@ -131,12 +136,17 @@ class complex_cpp(ExamplesTestCase):
         data: pd.DataFrame = self.decoded
         DESTRUCTOR = data[data.tracebuffer == "DESTRUCTOR_CPP"]
         formatted = DESTRUCTOR["formatted"].tolist()
-        self.assertNotIn("void destructor101()", formatted)
+        # destructors with priority > 101 reliably trace
         self.assertIn("void destructor102()", formatted)
         self.assertIn("void destructor103()", formatted)
         self.assertIn("TestClass::TestClass()", formatted)
         self.assertIn("TestClass::~TestClass()", formatted)
-        self.assertEqual(4 + TRACEBUFFER_INFO_COUNT, len(DESTRUCTOR))
+        # a destructor at priority exactly 101 races clltk's own teardown
+        # destructor (also priority 101): same-priority .fini_array order is
+        # emission-order dependent (LTO flips it), so destructor101 may or may
+        # not be traced. Both outcomes are valid; assert nothing about it.
+        expected_reliable = 4 + TRACEBUFFER_INFO_COUNT
+        self.assertIn(len(DESTRUCTOR), (expected_reliable, expected_reliable + 1))
         pass
 
     pass

@@ -17,6 +17,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		std::string name;
 		uint64_t offset;
 		uint64_t size;
+		uint64_t addr;
 		uint32_t type;
 	};
 
@@ -32,7 +33,11 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		static std::string extractTracebufferName(const std::string &section_name);
 
 		static constexpr const char *SECTION_PREFIX = "_clltk_";
+		/// legacy layout: meta entries stored inline in the section
 		static constexpr const char *SECTION_SUFFIX = "_meta";
+		/// current layout: the section stores pointers to meta entries that
+		/// live in regular data sections (see _CLLTK_EMIT_META_PTR)
+		static constexpr const char *SECTION_PTR_SUFFIX = "_metaptr";
 
 	  private:
 		ElfReader() = delete;

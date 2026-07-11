@@ -28,6 +28,14 @@
             }
         },
         {
+            "name": "unittests-nolto",
+            "inherits": "unittests",
+            "description": "Consumer-like build without LTO. IPO/LTO defers section assignment and hides ELF section conflicts that break non-LTO consumers of the tracing headers.",
+            "cacheVariables": {
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF"
+            }
+        },
+        {
             "name": "rpm",
             "inherits": "default",
             "cacheVariables": {
@@ -61,6 +69,13 @@
         {
             "name": "unittests",
             "configurePreset": "unittests",
+            "targets": [
+                "all"
+            ]
+        },
+        {
+            "name": "unittests-nolto",
+            "configurePreset": "unittests-nolto",
             "targets": [
                 "all"
             ]

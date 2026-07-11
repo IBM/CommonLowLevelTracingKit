@@ -27,6 +27,14 @@ typedef enum __attribute__((packed)) {
 } _clltk_meta_enty_type;
 _CLLTK_STATIC_ASSERT(sizeof(_clltk_meta_enty_type) == 1, "should be of size 1");
 
+/* fixed prefix shared by every meta entry created below: magic byte followed
+ * by the total entry size. Used to walk pointer-discovered meta entries. */
+typedef struct __attribute__((packed, aligned(1))) {
+	const char magic;
+	const uint32_t size;
+} _clltk_meta_entry_head_t;
+_CLLTK_STATIC_ASSERT(sizeof(_clltk_meta_entry_head_t) == 5, "should be of size 5");
+
 #define _CLLTK_CREATE_META_ENTRY_ARGS(_VAR_, _ATTRIBUTE_, _STR_, ...)                            \
                                                                                                  \
 	_CLLTK_STATIC_ASSERT(__LINE__ <= UINT32_MAX, "line fits not in uint32");                     \

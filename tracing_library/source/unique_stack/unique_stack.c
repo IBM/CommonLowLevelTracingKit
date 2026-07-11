@@ -3,6 +3,7 @@
 
 #include "unique_stack.h"
 
+#include "abstraction/memory.h"
 #include "crc8/crc8.h"
 #include "md5/md5.h"
 
@@ -130,4 +131,136 @@ uint64_t unique_stack_add(unique_stack_handler_t *handler, const void *body, uin
 	file_pwrite(handler->file, &stack_body_size, sizeof(stack_body_size), stack_body_size_offset);
 	// return offset of data in file
 	return base_offset + sizeof(entry_head);
+}
+
+// FNV-1a over size then body. Only used for in-memory indexing during batch
+// adds; equality is always confirmed by byte comparison, so collisions are
+// harmless. The md5 in the entry head is untouched (file format unchanged).
+static uint64_t batch_index_hash(const void *body, uint32_t size)
+{
+	uint64_t hash = 0xcbf29ce484222325ull;
+	const uint8_t *bytes = (const uint8_t *)&size;
+	for (size_t i = 0; i < sizeof(size); i++)
+		hash = (hash ^ bytes[i]) * 0x100000001b3ull;
+	bytes = (const uint8_t *)body;
+	for (size_t i = 0; i < size; i++)
+		hash = (hash ^ bytes[i]) * 0x100000001b3ull;
+	return hash;
+}
+
+void unique_stack_add_batch(unique_stack_handler_t *handler, unique_stack_batch_item_t *items,
+							size_t count)
+{
+	RETURN_IF_INVALID(handler);
+	if (items == NULL || count == 0)
+		return;
+
+	// open-addressing index over the batch items (index + 1, 0 = empty slot),
+	// sized to stay at most half full
+	size_t table_size = 2;
+	while (table_size < 2 * count)
+		table_size *= 2;
+	const size_t table_mask = table_size - 1;
+	size_t *table = memory_heap_allocation(table_size * sizeof(*table));
+	memset(table, 0, table_size * sizeof(*table));
+	uint64_t *hashes = memory_heap_allocation(count * sizeof(*hashes));
+	// representative item for items with identical content within the batch
+	size_t *rep = memory_heap_allocation(count * sizeof(*rep));
+
+	for (size_t i = 0; i < count; i++) {
+		items[i].out_offset = 0;
+		hashes[i] = batch_index_hash(items[i].body, items[i].size);
+		rep[i] = i;
+		size_t slot = hashes[i] & table_mask;
+		while (table[slot] != 0) {
+			const size_t other = table[slot] - 1;
+			if (hashes[other] == hashes[i] && items[other].size == items[i].size &&
+				memcmp(items[other].body, items[i].body, items[i].size) == 0) {
+				rep[i] = other;
+				break;
+			}
+			slot = (slot + 1) & table_mask;
+		}
+		if (rep[i] == i)
+			table[slot] = i + 1;
+	}
+
+	// read the existing stack body once and match it against the batch
+	unique_stack_header_t header = {0};
+	file_pread(handler->file, &header, sizeof(header), handler->file_offset);
+	uint8_t *existing = NULL;
+	if (header.body_size > 0) {
+		existing = memory_heap_allocation(header.body_size);
+		file_pread(handler->file, existing, header.body_size, body_offset(handler));
+		uint64_t offset_in_body = 0;
+		while (offset_in_body + sizeof(entry_head_t) <= header.body_size) {
+			const entry_head_t *const head = (const entry_head_t *)(existing + offset_in_body);
+			const uint64_t entry_body_in_body = offset_in_body + sizeof(entry_head_t);
+			if (entry_body_in_body + head->body_size > header.body_size)
+				break; // truncated/corrupt tail, treat rest as absent
+			const uint8_t *const entry_body = existing + entry_body_in_body;
+			const uint64_t entry_hash = batch_index_hash(entry_body, head->body_size);
+			size_t slot = entry_hash & table_mask;
+			while (table[slot] != 0) {
+				const size_t item = table[slot] - 1;
+				if (hashes[item] == entry_hash && items[item].size == head->body_size &&
+					items[item].out_offset == 0 &&
+					memcmp(items[item].body, entry_body, head->body_size) == 0) {
+					items[item].out_offset = body_offset(handler) + entry_body_in_body;
+					break;
+				}
+				slot = (slot + 1) & table_mask;
+			}
+			offset_in_body = entry_body_in_body + head->body_size;
+		}
+	}
+
+	// append everything that is still unmatched. All new entries are staged
+	// in one buffer and written with a single call instead of two writes per
+	// entry. The new body size is committed once at the end, so a crash
+	// mid-batch leaves the previous consistent state.
+	uint64_t append_size = 0;
+	for (size_t i = 0; i < count; i++) {
+		if (rep[i] != i || items[i].out_offset != 0)
+			continue;
+		append_size += sizeof(entry_head_t) + items[i].size;
+	}
+	if (append_size > 0) {
+		uint8_t *const staging = memory_heap_allocation(append_size);
+		uint64_t staged = 0;
+		for (size_t i = 0; i < count; i++) {
+			if (rep[i] != i || items[i].out_offset != 0)
+				continue;
+			entry_head_t entry_head = {
+				.md5_hash = hash_function(items[i].body, items[i].size),
+				.body_size = items[i].size,
+			};
+			entry_head.crc = crc8_continue(0, (const uint8_t *)&entry_head, sizeof(entry_head) - 1);
+			memcpy(staging + staged, &entry_head, sizeof(entry_head));
+			memcpy(staging + staged + sizeof(entry_head), items[i].body, items[i].size);
+			items[i].out_offset =
+				body_offset(handler) + header.body_size + staged + sizeof(entry_head);
+			staged += sizeof(entry_head) + items[i].size;
+		}
+		file_pwrite(handler->file, staging, append_size, body_offset(handler) + header.body_size);
+		memory_heap_free(staging);
+
+		const uint64_t stack_body_size = header.body_size + append_size;
+		const uint64_t stack_body_size_offset =
+			handler->file_offset + offsetof(unique_stack_header_t, body_size);
+		file_pwrite(handler->file, &stack_body_size, sizeof(stack_body_size),
+					stack_body_size_offset);
+	}
+
+	// resolve items that were duplicates within the batch
+	for (size_t i = 0; i < count; i++) {
+		if (rep[i] != i)
+			items[i].out_offset = items[rep[i]].out_offset;
+	}
+
+	if (existing != NULL)
+		memory_heap_free(existing);
+	memory_heap_free(rep);
+	memory_heap_free(hashes);
+	memory_heap_free(table);
 }

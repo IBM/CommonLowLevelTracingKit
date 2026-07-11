@@ -65,6 +65,16 @@ _clltk_file_offset_t _clltk_tracebuffer_get_in_file_offset(_clltk_tracebuffer_ha
 														   const uint32_t this_meta_size)
 	__attribute__((nonnull(1), used, visibility("default")));
 
+/* register all discovery entries of one tracebuffer at once. pairs_start and
+ * pairs_stop delimit the _clltk_<BUFFER>_metaptr section content: pointer
+ * pairs of {meta entry, file-offset cache}. Entries whose cache is already
+ * set are skipped; caches of successfully registered entries are filled with
+ * the resolved file offset. */
+void _clltk_tracebuffer_register_metaptrs(_clltk_tracebuffer_handler_t *buffer,
+										  const void *const *pairs_start,
+										  const void *const *pairs_stop)
+	__attribute__((nonnull(1), used, visibility("default")));
+
 void _clltk_static_tracepoint_with_dump(_clltk_tracebuffer_handler_t *buffer,
 										const _clltk_file_offset_t in_file_offset,
 										const char *const file, const uint32_t line,

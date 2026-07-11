@@ -28,7 +28,7 @@ EXPECTED_RPM_PATTERNS = [
 
 
 def packages_exist() -> bool:
-    """Check if all expected RPM packages have been built."""
+    """Check if all expected RPM packages have been built for the current version."""
     pkg_dir = get_packages_dir()
     if not pkg_dir.is_dir():
         return False
@@ -36,14 +36,26 @@ def packages_exist() -> bool:
     if not rpm_names:
         return False
     # Check that every expected subpackage has at least one matching RPM
+    # carrying the version from VERSION.md. Without the version check, stale
+    # artifacts from a previously built version would be reused and tested.
+    version = get_version_string()
     for pattern in EXPECTED_RPM_PATTERNS:
-        if not any(pattern in name for name in rpm_names):
+        if not any(name.startswith(f"{pattern}{version}-") for name in rpm_names):
             return False
     return True
 
 
 def ensure_rpms_built() -> None:
     """Build RPMs if they don't exist yet."""
+    # remove packages from other versions first: they would either satisfy the
+    # existence check with stale artifacts or sit next to the current packages
+    # and get picked up by filename-based lookups
+    pkg_dir = get_packages_dir()
+    if pkg_dir.is_dir():
+        version = get_version_string()
+        for rpm in pkg_dir.glob("*.rpm"):
+            if f"-{version}-" not in rpm.name:
+                rpm.unlink()
     if packages_exist():
         return
     root = get_repo_root()
