@@ -65,7 +65,8 @@ static void print_entry_row(Output &out, const MetaEntryInfo &entry, bool full)
 	} else {
 		std::string format_display = entry.format;
 		if (format_display.size() > 50) {
-			format_display = format_display.substr(0, 47) + "...";
+			format_display.resize(47);
+			format_display += "...";
 		}
 
 		std::string file_display = entry.file;

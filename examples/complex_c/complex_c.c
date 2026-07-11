@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 		LOOPS = atoi(a);
 	}
 
-	printf("LOOPS %lu\n", (size_t)LOOPS);
+	printf("LOOPS %zu\n", (size_t)LOOPS);
 
 	CLLTK_TRACEPOINT(COMPLEX_C, "LOOPS %lu", (size_t)LOOPS);
 	for (size_t i = 0; i < (size_t)LOOPS; i++) {

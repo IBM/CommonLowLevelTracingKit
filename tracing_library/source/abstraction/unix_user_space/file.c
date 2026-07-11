@@ -375,6 +375,8 @@ void file_reset(void)
 	struct stat file_stat;
 	// loop over all files in path
 	while ((iterator = readdir(directory)) != NULL) {
+		// NOLINTNEXTLINE(clang-analyzer-unix.StdCLibraryFunctions): directory is
+		// NULL-checked before the loop, so dirfd() returns a valid descriptor
 		if (fstatat(dirfd(directory), iterator->d_name, &file_stat, AT_SYMLINK_NOFOLLOW) == 0) {
 			if (S_ISDIR(file_stat.st_mode))
 				continue;

@@ -49,7 +49,7 @@ namespace {
 	}
 
 	MetaSourceInfo readTraceBufferMeta(const fs::path &path) {
-		MetaSourceInfo info;
+		MetaSourceInfo info{};
 		info.path = path;
 		info.source_type = MetaSourceType::Tracebuffer;
 
@@ -70,7 +70,7 @@ namespace {
 	}
 
 	MetaSourceInfo readRawMetaMeta(const fs::path &path) {
-		MetaSourceInfo info;
+		MetaSourceInfo info{};
 		info.path = path;
 		info.source_type = MetaSourceType::RawBlob;
 		info.name = path.stem().string();

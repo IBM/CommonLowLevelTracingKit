@@ -311,10 +311,10 @@ void clltk_dynamic_tracepoint_execution(const char *name, const char *file, cons
 	char *pos = (char *)&entry_buffer->body;
 	pos += (memcpy(pos, file, file_len), file_len);
 	pos += (memcpy(pos, &line, line_len), line_len);
-	pos += (memcpy(pos, message, message_len), message_len);
+	memcpy(pos, message, message_len);
 
 	// add to ringbuffer
-	_clltk_tracebuffer_handler_t handler = {{name, 10 * 1024}, {NULL, NULL}, {NULL, 0}};
+	_clltk_tracebuffer_handler_t handler = {{name, (size_t)10 * 1024}, {NULL, NULL}, {NULL, 0}};
 	if (_clltk_tracebuffer_init(&handler)) {
 		add_to_ringbuffer(&handler, raw_entry_buffer, raw_entry_size);
 		_clltk_tracebuffer_deinit(&handler);

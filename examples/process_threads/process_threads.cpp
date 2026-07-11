@@ -39,7 +39,7 @@ static int func(char const *msg)
 }
 
 constexpr size_t t_n = 10;
-void run_threads(std::string str)
+void run_threads(const std::string &str)
 {
 	std::array<std::thread, t_n> threads;
 	std::array<std::string, t_n> strings;

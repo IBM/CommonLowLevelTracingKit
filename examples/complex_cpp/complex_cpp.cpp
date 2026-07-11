@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 		LOOPS = std::stoi(a);
 	}
 
-	printf("LOOPS %lu\n", (size_t)LOOPS);
+	printf("LOOPS %zu\n", (size_t)LOOPS);
 
 	CLLTK_TRACEPOINT(COMPLEX_CPP, "LOOPS %lu", (size_t)LOOPS);
 	for (size_t i = 0; i < (size_t)LOOPS; i++) {

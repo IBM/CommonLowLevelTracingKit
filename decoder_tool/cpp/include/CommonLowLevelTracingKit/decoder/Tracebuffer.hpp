@@ -164,7 +164,7 @@ namespace CommonLowLevelTracingKit::decoder {
 		uint64_t pending = 0; // current entries in buffer (entries - dropped)
 		uint64_t dropped = 0;
 		uint64_t wrapped = 0;
-		std::filesystem::file_time_type modified{};
+		std::filesystem::file_time_type modified;
 		std::optional<std::string> error;
 
 		bool valid() const noexcept { return !error.has_value(); }

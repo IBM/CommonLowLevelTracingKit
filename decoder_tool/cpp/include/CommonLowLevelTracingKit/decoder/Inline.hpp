@@ -58,6 +58,8 @@ template <typename To, typename From> CONST_INLINE constexpr To safe_cast(From v
 	} else {
 		// both signed or both unsigned
 		using Common = std::common_type_t<From, To>;
+		// NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c): a signed source
+		// value must keep its sign here - this is a saturating numeric cast
 		const Common v = static_cast<Common>(value);
 		const Common lo = static_cast<Common>(std::numeric_limits<To>::min());
 		const Common hi = static_cast<Common>(std::numeric_limits<To>::max());
