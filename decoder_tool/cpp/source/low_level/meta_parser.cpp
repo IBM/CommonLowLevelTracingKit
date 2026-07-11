@@ -3,11 +3,14 @@
 
 #include "meta_parser.hpp"
 
+#include "file.hpp"
+
 #include <cstring>
 
 namespace CommonLowLevelTracingKit::decoder::source {
 
-	MetaEntryInfoCollection MetaParser::parse(std::span<const uint8_t> data, uint64_t base_offset) {
+	MetaEntryInfoCollection MetaParser::parse(std::span<const uint8_t> data, uint64_t base_offset,
+											  bool foreign_endian) {
 		MetaEntryInfoCollection result;
 
 		size_t offset = 0;
@@ -20,7 +23,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			MetaEntryInfo entry;
 			entry.offset = base_offset + offset;
 
-			const size_t consumed = parseOne(data, offset, entry);
+			const size_t consumed = parseOne(data, offset, entry, foreign_endian);
 			if (consumed == 0) {
 				++offset;
 				continue;
@@ -33,8 +36,8 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		return result;
 	}
 
-	size_t MetaParser::parseOne(std::span<const uint8_t> data, size_t offset,
-								MetaEntryInfo &entry) {
+	size_t MetaParser::parseOne(std::span<const uint8_t> data, size_t offset, MetaEntryInfo &entry,
+								bool foreign_endian) {
 		const size_t remaining = data.size() - offset;
 		if (remaining < MIN_ENTRY_SIZE) { return 0; }
 
@@ -43,6 +46,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 		uint32_t entry_size = 0;
 		std::memcpy(&entry_size, base + OFFSET_SIZE, sizeof(entry_size));
+		if (foreign_endian) { entry_size = internal::byteswapValue(entry_size); }
 		if (entry_size < MIN_ENTRY_SIZE || entry_size > remaining) { return 0; }
 
 		entry.size = entry_size;
@@ -57,6 +61,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		}
 
 		std::memcpy(&entry.line, base + OFFSET_LINE, sizeof(entry.line));
+		if (foreign_endian) { entry.line = internal::byteswapValue(entry.line); }
 		entry.arg_count = base[OFFSET_ARG_COUNT];
 
 		const size_t arg_types_array_size = entry.arg_count + 1;

@@ -3,6 +3,7 @@
 #include "CommonLowLevelTracingKit/decoder/Inline.hpp"
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -21,6 +22,24 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		using FilePtr = std::shared_ptr<File>;
 
 		static constexpr size_t s_max_file_size = 1024 * 1024 * 1024;
+
+		// byte-swap one arithmetic value; used to read files written on a
+		// machine with the opposite byte order (detected via the file magic)
+		template <typename T> INLINE T byteswapValue(T value) {
+			static_assert(std::is_arithmetic_v<T>);
+			if constexpr (sizeof(T) == 2) {
+				return std::bit_cast<T>(__builtin_bswap16(std::bit_cast<uint16_t>(value)));
+			} else if constexpr (sizeof(T) == 4) {
+				return std::bit_cast<T>(__builtin_bswap32(std::bit_cast<uint32_t>(value)));
+			} else if constexpr (sizeof(T) == 8) {
+				return std::bit_cast<T>(__builtin_bswap64(std::bit_cast<uint64_t>(value)));
+			} else {
+				return value;
+			}
+		}
+
+		template <typename T>
+		concept ByteSwappable = std::is_arithmetic_v<T> && (sizeof(T) > 1);
 	} // namespace internal
 	class FilePart final {
 		friend struct internal::File;
@@ -33,20 +52,31 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		FilePart &operator=(const FilePart &) = delete;
 		FilePart &operator=(FilePart &&) = delete;
 
+		/// raw zero-copy access; never byte-swapped. Use only for byte arrays
+		/// and for native-endian live paths (foreign-endian files are
+		/// restricted to offline decoding).
 		template <internal::POD T> INLINE const T &getReference(size_t offset = 0) const {
 			const T &value = *(const T *)getPtr(offset, sizeof(T));
 			return value;
 		}
 		template <typename T = FilePart> INLINE T get(size_t offset = 0) const {
-			return *(const T *)getPtr(offset, sizeof(T));
+			T value = *(const T *)getPtr(offset, sizeof(T));
+			if constexpr (internal::ByteSwappable<T>) {
+				if (m_foreign_endian) { value = internal::byteswapValue(value); }
+			}
+			return value;
 		}
 
 		template <typename T>
 			requires(internal::POD<T>)
 		INLINE T getLimted(size_t limit, size_t offset = 0) const noexcept {
-			std::array<uint8_t, sizeof(T)> value = {};
-			getLimtedRaw(value.data(), offset, value.size(), limit);
-			return *reinterpret_cast<const T *>(value.data());
+			std::array<uint8_t, sizeof(T)> raw = {};
+			getLimtedRaw(raw.data(), offset, raw.size(), limit);
+			T value = *reinterpret_cast<const T *>(raw.data());
+			if constexpr (internal::ByteSwappable<T>) {
+				if (m_foreign_endian) { value = internal::byteswapValue(value); }
+			}
+			return value;
 		}
 		template <std::ranges::contiguous_range R>
 		INLINE void copyOut(R &out, size_t offset, size_t size, size_t limit) const {
@@ -66,6 +96,12 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 		const std::filesystem::path &path() const noexcept;
 
+		/// mark this file as written with the opposite byte order (decided by
+		/// the tracebuffer magic); all get/getLimted calls then byte-swap.
+		/// Sub-FileParts created afterwards inherit the flag.
+		INLINE void setForeignEndian(bool foreign) noexcept { m_foreign_endian = foreign; }
+		INLINE bool isForeignEndian() const noexcept { return m_foreign_endian; }
+
 	  private:
 		uintptr_t getPtr(size_t offset, size_t object_size) const;
 		void getLimtedRaw(uint8_t *const out, size_t offset, size_t size,
@@ -74,6 +110,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		const internal::FilePtr m_file;
 		const size_t m_offset;
 		const uintptr_t m_base;
+		bool m_foreign_endian = false;
 	};
 
 	template <> FilePart FilePart::get<FilePart>(size_t offset) const;

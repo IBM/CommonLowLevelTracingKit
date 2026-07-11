@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "elf_reader.hpp"
+#include "file.hpp"
 #include "meta_parser.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <cstring>
 #include <elf.h>
 #include <fstream>
@@ -31,6 +33,21 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			return data[EI_CLASS] == ELFCLASS64;
 		}
 
+		// an ELF file declares its byte order in the identification bytes;
+		// foreign means the opposite of this host's order
+		bool isForeignElf(const std::vector<uint8_t> &data) {
+			if (data.size() < EI_NIDENT) { return false; }
+			constexpr uint8_t host_order =
+				(std::endian::native == std::endian::little) ? ELFDATA2LSB : ELFDATA2MSB;
+			const uint8_t file_order = data[EI_DATA];
+			return (file_order == ELFDATA2LSB || file_order == ELFDATA2MSB) &&
+				   (file_order != host_order);
+		}
+
+		template <typename T> T swapped(T value, bool foreign) {
+			return foreign ? internal::byteswapValue(value) : value;
+		}
+
 		std::string getSectionName(const std::vector<uint8_t> &data, uint64_t strtab_offset,
 								   uint32_t name_index) {
 			if (strtab_offset + name_index >= data.size()) { return ""; }
@@ -47,27 +64,28 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 			if (data.size() < sizeof(Elf64_Ehdr)) { return sections; }
 
+			const bool foreign = isForeignElf(data);
 			const auto *ehdr = reinterpret_cast<const Elf64_Ehdr *>(data.data());
-			if (ehdr->e_shoff == 0 || ehdr->e_shnum == 0) { return sections; }
-			if (ehdr->e_shoff + ehdr->e_shnum * sizeof(Elf64_Shdr) > data.size()) {
-				return sections;
-			}
+			const uint64_t e_shoff = swapped(ehdr->e_shoff, foreign);
+			const uint16_t e_shnum = swapped(ehdr->e_shnum, foreign);
+			const uint16_t e_shstrndx = swapped(ehdr->e_shstrndx, foreign);
+			if (e_shoff == 0 || e_shnum == 0) { return sections; }
+			if (e_shoff + e_shnum * sizeof(Elf64_Shdr) > data.size()) { return sections; }
 
-			if (ehdr->e_shstrndx >= ehdr->e_shnum) { return sections; }
+			if (e_shstrndx >= e_shnum) { return sections; }
 
-			const auto *shdr_base =
-				reinterpret_cast<const Elf64_Shdr *>(data.data() + ehdr->e_shoff);
-			const auto &shstrtab_hdr = shdr_base[ehdr->e_shstrndx];
+			const auto *shdr_base = reinterpret_cast<const Elf64_Shdr *>(data.data() + e_shoff);
+			const uint64_t shstrtab_offset = swapped(shdr_base[e_shstrndx].sh_offset, foreign);
 
-			for (uint16_t i = 0; i < ehdr->e_shnum; ++i) {
+			for (uint16_t i = 0; i < e_shnum; ++i) {
 				const auto &shdr = shdr_base[i];
 
 				ElfSectionInfo info;
-				info.name = getSectionName(data, shstrtab_hdr.sh_offset, shdr.sh_name);
-				info.offset = shdr.sh_offset;
-				info.size = shdr.sh_size;
-				info.addr = shdr.sh_addr;
-				info.type = shdr.sh_type;
+				info.name = getSectionName(data, shstrtab_offset, swapped(shdr.sh_name, foreign));
+				info.offset = swapped(shdr.sh_offset, foreign);
+				info.size = swapped(shdr.sh_size, foreign);
+				info.addr = swapped(shdr.sh_addr, foreign);
+				info.type = swapped(shdr.sh_type, foreign);
 
 				sections.push_back(std::move(info));
 			}
@@ -80,26 +98,27 @@ namespace CommonLowLevelTracingKit::decoder::source {
 
 			if (data.size() < sizeof(Elf32_Ehdr)) { return sections; }
 
+			const bool foreign = isForeignElf(data);
 			const auto *ehdr = reinterpret_cast<const Elf32_Ehdr *>(data.data());
-			if (ehdr->e_shoff == 0 || ehdr->e_shnum == 0) { return sections; }
-			if (ehdr->e_shoff + ehdr->e_shnum * sizeof(Elf32_Shdr) > data.size()) {
-				return sections;
-			}
-			if (ehdr->e_shstrndx >= ehdr->e_shnum) { return sections; }
+			const uint32_t e_shoff = swapped(ehdr->e_shoff, foreign);
+			const uint16_t e_shnum = swapped(ehdr->e_shnum, foreign);
+			const uint16_t e_shstrndx = swapped(ehdr->e_shstrndx, foreign);
+			if (e_shoff == 0 || e_shnum == 0) { return sections; }
+			if (e_shoff + e_shnum * sizeof(Elf32_Shdr) > data.size()) { return sections; }
+			if (e_shstrndx >= e_shnum) { return sections; }
 
-			const auto *shdr_base =
-				reinterpret_cast<const Elf32_Shdr *>(data.data() + ehdr->e_shoff);
-			const auto &shstrtab_hdr = shdr_base[ehdr->e_shstrndx];
+			const auto *shdr_base = reinterpret_cast<const Elf32_Shdr *>(data.data() + e_shoff);
+			const uint32_t shstrtab_offset = swapped(shdr_base[e_shstrndx].sh_offset, foreign);
 
-			for (uint16_t i = 0; i < ehdr->e_shnum; ++i) {
+			for (uint16_t i = 0; i < e_shnum; ++i) {
 				const auto &shdr = shdr_base[i];
 
 				ElfSectionInfo info;
-				info.name = getSectionName(data, shstrtab_hdr.sh_offset, shdr.sh_name);
-				info.offset = shdr.sh_offset;
-				info.size = shdr.sh_size;
-				info.addr = shdr.sh_addr;
-				info.type = shdr.sh_type;
+				info.name = getSectionName(data, shstrtab_offset, swapped(shdr.sh_name, foreign));
+				info.offset = swapped(shdr.sh_offset, foreign);
+				info.size = swapped(shdr.sh_size, foreign);
+				info.addr = swapped(shdr.sh_addr, foreign);
+				info.type = swapped(shdr.sh_type, foreign);
 
 				sections.push_back(std::move(info));
 			}
@@ -134,19 +153,20 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		// parse one self-describing meta entry (magic + size prefix) located
 		// at a file offset and append the result
 		void appendMetaEntryAt(const std::vector<uint8_t> &data, uint64_t entry_offset,
-							   MetaEntryInfoCollection &entries) {
+							   MetaEntryInfoCollection &entries, bool foreign) {
 			if (entry_offset + MetaParser::MIN_ENTRY_SIZE > data.size()) { return; }
 
 			uint32_t entry_size = 0;
 			std::memcpy(&entry_size, data.data() + entry_offset + MetaParser::OFFSET_SIZE,
 						sizeof(entry_size));
+			entry_size = swapped(entry_size, foreign);
 			if (entry_size < MetaParser::MIN_ENTRY_SIZE ||
 				entry_offset + entry_size > data.size()) {
 				return;
 			}
 
 			const std::span<const uint8_t> entry_data(data.data() + entry_offset, entry_size);
-			auto parsed = MetaParser::parse(entry_data, entry_offset);
+			auto parsed = MetaParser::parse(entry_data, entry_offset, foreign);
 			entries.insert(entries.end(), std::make_move_iterator(parsed.begin()),
 						   std::make_move_iterator(parsed.end()));
 		}
@@ -156,7 +176,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			// e_type sits at the same offset for ELFCLASS32 and ELFCLASS64
 			uint16_t e_type = 0;
 			std::memcpy(&e_type, data.data() + offsetof(Elf64_Ehdr, e_type), sizeof(e_type));
-			return e_type == ET_REL;
+			return swapped(e_type, isForeignElf(data)) == ET_REL;
 		}
 
 		// In relocatable objects (.o) the pointer slots are zero; the meta
@@ -182,6 +202,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			if (symtab == nullptr || rela == nullptr) { return entries; }
 			if (rela->offset + rela->size > data.size()) { return entries; }
 
+			const bool foreign = isForeignElf(data);
 			std::vector<uint64_t> seen;
 			const size_t entry_stride = 2 * pointer_size;
 			const size_t count = rela->size / sizeof(Elf64_Rela);
@@ -189,6 +210,9 @@ namespace CommonLowLevelTracingKit::decoder::source {
 				Elf64_Rela relocation = {};
 				std::memcpy(&relocation, data.data() + rela->offset + i * sizeof(relocation),
 							sizeof(relocation));
+				relocation.r_offset = swapped(relocation.r_offset, foreign);
+				relocation.r_info = swapped(relocation.r_info, foreign);
+				relocation.r_addend = swapped(relocation.r_addend, foreign);
 				if (relocation.r_offset % entry_stride != 0) { continue; } // offset cache slot
 
 				const uint64_t sym_index = ELF64_R_SYM(relocation.r_info);
@@ -199,6 +223,8 @@ namespace CommonLowLevelTracingKit::decoder::source {
 				}
 				Elf64_Sym symbol = {};
 				std::memcpy(&symbol, data.data() + sym_offset, sizeof(symbol));
+				symbol.st_shndx = swapped(symbol.st_shndx, foreign);
+				symbol.st_value = swapped(symbol.st_value, foreign);
 				if (symbol.st_shndx == SHN_UNDEF || symbol.st_shndx >= sections.size()) {
 					continue;
 				}
@@ -208,7 +234,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 					target.offset + symbol.st_value + (uint64_t)relocation.r_addend;
 				if (std::find(seen.begin(), seen.end(), entry_offset) != seen.end()) { continue; }
 				seen.push_back(entry_offset);
-				appendMetaEntryAt(data, entry_offset, entries);
+				appendMetaEntryAt(data, entry_offset, entries, foreign);
 			}
 
 			return entries;
@@ -227,6 +253,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 													size_t pointer_size) {
 			MetaEntryInfoCollection entries;
 
+			const bool foreign = isForeignElf(data);
 			std::vector<uint64_t> seen;
 			const size_t entry_stride = 2 * pointer_size;
 			const size_t count = ptr_section.size / entry_stride;
@@ -235,7 +262,15 @@ namespace CommonLowLevelTracingKit::decoder::source {
 				if (ptr_offset + pointer_size > data.size()) { break; }
 
 				uint64_t address = 0;
-				std::memcpy(&address, data.data() + ptr_offset, pointer_size);
+				if (pointer_size == sizeof(uint64_t)) {
+					uint64_t raw = 0;
+					std::memcpy(&raw, data.data() + ptr_offset, sizeof(raw));
+					address = swapped(raw, foreign);
+				} else {
+					uint32_t raw = 0;
+					std::memcpy(&raw, data.data() + ptr_offset, sizeof(raw));
+					address = swapped(raw, foreign);
+				}
 				if (address == 0) { continue; }
 				if (std::find(seen.begin(), seen.end(), address) != seen.end()) { continue; }
 				seen.push_back(address);
@@ -245,7 +280,8 @@ namespace CommonLowLevelTracingKit::decoder::source {
 					if (address < section.addr || address >= section.addr + section.size) {
 						continue;
 					}
-					appendMetaEntryAt(data, section.offset + (address - section.addr), entries);
+					appendMetaEntryAt(data, section.offset + (address - section.addr), entries,
+									  foreign);
 					break;
 				}
 			}

@@ -15,8 +15,9 @@ namespace CommonLowLevelTracingKit::decoder::source {
 	class MetaParser final {
 	  public:
 		static MetaEntryInfoCollection parse(std::span<const uint8_t> data,
-											 uint64_t base_offset = 0);
-		static size_t parseOne(std::span<const uint8_t> data, size_t offset, MetaEntryInfo &entry);
+											 uint64_t base_offset = 0, bool foreign_endian = false);
+		static size_t parseOne(std::span<const uint8_t> data, size_t offset, MetaEntryInfo &entry,
+							   bool foreign_endian = false);
 		CONST_INLINE static bool isValidMagic(uint8_t byte) { return byte == MAGIC_BYTE; }
 
 		static constexpr uint8_t MAGIC_BYTE = '{';

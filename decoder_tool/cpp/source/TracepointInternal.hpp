@@ -13,11 +13,17 @@ template <typename T>
 concept PODType = std::is_standard_layout_v<T> && std::is_trivial_v<T>;
 
 template <PODType T, std::ranges::contiguous_range R>
-INLINE static constexpr T get(R r, size_t offset = 0) {
+INLINE static constexpr T get(R r, size_t offset = 0, bool foreign_endian = false) {
 	const uintptr_t base = std::bit_cast<uintptr_t>(r.data());
 	const uintptr_t position = base + offset;
 	const T *const ptr = reinterpret_cast<T *>(position);
-	return *ptr;
+	T value = *ptr;
+	if constexpr (CommonLowLevelTracingKit::decoder::source::internal::ByteSwappable<T>) {
+		if (foreign_endian) {
+			value = CommonLowLevelTracingKit::decoder::source::internal::byteswapValue(value);
+		}
+	}
+	return value;
 }
 
 namespace CommonLowLevelTracingKit::decoder {
@@ -68,7 +74,7 @@ namespace CommonLowLevelTracingKit::decoder {
 		const uint32_t m_pid;
 		const uint32_t m_tid;
 		TraceEntryHead(uint64_t n, uint64_t t, const std::span<const uint8_t> &body,
-					   SourceType src = SourceType::Unknown);
+					   bool foreign_endian, SourceType src = SourceType::Unknown);
 		TraceEntryHead(uint64_t n, uint64_t t, uint32_t pid, uint32_t tid,
 					   SourceType src = SourceType::Unknown);
 		uint32_t pid() const noexcept override { return m_pid; };
@@ -139,7 +145,7 @@ namespace CommonLowLevelTracingKit::decoder {
 			, m_line() {}
 		VirtualTracepoint(std::string tb_name, const source::Ringbuffer::Entry &e,
 						  const std::string &msg, SourceType src = SourceType::Unknown)
-			: TraceEntryHead(e.nr, get<uint64_t>(e.body(), 14), 0, 0, src)
+			: TraceEntryHead(e.nr, get<uint64_t>(e.body(), 14, e.foreignEndian()), 0, 0, src)
 			, m_tracebuffer(std::move(tb_name))
 			, m_msg(msg)
 			, m_file()

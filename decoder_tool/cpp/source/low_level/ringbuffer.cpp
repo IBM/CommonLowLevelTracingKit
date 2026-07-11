@@ -17,7 +17,8 @@ EntryPtr Entry::make(const uint64_t entry_nr, const uint64_t body_start, const s
 Entry::Entry(const uint64_t entry_nr, const uint64_t body_start, const size_t body_size,
 			 const FilePart &rb_body, const uint64_t rb_size, const bool skip_crc) noexcept
 	: nr(entry_nr)
-	, m_valid(false) {
+	, m_valid(false)
+	, m_foreign_endian(rb_body.isForeignEndian()) {
 
 	if (body_size <= static_body_size) [[likely]] {
 		rb_body.copyOut(m_static_body, body_start, body_size, rb_size);
@@ -112,6 +113,7 @@ std::variant<EntryPtr, std::string> Ringbuffer::getNextEntry() noexcept {
 }
 Ringbuffer::Ringbuffer(FilePart &&file)
 	: m_file(file)
+	, m_foreign_endian(file.isForeignEndian())
 	, m_version(file.get<uint64_t>(0))
 	, m_headpart(&file.getReference<std::atomic<HeadPart>>(72))
 	, m_read(capture())

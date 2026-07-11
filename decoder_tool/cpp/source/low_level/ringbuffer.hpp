@@ -106,7 +106,16 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		}
 		INLINE uint64_t getAvailable() const noexcept { return getSize() - getUsed(); }
 		INLINE const HeadPart capture() const noexcept {
-			return m_headpart->load(std::memory_order_relaxed);
+			HeadPart c = m_headpart->load(std::memory_order_relaxed);
+			if (m_foreign_endian) [[unlikely]] {
+				c.size = internal::byteswapValue(c.size);
+				c.wrapped = internal::byteswapValue(c.wrapped);
+				c.dropped = internal::byteswapValue(c.dropped);
+				c.entries = internal::byteswapValue(c.entries);
+				c.next_free = internal::byteswapValue(c.next_free);
+				c.last_valid = internal::byteswapValue(c.last_valid);
+			}
+			return c;
 		}
 
 		INLINE void reset() noexcept { m_read.reset(capture()); }
@@ -131,6 +140,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 	  private:
 		std::mutex m_this_lock;
 		const FilePart m_file;
+		const bool m_foreign_endian;
 		const uint64_t m_version;
 		const std::atomic<HeadPart> *const m_headpart;
 		State m_read;
@@ -142,6 +152,9 @@ namespace CommonLowLevelTracingKit::decoder::source {
 	  public:
 		CONST_INLINE const std::span<const uint8_t> &body() const noexcept { return m_body; }
 		CONST_INLINE size_t size() const noexcept { return m_body.size(); }
+		/// true when the trace file was written with the opposite byte order;
+		/// multi-byte fields inside body() must then be byte-swapped
+		CONST_INLINE bool foreignEndian() const noexcept { return m_foreign_endian; }
 
 		static constexpr uint8_t header_size = 4;
 
@@ -158,6 +171,7 @@ namespace CommonLowLevelTracingKit::decoder::source {
 		friend class Ringbuffer;
 
 		bool m_valid;
+		const bool m_foreign_endian;
 		std::array<uint8_t, static_body_size> m_static_body;
 		std::vector<uint8_t> m_dynamic_body;
 		std::span<const uint8_t> m_body;

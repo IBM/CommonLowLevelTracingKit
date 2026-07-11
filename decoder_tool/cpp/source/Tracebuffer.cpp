@@ -108,7 +108,12 @@ TracepointPtr SyncTbInternal::next(const TracepointFilterFunc &filter) noexcept 
 		auto &e = std::get<Ringbuffer::EntryPtr>(ringbuffer_entry);
 		if (e == nullptr) return {};
 
-		const uint64_t fileoffset = get<uint64_t>(e->body()) & ((1ULL << 48) - 1);
+		// the file offset is stored as 6 bytes in the writer's byte order at
+		// the start of the entry body; the remaining 2 bytes of the uint64
+		// read belong to the next field and are discarded
+		const uint64_t fileoffset_raw = get<uint64_t>(e->body(), 0, e->foreignEndian());
+		const uint64_t fileoffset =
+			e->foreignEndian() ? (fileoffset_raw >> 16) : (fileoffset_raw & ((1ULL << 48) - 1));
 		if (fileoffset == 0x01) {
 			auto tp = make_tracepoint<TracepointDynamic>(std::string(name()), std::move(e),
 														 m_source_type);
@@ -147,7 +152,12 @@ TracepointPtr SyncTbInternal::next_pooled(TracepointPool &pool,
 		auto &e = std::get<Ringbuffer::EntryPtr>(ringbuffer_entry);
 		if (e == nullptr) return {};
 
-		const uint64_t fileoffset = get<uint64_t>(e->body()) & ((1ULL << 48) - 1);
+		// the file offset is stored as 6 bytes in the writer's byte order at
+		// the start of the entry body; the remaining 2 bytes of the uint64
+		// read belong to the next field and are discarded
+		const uint64_t fileoffset_raw = get<uint64_t>(e->body(), 0, e->foreignEndian());
+		const uint64_t fileoffset =
+			e->foreignEndian() ? (fileoffset_raw >> 16) : (fileoffset_raw & ((1ULL << 48) - 1));
 		if (fileoffset == 0x01) {
 			auto tp = make_pooled_tracepoint<TracepointDynamic>(pool, std::string(name()),
 																std::move(e), m_source_type);
@@ -201,7 +211,7 @@ bool Tracebuffer::is_tracebuffer(const fs::path &path) {
 
 	const std::string_view magic{fileHead.data(), fileHead.size()};
 	if (magic == little_endian_magic) return true;
-	if (magic == big_endian_magic) return false; // currently not supported
+	if (magic == big_endian_magic) return true; // foreign byte order, byte-swapped while reading
 	return false;
 }
 bool SnapTracebuffer::is_formattable(const fs::path &path) {

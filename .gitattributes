@@ -1,0 +1,2 @@
+# Golden test fixtures are committed binaries; never apply text/EOL normalization
+tests/golden/** binary
