@@ -173,16 +173,18 @@ run_clang_tidy_diff() {
     # root; tell git the mount is trusted so `git diff` works
     git config --global --add safe.directory "$ROOT_PATH" 2>/dev/null || true
 
-    # Only source files: headers are not translation units (not in
-    # compile_commands.json), and some intentionally #error when compiled
-    # standalone. Header changes are still covered by the full builds and by
-    # clang-tidy of the sources that include them.
+    # Only source files that cmake actually compiles: headers are not
+    # translation units (not in compile_commands.json), and some intentionally
+    # #error when compiled standalone. Kernel-module sources are built by Kbuild,
+    # not cmake, so they are absent from compile_commands.json too - clang-tidy
+    # would fall back to defaults and fail on the kernel headers. Exclude both;
+    # they are covered by the full builds and the kernel-module build job.
     #
     # -U0: no context lines, so only changed lines are analyzed. -p1 strips the
     # a/ b/ diff prefix. clang-tidy-diff exits non-zero on findings, so guard the
     # assignment (set -e) and decide pass/fail from the output itself.
     local out
-    out=$(git diff -U0 "${DIFF_BASE}" -- '*.c' '*.cpp' \
+    out=$(git diff -U0 "${DIFF_BASE}" -- '*.c' '*.cpp' ':(exclude)kernel_tracing_library/*' \
         | python3 "$diff_tool" -p1 -path "$BUILD_DIR" -clang-tidy-binary clang-tidy \
             -extra-arg=-Wno-unknown-warning-option 2>&1) || true
     echo "$out"
