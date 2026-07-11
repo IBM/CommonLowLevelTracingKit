@@ -240,6 +240,33 @@ jobs:
         run: ./scripts/container.sh ./scripts/ci-cd/step_build_kernel_module.sh
 
   # ============================================
+  # Kernel module RUNTIME test on a stock distro kernel.
+  # Boots the modules in QEMU on the distro kernel (built WITHOUT
+  # CONFIG_CONSTRUCTORS) and checks tracing actually registers - the
+  # regression gate for the module-notifier init path. No kernel build.
+  # ============================================
+  kernel-runtime:
+    runs-on: ubuntu-latest
+    needs: [changes, checks]
+    if: |
+      !failure() && !cancelled() &&
+      (github.event_name == 'push' ||
+       needs.changes.outputs.code == 'true' ||
+       needs.changes.outputs.tests == 'true' ||
+       needs.changes.outputs.ci == 'true')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Load CI-Container
+        uses: ./.github/actions/load-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Kernel runtime test (stock kernel)
+        run: ./scripts/container.sh ./scripts/ci-cd/step_kernel_runtime.sh
+
+  # ============================================
   # Static analysis (clang-tidy + cppcheck, semantic subset)
   # Single-TU semantic lint. Cheap gate for confidently-wrong local
   # mistakes; the cross-TU / runtime bugs are caught by the sanitizer legs.

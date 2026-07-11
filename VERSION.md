@@ -1,6 +1,13 @@
-1.7.4
+1.7.5
 
 # Change log
+## 1.7.5
+- ci: kernel-module runtime gate. Boots the modules in QEMU on the stock distro kernel
+  (built without CONFIG_CONSTRUCTORS) and verifies tracing actually registers and produces
+  trace files - the regression gate for the module-notifier init path (1.7.4). No kernel
+  build: uses the distro kernel-core image (bzImage on x86_64; the raw Image extracted from
+  the EFI zboot payload on aarch64).
+
 ## 1.7.4
 - fix: kernel tracing registers via a module notifier, so it works on kernels built
   without CONFIG_CONSTRUCTORS (the default for most production kernels). Registration
