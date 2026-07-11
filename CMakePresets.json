@@ -38,9 +38,16 @@
         {
             "name": "unittests-asan",
             "inherits": "unittests-nolto",
-            "description": "ASan + UBSan, no LTO",
+            "description": "AddressSanitizer (+ LeakSanitizer), no LTO",
             "cacheVariables": {
-                "ENABLE_ASAN": "ON",
+                "ENABLE_ASAN": "ON"
+            }
+        },
+        {
+            "name": "unittests-ubsan",
+            "inherits": "unittests-nolto",
+            "description": "UndefinedBehaviorSanitizer, no LTO",
+            "cacheVariables": {
                 "ENABLE_UBSAN": "ON"
             }
         },
@@ -102,6 +109,10 @@
             "configurePreset": "unittests-asan"
         },
         {
+            "name": "unittests-ubsan",
+            "configurePreset": "unittests-ubsan"
+        },
+        {
             "name": "unittests-tsan",
             "configurePreset": "unittests-tsan"
         },
@@ -148,6 +159,16 @@
         {
             "name": "unittests-tsan",
             "configurePreset": "unittests-tsan",
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "noTestsAction": "error"
+            }
+        },
+        {
+            "name": "unittests-ubsan",
+            "configurePreset": "unittests-ubsan",
             "output": {
                 "outputOnFailure": true
             },

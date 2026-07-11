@@ -280,8 +280,11 @@ jobs:
 
   # ============================================
   # Sanitizers - runtime verification of the semantics static lint can't see
-  # (byte packing, endianness, 48-bit offsets, shared-memory sync).
-  #   asan = AddressSanitizer + UBSan   tsan = ThreadSanitizer
+  # (byte packing, endianness, 48-bit offsets, shared-memory sync). Each runs
+  # as its own leg so a finding is unambiguous:
+  #   asan  = AddressSanitizer (+ LeakSanitizer)
+  #   ubsan = UndefinedBehaviorSanitizer
+  #   tsan  = ThreadSanitizer
   # ============================================
   sanitizers:
     runs-on: ubuntu-latest
@@ -295,7 +298,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kind: [asan, tsan]
+        kind: [asan, ubsan, tsan]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

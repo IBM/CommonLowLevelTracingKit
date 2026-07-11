@@ -14,8 +14,9 @@ cd "${ROOT_PATH}"
 KIND="${1:-asan}"
 case "$KIND" in
     asan) PRESET="unittests-asan" ;;
+    ubsan) PRESET="unittests-ubsan" ;;
     tsan) PRESET="unittests-tsan" ;;
-    *) echo "usage: $0 <asan|tsan>"; exit 1 ;;
+    *) echo "usage: $0 <asan|ubsan|tsan>"; exit 1 ;;
 esac
 
 echo "========================================"
