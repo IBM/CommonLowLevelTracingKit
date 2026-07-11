@@ -183,12 +183,14 @@ _CLLTK_EXTERN_C_END
                                                                                                   \
 		/* normally already set by the constructor; fallback for call sites   */                  \
 		/* executed before startup registration (constructor priority <= 101) */                  \
-		if (_clltk_offset == _clltk_file_offset_unset) {                                          \
-			_clltk_offset = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta));    \
+		_clltk_file_offset_t _clltk_off = __atomic_load_n(&_clltk_offset, __ATOMIC_RELAXED); \
+		if (_clltk_off == _clltk_file_offset_unset) { \
+			_clltk_off = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta)); \
+			__atomic_store_n(&_clltk_offset, _clltk_off, __ATOMIC_RELAXED); \
 		}                                                                                         \
                                                                                                   \
 		/* at runtime execute trace point */                                                      \
-		_clltk_static_tracepoint_with_args(_tb, _clltk_offset, __FILE__, __LINE__, &_clltk_types, \
+		_clltk_static_tracepoint_with_args(_tb, _clltk_off, __FILE__, __LINE__, &_clltk_types, \
 										   _FORMAT_ _CLLTK_CAST(__VA_ARGS__));                    \
 	} while (0)
 
@@ -222,11 +224,13 @@ _CLLTK_EXTERN_C_END
 			}                                                                                  \
 		}                                                                                      \
                                                                                                \
-		if (_clltk_offset == _clltk_file_offset_unset) {                                       \
-			_clltk_offset = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta)); \
+		_clltk_file_offset_t _clltk_off = __atomic_load_n(&_clltk_offset, __ATOMIC_RELAXED); \
+		if (_clltk_off == _clltk_file_offset_unset) { \
+			_clltk_off = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta)); \
+			__atomic_store_n(&_clltk_offset, _clltk_off, __ATOMIC_RELAXED); \
 		}                                                                                      \
                                                                                                \
-		_clltk_static_tracepoint_with_args_unchecked(_tb, _clltk_offset, __FILE__, __LINE__,   \
+		_clltk_static_tracepoint_with_args_unchecked(_tb, _clltk_off, __FILE__, __LINE__,   \
 													 &_clltk_types,                            \
 													 _FORMAT_ _CLLTK_CAST(__VA_ARGS__));       \
 	} while (0)
@@ -254,8 +258,10 @@ _CLLTK_EXTERN_C_END
 				break;                                                                         \
 			}                                                                                  \
 		}                                                                                      \
-		if (_clltk_offset == _clltk_file_offset_unset) {                                       \
-			_clltk_offset = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta)); \
+		_clltk_file_offset_t _clltk_off = __atomic_load_n(&_clltk_offset, __ATOMIC_RELAXED); \
+		if (_clltk_off == _clltk_file_offset_unset) { \
+			_clltk_off = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta)); \
+			__atomic_store_n(&_clltk_offset, _clltk_off, __ATOMIC_RELAXED); \
 		}                                                                                      \
 		_CALL_;                                                                                \
 	} while (0)
@@ -266,7 +272,7 @@ _CLLTK_EXTERN_C_END
 		const clltk_span_id_t _clltk_span_parent = (_PARENT_);                                \
 		_CLLTK_STATIC_SPAN_EVENT(_clltk_meta_enty_type_span_begin, _BUFFER_, _NAME_,          \
 								 _clltk_static_tracepoint_span_begin(                         \
-									 _tb, _clltk_offset, _clltk_span_id, _clltk_span_parent), \
+									 _tb, _clltk_off, _clltk_span_id, _clltk_span_parent), \
 								 (clltk_span_id_t)0, (clltk_span_id_t)0);                     \
 		_clltk_span_id;                                                                       \
 	})
@@ -276,7 +282,7 @@ _CLLTK_EXTERN_C_END
 		const clltk_span_id_t _clltk_span_id = (_ID_);                             \
 		_CLLTK_STATIC_SPAN_EVENT(                                                  \
 			_clltk_meta_enty_type_span_end, _BUFFER_, "",                          \
-			_clltk_static_tracepoint_span_end(_tb, _clltk_offset, _clltk_span_id), \
+			_clltk_static_tracepoint_span_end(_tb, _clltk_off, _clltk_span_id), \
 			(clltk_span_id_t)0);                                                   \
 	} while (0)
 
@@ -302,12 +308,14 @@ _CLLTK_EXTERN_C_END
                                                                                                   \
 		/* normally already set by the constructor; fallback for call sites   */                  \
 		/* executed before startup registration (constructor priority <= 101) */                  \
-		if (_clltk_offset == _clltk_file_offset_unset) {                                          \
-			_clltk_offset = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta));    \
+		_clltk_file_offset_t _clltk_off = __atomic_load_n(&_clltk_offset, __ATOMIC_RELAXED); \
+		if (_clltk_off == _clltk_file_offset_unset) { \
+			_clltk_off = _clltk_tracebuffer_get_in_file_offset(_tb, &_meta, sizeof(_meta)); \
+			__atomic_store_n(&_clltk_offset, _clltk_off, __ATOMIC_RELAXED); \
 		}                                                                                         \
                                                                                                   \
 		/* at runtime execute trace point */                                                      \
-		_clltk_static_tracepoint_with_dump(_tb, _clltk_offset, _meta.file, _meta.line, _ADDRESS_, \
+		_clltk_static_tracepoint_with_dump(_tb, _clltk_off, _meta.file, _meta.line, _ADDRESS_, \
 										   _SIZE_);                                               \
 	} while (0)
 

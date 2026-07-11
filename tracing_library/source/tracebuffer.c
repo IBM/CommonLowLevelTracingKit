@@ -243,7 +243,7 @@ void _clltk_tracebuffer_register_metaptrs(_clltk_tracebuffer_handler_t *handler,
 			(const _clltk_meta_entry_head_t *)pairs_start[2 * i];
 		_clltk_file_offset_t *const offset_cache =
 			(_clltk_file_offset_t *)(uintptr_t)pairs_start[2 * i + 1];
-		if (*offset_cache != _clltk_file_offset_unset) {
+		if (__atomic_load_n(offset_cache, __ATOMIC_RELAXED) != _clltk_file_offset_unset) {
 			// already resolved, e.g. by another translation unit's
 			// constructor walking the same merged section
 			continue;
@@ -263,9 +263,11 @@ void _clltk_tracebuffer_register_metaptrs(_clltk_tracebuffer_handler_t *handler,
 		} else {
 			unique_stack_add_batch(&buffer->stack, items, todo);
 			for (size_t i = 0; i < todo; i++) {
-				// leave the cache unset on failure so the lazy path retries
+				// leave the cache unset on failure so the lazy path retries.
+				// relaxed atomic store: the lazy runtime path reads the same
+				// cache atomically from concurrent tracepoints
 				if (_CLLTK_FILE_OFFSET_IS_STATIC(items[i].out_offset))
-					*caches[i] = items[i].out_offset;
+					__atomic_store_n(caches[i], items[i].out_offset, __ATOMIC_RELAXED);
 			}
 		}
 	}
