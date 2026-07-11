@@ -23,6 +23,10 @@ TEST(memory, heap_allocation)
 #ifdef CLLTK_ASAN_ENABLED
 	EXPECT_EXIT({ *ptr = 'A'; }, ::testing::ExitedWithCode(1), ".*");
 	EXPECT_EXIT({ [[maybe_unused]] char c = *ptr; }, ::testing::ExitedWithCode(1), ".*");
+#elif defined(CLLTK_TSAN_ENABLED)
+	// ThreadSanitizer does not fault on use-after-free, so the death checks
+	// below would not trigger; skip them under TSan
+	(void)ptr;
 #else
 	EXPECT_EXIT({ *ptr = 'A'; }, ::testing::KilledBySignal(SIGSEGV), ".*");
 	EXPECT_EXIT({ [[maybe_unused]] char c = *ptr; }, ::testing::KilledBySignal(SIGSEGV), ".*");
@@ -50,8 +54,9 @@ TEST(memory, equal_relocate)
 	char *ptrA = std::bit_cast<char *>(memory_heap_allocation(first_size));
 	memcpy_and_flush(ptrA, data.data(), data.size() + 1);
 	char *ptrB = std::bit_cast<char *>(memory_heap_realloc(ptrA, first_size));
-	// ASAN's realloc always returns a new pointer to detect use-after-realloc bugs
-#ifndef CLLTK_ASAN_ENABLED
+	// ASAN's (and TSAN's) realloc always returns a new pointer to detect
+	// use-after-realloc bugs, so in-place realloc cannot be assumed there
+#if !defined(CLLTK_ASAN_ENABLED) && !defined(CLLTK_TSAN_ENABLED)
 	ASSERT_EQ(ptrA, ptrB);
 #endif
 	EXPECT_EQ(ptrB, data);

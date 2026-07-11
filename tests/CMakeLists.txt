@@ -16,6 +16,9 @@ target_link_libraries(clltk_test_flags INTERFACE clltk_warnings_extra)
 if(ENABLE_ASAN)
     target_compile_definitions(clltk_test_flags INTERFACE CLLTK_ASAN_ENABLED)
 endif()
+if(ENABLE_TSAN)
+    target_compile_definitions(clltk_test_flags INTERFACE CLLTK_TSAN_ENABLED)
+endif()
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     target_compile_options(clltk_test_flags INTERFACE
         -Wno-unneeded-internal-declaration

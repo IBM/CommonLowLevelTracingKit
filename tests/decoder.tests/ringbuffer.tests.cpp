@@ -313,6 +313,17 @@ TEST_F(decoder_ringbuffer, read_parallel_overwhelmed)
 		};
 	}
 	std::for_each(threads.begin(), threads.end(), [](std::thread &t) { t.join(); });
+	// The reader loop above stops after 100ms of no new entries. Under heavy
+	// load (e.g. ThreadSanitizer's slowdown) a writer can pause longer than
+	// that while still having produced entries, so drain whatever is left now
+	// that all writers have finished, making the "no pending" check deterministic.
+	for (;;) {
+		auto rc = rb.getNextEntry();
+		if (rc.index() != 0) break;
+		auto tp = std::move(get<0>(rc));
+		if (tp == nullptr) break;
+		nrs_vector.push_back(tp->nr);
+	}
 	EXPECT_EQ(rb.pendingBytes(), 0) << "there should be no new tracepoints ";
 
 	std::map<uint64_t, uint64_t> frequency;

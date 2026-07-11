@@ -258,7 +258,7 @@ TEST_F(MetaEntryInfoTest, argCharToTypeName)
 
 TEST_F(MetaEntryInfoTest, argumentTypeNames)
 {
-	MetaEntryInfo info;
+	MetaEntryInfo info{};
 	info.arg_types = "isL";
 
 	auto names = info.argumentTypeNames();
@@ -271,7 +271,7 @@ TEST_F(MetaEntryInfoTest, argumentTypeNames)
 
 TEST_F(MetaEntryInfoTest, argumentTypeNames_empty)
 {
-	MetaEntryInfo info;
+	MetaEntryInfo info{};
 	info.arg_types = "";
 
 	auto names = info.argumentTypeNames();
@@ -375,7 +375,7 @@ TEST_F(MetaIntegrationTest, getMetaInfo_filter_excludes)
 
 TEST_F(MetaIntegrationTest, MetaSourceInfo_valid)
 {
-	MetaSourceInfo info;
+	MetaSourceInfo info{};
 	EXPECT_TRUE(info.valid());
 
 	info.error = "some error";

@@ -6,6 +6,16 @@
 #include <memory>
 #include <stdint.h>
 #include <string.h>
+#include <cstring>
+
+namespace {
+template <typename T> T read_unaligned(const void *p)
+{
+	T v;
+	std::memcpy(&v, p, sizeof(T));
+	return v;
+}
+} // namespace
 
 CLLTK_TRACEBUFFER(META_MACRO_00, 1024)
 TEST(meta_macro, str)
@@ -16,14 +26,14 @@ TEST(meta_macro, str)
 	// the meta section holds {meta, offset-cache} pointer pairs per tracepoint
 	const char *const meta = ((const char *const *)_clltk_META_MACRO_00.meta.start)[0];
 	const char magic = *reinterpret_cast<const char *>(&meta[0]);
-	const uint32_t size = *reinterpret_cast<const uint32_t *>(&meta[1]);
-	const _clltk_meta_enty_type type = *reinterpret_cast<const _clltk_meta_enty_type *>(&meta[5]);
-	const uint32_t line = *reinterpret_cast<const uint32_t *>(&meta[6]);
+	const uint32_t size = read_unaligned<uint32_t>(&meta[1]);
+	const _clltk_meta_enty_type type = read_unaligned<_clltk_meta_enty_type>(&meta[5]);
+	const uint32_t line = read_unaligned<uint32_t>(&meta[6]);
 	const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 	const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
-	const char *const meta_file_name = reinterpret_cast<const char *>(&meta[10 + arg_count + 2]);
+	const char *const meta_file_name = reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
 	const char *const meta_format =
-		reinterpret_cast<const char *>(&meta[10 + arg_count + 2 + strlen(__FILE__) + 1]);
+		reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 	EXPECT_EQ(magic, '{');
 	EXPECT_EQ(size, 24 + strlen(__FILE__));
@@ -46,14 +56,14 @@ TEST(meta_macro, str_str)
 	// the meta section holds {meta, offset-cache} pointer pairs per tracepoint
 	const char *const meta = ((const char *const *)_clltk_META_MACRO_01.meta.start)[0];
 	const char magic = *reinterpret_cast<const char *>(&meta[0]);
-	const uint32_t size = *reinterpret_cast<const uint32_t *>(&meta[1]);
-	const _clltk_meta_enty_type type = *reinterpret_cast<const _clltk_meta_enty_type *>(&meta[5]);
-	const uint32_t line = *reinterpret_cast<const uint32_t *>(&meta[6]);
+	const uint32_t size = read_unaligned<uint32_t>(&meta[1]);
+	const _clltk_meta_enty_type type = read_unaligned<_clltk_meta_enty_type>(&meta[5]);
+	const uint32_t line = read_unaligned<uint32_t>(&meta[6]);
 	const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 	const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
-	const char *const meta_file_name = reinterpret_cast<const char *>(&meta[10 + arg_count + 2]);
+	const char *const meta_file_name = reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
 	const char *const meta_format =
-		reinterpret_cast<const char *>(&meta[10 + arg_count + 2 + strlen(__FILE__) + 1]);
+		reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 	EXPECT_EQ(magic, '{');
 	EXPECT_EQ(size, 35 + strlen(__FILE__));
@@ -76,14 +86,14 @@ TEST(meta_macro, int64)
 	// the meta section holds {meta, offset-cache} pointer pairs per tracepoint
 	const char *const meta = ((const char *const *)_clltk_META_MACRO_02.meta.start)[0];
 	const char magic = *reinterpret_cast<const char *>(&meta[0]);
-	const uint32_t size = *reinterpret_cast<const uint32_t *>(&meta[1]);
-	const _clltk_meta_enty_type type = *reinterpret_cast<const _clltk_meta_enty_type *>(&meta[5]);
-	const uint32_t line = *reinterpret_cast<const uint32_t *>(&meta[6]);
+	const uint32_t size = read_unaligned<uint32_t>(&meta[1]);
+	const _clltk_meta_enty_type type = read_unaligned<_clltk_meta_enty_type>(&meta[5]);
+	const uint32_t line = read_unaligned<uint32_t>(&meta[6]);
 	const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 	const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
-	const char *const meta_file_name = reinterpret_cast<const char *>(&meta[10 + arg_count + 2]);
+	const char *const meta_file_name = reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
 	const char *const meta_format =
-		reinterpret_cast<const char *>(&meta[10 + arg_count + 2 + strlen(__FILE__) + 1]);
+		reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 	EXPECT_EQ(magic, '{');
 	EXPECT_EQ(size, 25 + strlen(__FILE__));
@@ -109,16 +119,16 @@ TEST(meta_macro, two_tracepoints)
 		CLLTK_TRACEPOINT(META_MACRO_03, "arg0 = %ld", arg0);
 		const static uint32_t ref_line = __LINE__;
 		const char magic = *reinterpret_cast<const char *>(&meta[0]);
-		const uint32_t size = *reinterpret_cast<const uint32_t *>(&meta[1]);
+		const uint32_t size = read_unaligned<uint32_t>(&meta[1]);
 		const _clltk_meta_enty_type type =
-			*reinterpret_cast<const _clltk_meta_enty_type *>(&meta[5]);
-		const uint32_t line = *reinterpret_cast<const uint32_t *>(&meta[6]);
+			read_unaligned<_clltk_meta_enty_type>(&meta[5]);
+		const uint32_t line = read_unaligned<uint32_t>(&meta[6]);
 		const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 		const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
 		const char *const meta_file_name =
-			reinterpret_cast<const char *>(&meta[10 + arg_count + 2]);
+			reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
 		const char *const meta_format =
-			reinterpret_cast<const char *>(&meta[10 + arg_count + 2 + strlen(__FILE__) + 1]);
+			reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 		EXPECT_EQ(magic, '{');
 		EXPECT_EQ(size, 25 + strlen(__FILE__));
@@ -136,16 +146,16 @@ TEST(meta_macro, two_tracepoints)
 		CLLTK_TRACEPOINT(META_MACRO_03, "arg0 = %ld", arg0);
 		const static uint32_t ref_line = __LINE__;
 		const char magic = *reinterpret_cast<const char *>(&meta[0]);
-		const uint32_t size = *reinterpret_cast<const uint32_t *>(&meta[1]);
+		const uint32_t size = read_unaligned<uint32_t>(&meta[1]);
 		const _clltk_meta_enty_type type =
-			*reinterpret_cast<const _clltk_meta_enty_type *>(&meta[5]);
-		const uint32_t line = *reinterpret_cast<const uint32_t *>(&meta[6]);
+			read_unaligned<_clltk_meta_enty_type>(&meta[5]);
+		const uint32_t line = read_unaligned<uint32_t>(&meta[6]);
 		const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 		const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
 		const char *const meta_file_name =
-			reinterpret_cast<const char *>(&meta[10 + arg_count + 2]);
+			reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2]);
 		const char *const meta_format =
-			reinterpret_cast<const char *>(&meta[10 + arg_count + 2 + strlen(__FILE__) + 1]);
+			reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 		EXPECT_EQ(magic, '{');
 		EXPECT_EQ(size, 25 + strlen(__FILE__));
@@ -177,11 +187,11 @@ TEST(meta_macro, span_meta_layout)
 	{ // first call site: span begin
 		const char *const meta = meta_ptrs[0];
 		const _clltk_meta_enty_type type =
-			*reinterpret_cast<const _clltk_meta_enty_type *>(&meta[5]);
+			read_unaligned<_clltk_meta_enty_type>(&meta[5]);
 		const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 		const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
 		const char *const name =
-			reinterpret_cast<const char *>(&meta[10 + arg_count + 2 + strlen(__FILE__) + 1]);
+			reinterpret_cast<const char *>(&meta[10 + static_cast<size_t>(arg_count) + 2 + strlen(__FILE__) + 1]);
 
 		EXPECT_EQ(type, _clltk_meta_enty_type_span_begin);
 		EXPECT_EQ(arg_count, 2);
@@ -192,7 +202,7 @@ TEST(meta_macro, span_meta_layout)
 	{ // second call site: span end
 		const char *const meta = meta_ptrs[2];
 		const _clltk_meta_enty_type type =
-			*reinterpret_cast<const _clltk_meta_enty_type *>(&meta[5]);
+			read_unaligned<_clltk_meta_enty_type>(&meta[5]);
 		const uint8_t arg_count = *reinterpret_cast<const uint8_t *>(&meta[10]);
 		const char *const arg_types = reinterpret_cast<const char *>(&meta[11]);
 
@@ -214,7 +224,7 @@ TEST(meta_macro, three_tracepoints)
 		int64_t arg0 = -1;
 		CLLTK_TRACEPOINT(META_MACRO_04, "arg0 = %ld", arg0);
 		const char magic = *reinterpret_cast<const char *>(&meta[0]);
-		const uint32_t size = *reinterpret_cast<const uint32_t *>(&meta[1]);
+		const uint32_t size = read_unaligned<uint32_t>(&meta[1]);
 
 		EXPECT_EQ(magic, '{');
 		EXPECT_EQ(size, 25 + strlen(__FILE__));
@@ -224,7 +234,7 @@ TEST(meta_macro, three_tracepoints)
 		volatile char arg0[] = "Hello World!\n";
 		CLLTK_TRACEPOINT(META_MACRO_04, "arg0 = %s", arg0);
 		const char magic = *reinterpret_cast<const char *>(&meta[0]);
-		const uint32_t size = *reinterpret_cast<const uint32_t *>(&meta[1]);
+		const uint32_t size = read_unaligned<uint32_t>(&meta[1]);
 
 		EXPECT_EQ(magic, '{');
 		EXPECT_GT(size, 0u);
@@ -234,7 +244,7 @@ TEST(meta_macro, three_tracepoints)
 		volatile double arg0 = 3e-23;
 		CLLTK_TRACEPOINT(META_MACRO_04, "arg0 = %f", arg0);
 		const char magic = *reinterpret_cast<const char *>(&meta[0]);
-		const uint32_t size = *reinterpret_cast<const uint32_t *>(&meta[1]);
+		const uint32_t size = read_unaligned<uint32_t>(&meta[1]);
 
 		EXPECT_EQ(magic, '{');
 		EXPECT_GT(size, 0u);
