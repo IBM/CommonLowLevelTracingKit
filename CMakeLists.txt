@@ -11,7 +11,7 @@ include(cmake/ToolchainVersionCheck.cmake)
 include(cmake/CreateVersion.cmake)
 include(cmake/CheckPICEnabled.cmake)
 include(cmake/CodeCoverage.cmake)
-include(cmake/ASAN.cmake)
+include(cmake/Sanitizers.cmake)
 include(cmake/StaticAnalysis.cmake)
 include(cmake/CompileWarnings.cmake)
 

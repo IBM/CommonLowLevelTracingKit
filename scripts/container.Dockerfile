@@ -24,6 +24,9 @@ RUN dnf -y install \
     lcov \
     gcovr \
     libasan \
+    libubsan \
+    libtsan \
+    clang \
     rpmdevtools \
     cppcheck \
     jq \

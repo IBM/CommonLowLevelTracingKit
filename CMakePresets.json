@@ -36,6 +36,23 @@
             }
         },
         {
+            "name": "unittests-asan",
+            "inherits": "unittests-nolto",
+            "description": "ASan + UBSan, no LTO",
+            "cacheVariables": {
+                "ENABLE_ASAN": "ON",
+                "ENABLE_UBSAN": "ON"
+            }
+        },
+        {
+            "name": "unittests-tsan",
+            "inherits": "unittests-nolto",
+            "description": "ThreadSanitizer, no LTO",
+            "cacheVariables": {
+                "ENABLE_TSAN": "ON"
+            }
+        },
+        {
             "name": "rpm",
             "inherits": "default",
             "cacheVariables": {
@@ -81,6 +98,14 @@
             ]
         },
         {
+            "name": "unittests-asan",
+            "configurePreset": "unittests-asan"
+        },
+        {
+            "name": "unittests-tsan",
+            "configurePreset": "unittests-tsan"
+        },
+        {
             "name": "rpm",
             "configurePreset": "rpm",
             "targets": [
@@ -108,6 +133,26 @@
             },
             "environment": {
                 "LLVM_PROFILE_FILE": "%p.profraw"
+            }
+        },
+        {
+            "name": "unittests-asan",
+            "configurePreset": "unittests-asan",
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "noTestsAction": "error"
+            }
+        },
+        {
+            "name": "unittests-tsan",
+            "configurePreset": "unittests-tsan",
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "noTestsAction": "error"
             }
         }
     ],

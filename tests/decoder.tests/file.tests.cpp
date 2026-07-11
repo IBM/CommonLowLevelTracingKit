@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <array>
+#include <cstring>
 #include <fcntl.h>
 #include <filesystem>
 #include <fstream>
@@ -14,6 +15,16 @@
 
 #include "file.hpp"
 #include "gtest/gtest.h"
+
+namespace
+{
+template <typename T> T read_unaligned(const void *p)
+{
+	T v;
+	std::memcpy(&v, p, sizeof(T));
+	return v;
+}
+} // namespace
 
 using namespace CommonLowLevelTracingKit;
 using namespace CommonLowLevelTracingKit::decoder;
@@ -63,9 +74,9 @@ TEST_F(decoder_file_part, get)
 	outFile.close();
 	const auto file = FilePart(m_file_name);
 	ASSERT_EQ(file.get<uint8_t>(), *reinterpret_cast<uint8_t *>(m_data.data()));
-	ASSERT_EQ(file.get<uint16_t>(), *reinterpret_cast<uint16_t *>(m_data.data()));
-	ASSERT_EQ(file.get<uint32_t>(), *reinterpret_cast<uint32_t *>(m_data.data()));
-	ASSERT_EQ(file.get<uint64_t>(), *reinterpret_cast<uint64_t *>(m_data.data()));
+	ASSERT_EQ(file.get<uint16_t>(), read_unaligned<uint16_t>(m_data.data()));
+	ASSERT_EQ(file.get<uint32_t>(), read_unaligned<uint32_t>(m_data.data()));
+	ASSERT_EQ(file.get<uint64_t>(), read_unaligned<uint64_t>(m_data.data()));
 
 	EXPECT_ANY_THROW(file.get<uint8_t>(257));
 }
@@ -77,9 +88,9 @@ TEST_F(decoder_file_part, getRef)
 	outFile.close();
 	const auto file = FilePart(m_file_name);
 	ASSERT_EQ(file.getReference<uint8_t>(), *reinterpret_cast<uint8_t *>(m_data.data()));
-	ASSERT_EQ(file.getReference<uint16_t>(), *reinterpret_cast<uint16_t *>(m_data.data()));
-	ASSERT_EQ(file.getReference<uint32_t>(), *reinterpret_cast<uint32_t *>(m_data.data()));
-	ASSERT_EQ(file.getReference<uint64_t>(), *reinterpret_cast<uint64_t *>(m_data.data()));
+	ASSERT_EQ(file.getReference<uint16_t>(), read_unaligned<uint16_t>(m_data.data()));
+	ASSERT_EQ(file.getReference<uint32_t>(), read_unaligned<uint32_t>(m_data.data()));
+	ASSERT_EQ(file.getReference<uint64_t>(), read_unaligned<uint64_t>(m_data.data()));
 
 	EXPECT_ANY_THROW(file.get<uint8_t>(257));
 }
@@ -91,10 +102,18 @@ TEST_F(decoder_file_part, getFilePart)
 	outFile.close();
 	const auto file = FilePart(m_file_name);
 	const auto subFile = file.get<FilePart>(1);
-	ASSERT_EQ(subFile.getReference<uint8_t>(), *reinterpret_cast<uint8_t *>(m_data.data() + 1));
-	ASSERT_EQ(subFile.getReference<uint16_t>(), *reinterpret_cast<uint16_t *>(m_data.data() + 1));
-	ASSERT_EQ(subFile.getReference<uint32_t>(), *reinterpret_cast<uint32_t *>(m_data.data() + 1));
-	ASSERT_EQ(subFile.getReference<uint64_t>(), *reinterpret_cast<uint64_t *>(m_data.data() + 1));
+	// getReference is zero-copy (byte access only); multi-byte values live at
+	// unaligned offsets here, so read them with the copying get<T>() accessor
+	// and compare against unaligned-safe reads of the source bytes
+	const auto raw = [this](size_t off, auto sample) {
+		decltype(sample) v;
+		std::memcpy(&v, m_data.data() + off, sizeof(v));
+		return v;
+	};
+	ASSERT_EQ(subFile.getReference<uint8_t>(), raw(1, uint8_t{}));
+	ASSERT_EQ(subFile.get<uint16_t>(), raw(1, uint16_t{}));
+	ASSERT_EQ(subFile.get<uint32_t>(), raw(1, uint32_t{}));
+	ASSERT_EQ(subFile.get<uint64_t>(), raw(1, uint64_t{}));
 	ASSERT_EQ(&file.getReference<uint8_t>(10), &subFile.getReference<uint8_t>(10 - 1));
 }
 

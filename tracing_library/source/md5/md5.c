@@ -83,10 +83,10 @@ void md5Update(MD5Context *ctx, const uint8_t *input_buffer, size_t input_len)
 				// Convert to little-endian
 				// The local variable `input` our 512-bit chunk separated into 32-bit words
 				// we can use in calculations
-				input[j] = (uint32_t)(ctx->input[(j * 4) + 3]) << 24 |
-						   (uint32_t)(ctx->input[(j * 4) + 2]) << 16 |
-						   (uint32_t)(ctx->input[(j * 4) + 1]) << 8 |
-						   (uint32_t)(ctx->input[(j * 4)]);
+				input[j] = (uint32_t)(ctx->input[((size_t)j * 4) + 3]) << 24 |
+						   (uint32_t)(ctx->input[((size_t)j * 4) + 2]) << 16 |
+						   (uint32_t)(ctx->input[((size_t)j * 4) + 1]) << 8 |
+						   (uint32_t)(ctx->input[((size_t)j * 4)]);
 			}
 			md5Step(ctx->buffer, input);
 			offset = 0;
@@ -111,9 +111,10 @@ void md5Finalize(MD5Context *ctx)
 	// Do a final update (internal to this function)
 	// Last two 32-bit words are the two halves of the size (converted from bytes to bits)
 	for (unsigned int j = 0; j < 14; ++j) {
-		input[j] = (uint32_t)(ctx->input[(j * 4) + 3]) << 24 |
-				   (uint32_t)(ctx->input[(j * 4) + 2]) << 16 |
-				   (uint32_t)(ctx->input[(j * 4) + 1]) << 8 | (uint32_t)(ctx->input[(j * 4)]);
+		input[j] = (uint32_t)(ctx->input[((size_t)j * 4) + 3]) << 24 |
+				   (uint32_t)(ctx->input[((size_t)j * 4) + 2]) << 16 |
+				   (uint32_t)(ctx->input[((size_t)j * 4) + 1]) << 8 |
+				   (uint32_t)(ctx->input[((size_t)j * 4)]);
 	}
 	input[14] = (uint32_t)(ctx->size * 8);
 	input[15] = (uint32_t)((ctx->size * 8) >> 32);

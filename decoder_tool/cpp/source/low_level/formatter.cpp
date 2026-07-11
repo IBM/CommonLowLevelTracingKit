@@ -454,7 +454,8 @@ std::string formatter::dump(const std::string_view format, const std::span<const
 	const size_t format_size = format.size();
 	if (args_raw.size() < sizeof(uint32_t))
 		CLLTK_DECODER_THROW(FormattingFailed, "args_raw too small for dump size");
-	uint32_t dump_size = (*std::bit_cast<const uint32_t *>(args_raw.data()));
+	uint32_t dump_size;
+	std::memcpy(&dump_size, args_raw.data(), sizeof(dump_size));
 	if (foreign_endian) {
 		dump_size = CommonLowLevelTracingKit::decoder::source::internal::byteswapValue(dump_size);
 	}

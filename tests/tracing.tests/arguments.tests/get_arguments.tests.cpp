@@ -5,9 +5,20 @@
 #include "arguments.h"
 #include "gtest/gtest.h"
 #include <cstdint>
+#include <cstring>
 #include <stdarg.h>
 #include <string.h>
 #include <string>
+
+namespace
+{
+template <typename T> T read_unaligned(const void *p)
+{
+	T v;
+	std::memcpy(&v, p, sizeof(T));
+	return v;
+}
+} // namespace
 
 void _helper(const char *const format, void *const buffer, _clltk_argument_types_t *types, ...)
 {
@@ -47,19 +58,19 @@ TEST(get_argument, types_str_str_str)
 
 	constexpr size_t argN_size = 5;
 	// arg0
-	EXPECT_EQ(*(uint32_t *)ptr, argN_size);
+	EXPECT_EQ(read_unaligned<uint32_t>(ptr), argN_size);
 	ptr += sizeof(uint32_t);
 	EXPECT_TRUE(memcmp(ptr, "arg0", argN_size) == 0);
 	ptr += argN_size;
 
 	// arg1
-	EXPECT_EQ(*(uint32_t *)ptr, argN_size);
+	EXPECT_EQ(read_unaligned<uint32_t>(ptr), argN_size);
 	ptr += sizeof(uint32_t);
 	EXPECT_TRUE(memcmp(ptr, "arg1", argN_size) == 0);
 	ptr += argN_size;
 
 	// arg2
-	EXPECT_EQ(*(uint32_t *)ptr, argN_size);
+	EXPECT_EQ(read_unaligned<uint32_t>(ptr), argN_size);
 	ptr += sizeof(uint32_t);
 	EXPECT_TRUE(memcmp(ptr, "arg2", argN_size) == 0);
 	ptr += argN_size;
@@ -81,19 +92,19 @@ TEST(get_argument, types_str_int64_str)
 	// arg0
 	const char *const arg0 = "some arg";
 	const size_t arg0_n = strlen(arg0) + 1;
-	EXPECT_EQ(*(uint32_t *)ptr, arg0_n);
+	EXPECT_EQ(read_unaligned<uint32_t>(ptr), arg0_n);
 	ptr += sizeof(uint32_t);
 	EXPECT_TRUE(memcmp(ptr, arg0, arg0_n) == 0);
 	ptr += arg0_n;
 
 	// arg1
-	EXPECT_EQ(0x4d61696e6c6f6f70, *(int64_t *)ptr);
+	EXPECT_EQ(0x4d61696e6c6f6f70, read_unaligned<int64_t>(ptr));
 	ptr += sizeof(int64_t);
 
 	// arg2
 	const char *const arg2 = "work/folder/source-file.cpp line:62";
 	const size_t arg2_n = strlen(arg2) + 1;
-	EXPECT_EQ(*(uint32_t *)ptr, arg2_n);
+	EXPECT_EQ(read_unaligned<uint32_t>(ptr), arg2_n);
 	ptr += sizeof(uint32_t);
 	EXPECT_TRUE(memcmp(ptr, arg2, arg2_n) == 0);
 	ptr += arg2_n;
@@ -113,7 +124,7 @@ TEST(get_argument, types_str)
 	// arg0
 	const char *str0 = "Mainloop";
 	const size_t str0_n = strlen(str0) + 1;
-	EXPECT_EQ(*(uint32_t *)ptr, str0_n);
+	EXPECT_EQ(read_unaligned<uint32_t>(ptr), str0_n);
 	ptr += sizeof(uint32_t);
 	EXPECT_TRUE(memcmp(ptr, str0, str0_n) == 0);
 	ptr += str0_n;

@@ -32,7 +32,7 @@ void unrecoverable_error(const char *file, size_t line, const char *func, const 
 #define CML_RED "\033[1;31m"
 #define CML_RESET "\033[0m"
 	snprintf(clltk_format, sizeof(clltk_format),
-			 CML_RED "clltk unrecoverable: %s (%s in %s:%lu)" CML_RESET "\n", format, func, file,
+			 CML_RED "clltk unrecoverable: %s (%s in %s:%zu)" CML_RESET "\n", format, func, file,
 			 line);
 #undef CML_RED
 #undef CML_RESET
@@ -49,7 +49,7 @@ void recoverable_error(const char *file, size_t line, const char *func, const ch
 #define CML_RED "\033[1;31m"
 #define CML_RESET "\033[0m"
 	snprintf(clltk_format, sizeof(clltk_format),
-			 CML_RED "clltk recoverable: %s (%s in %s:%lu)" CML_RESET "\n", format, func, file,
+			 CML_RED "clltk recoverable: %s (%s in %s:%zu)" CML_RESET "\n", format, func, file,
 			 line);
 #undef CML_RED
 #undef CML_RESET

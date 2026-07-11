@@ -187,7 +187,8 @@ static void drop_oldest_entry(ringbuffer_head_t *rb)
 		if (occupied <= sizeof(ringbuffer_entry_head_t)) {
 			move_last_valid(rb, occupied);
 			return;
-		} else if (rb->body[rb->last_valid] != ringbuffer_entry_magic) {
+		}
+		if (rb->body[rb->last_valid] != ringbuffer_entry_magic) {
 			move_last_valid(rb, 1);
 			found_invalid_data = true;
 			occupied--;
@@ -270,7 +271,8 @@ size_t ringbuffer_out(void *destination, size_t max_size, ringbuffer_head_t *sou
 		if (occupied <= sizeof(ringbuffer_entry_head_t)) { // not enough in ringbuffer
 			move_last_valid(source, occupied);
 			return 0;
-		} else if (source->body[source->last_valid] != ringbuffer_entry_magic) { // wrong magic
+		}
+		if (source->body[source->last_valid] != ringbuffer_entry_magic) { // wrong magic
 			move_last_valid(source, 1);
 			occupied--;
 			continue;

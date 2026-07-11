@@ -1,6 +1,14 @@
-1.7.0
+1.7.1
 
 # Change log
+## 1.7.1
+- fix: unaligned access on the byte-packed trace format in the writer and both decoders
+  (memcpy instead of typed-pointer loads/stores) - undefined behavior that faults on
+  strict-alignment targets such as s390x; no format change.
+- fix: the unique-stack lookup index is freed on close (was leaked via the raw API).
+- fix: the per-call-site offset cache is accessed with relaxed atomics (data race on
+  concurrent first use). Behavior preserved throughout; patch-level.
+
 ## 1.7.0
 - perf: registration lookups use a persisted open-addressing index instead of scanning the
   stack linearly. The index lives in memory per tracebuffer and is periodically persisted

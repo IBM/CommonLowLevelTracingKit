@@ -98,6 +98,7 @@ TEST_F(SnapshotTest, TestUncompressedSnapshot)
 	};
 	const auto count = take_snapshot(func, {}, false);
 	ASSERT_TRUE(count);
+	// NOLINTNEXTLINE(bugprone-unchecked-optional-access): guarded by ASSERT_TRUE above
 	EXPECT_TRUE(count.value());
 }
 TEST_F(SnapshotTest, verbose)
@@ -113,6 +114,7 @@ TEST_F(SnapshotTest, verbose)
 	};
 	const auto count = take_snapshot(func, {}, false, 4094, verbose);
 	ASSERT_TRUE(count);
+	// NOLINTNEXTLINE(bugprone-unchecked-optional-access): guarded by ASSERT_TRUE above
 	EXPECT_TRUE(count.value());
 }
 
@@ -123,6 +125,7 @@ TEST_F(SnapshotTest, TestCompressedSnapshot)
 	};
 	const auto count = take_snapshot(func, {}, true);
 	ASSERT_TRUE(count);
+	// NOLINTNEXTLINE(bugprone-unchecked-optional-access): guarded by ASSERT_TRUE above
 	EXPECT_TRUE(count.value());
 }
 
@@ -139,6 +142,7 @@ TEST_F(SnapshotTest, AllFileClosedInUnCompressedSnapshot)
 	};
 	const auto count = take_snapshot(func, {}, false);
 	ASSERT_TRUE(count);
+	// NOLINTNEXTLINE(bugprone-unchecked-optional-access): guarded by ASSERT_TRUE above
 	EXPECT_TRUE(count.value());
 	EXPECT_EQ(oldOpenFdCounter, countOpenFileDescriptors());
 }
@@ -156,6 +160,7 @@ TEST_F(SnapshotTest, AllFileClosedInCompressedSnapshot)
 	};
 	const auto count = take_snapshot(func, {}, true);
 	ASSERT_TRUE(count);
+	// NOLINTNEXTLINE(bugprone-unchecked-optional-access): guarded by ASSERT_TRUE above
 	EXPECT_TRUE(count.value());
 	EXPECT_EQ(oldOpenFdCounter, countOpenFileDescriptors());
 }
@@ -354,10 +359,11 @@ TEST_F(SnapshotTest, CheckForMissingMUNMAP)
 	};
 	const auto count = take_snapshot(func, {}, false);
 	ASSERT_TRUE(count);
+	// NOLINTNEXTLINE(bugprone-unchecked-optional-access): guarded by ASSERT_TRUE above
 	EXPECT_TRUE(count.value());
 	const std::vector<std::string> mmappedFilesAfter = mmappedFiles();
 
-	for (auto fileAfter : mmappedFilesAfter) {
+	for (const auto &fileAfter : mmappedFilesAfter) {
 		if (std::find(mmappedFilesBefore.begin(), mmappedFilesBefore.end(), fileAfter) ==
 			mmappedFilesBefore.end()) {
 			if (fileAfter.find(this->temp_dir) != std::string::npos) {

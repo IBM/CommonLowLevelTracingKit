@@ -60,7 +60,11 @@ namespace CommonLowLevelTracingKit::decoder::source {
 			return value;
 		}
 		template <typename T = FilePart> INLINE T get(size_t offset = 0) const {
-			T value = *(const T *)getPtr(offset, sizeof(T));
+			// trace data is byte-packed, so the source may be unaligned for T;
+			// copy the bytes out instead of a misaligned load
+			T value;
+			std::memcpy(&value, reinterpret_cast<const void *>(getPtr(offset, sizeof(T))),
+						sizeof(T));
 			if constexpr (internal::ByteSwappable<T>) {
 				if (m_foreign_endian) { value = internal::byteswapValue(value); }
 			}

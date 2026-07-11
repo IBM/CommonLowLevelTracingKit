@@ -57,7 +57,11 @@ unique_stack_handler_t unique_stack_open(file_t *fh, uint64_t file_offset)
 
 void unique_stack_close(unique_stack_handler_t *handler)
 {
-	RETURN_IF_INVALID(handler);
+	if (handler == NULL)
+		return;
+
+	// the in-memory lookup index is owned by the handler; closing releases it
+	unique_stack_drop_index(handler);
 
 	handler->valid = 0;
 	handler->file = NULL;
@@ -226,8 +230,8 @@ static uint32_t slab_encoded_size(uint32_t logical)
 static void slab_encode(const uint8_t *in, uint32_t in_size, uint8_t *out)
 {
 	for (uint32_t i = 0; i < in_size; i++) {
-		out[2 * i] = (uint8_t)(0x80u | (in[i] >> 4));
-		out[2 * i + 1] = (uint8_t)(0x80u | (in[i] & 0x0Fu));
+		out[2 * (size_t)i] = (uint8_t)(0x80u | (in[i] >> 4));
+		out[2 * (size_t)i + 1] = (uint8_t)(0x80u | (in[i] & 0x0Fu));
 	}
 }
 
@@ -341,7 +345,7 @@ static void index_maybe_publish(unique_stack_handler_t *handler, uint64_t stack_
 		return;
 
 	const uint32_t logical_size =
-		sizeof(slab_head_t) + index->used * (uint32_t)sizeof(index_slot_t);
+		sizeof(slab_head_t) + (uint32_t)((size_t)index->used * sizeof(index_slot_t));
 	uint8_t *const logical = memory_heap_allocation(logical_size);
 	const slab_head_t slab = {
 		.magic = SLAB_MAGIC,

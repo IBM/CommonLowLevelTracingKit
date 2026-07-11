@@ -1,0 +1,12 @@
+# ThreadSanitizer suppressions - each entry is a proven-benign or
+# intentional race, not a blanket mute. Real races must still fail CI.
+
+# parallelism.tests.cpp deliberately races a non-atomic increment against an
+# atomic one to demonstrate why the atomic is needed (see the "will create
+# race condition" comment). The race is the point of the test.
+race:multi_thread_atomic_increment
+
+# sync.tests.cpp deliberately calls the mutex API from a signal handler to
+# verify behavior; pthread_mutex_clocklock is not async-signal-safe, which
+# is exactly what the test probes.
+signal:signal_in_same_process__signal_handler

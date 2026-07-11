@@ -8,6 +8,16 @@ endif()
 
 find_package(Boost REQUIRED CONFIG)
 
+# Treat Boost headers as system headers so static analysis (clang-tidy /
+# clang-analyzer) does not report findings inside them.
+if(TARGET Boost::boost)
+    get_target_property(_clltk_boost_inc Boost::boost INTERFACE_INCLUDE_DIRECTORIES)
+    if(_clltk_boost_inc)
+        set_target_properties(Boost::boost PROPERTIES
+            INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_clltk_boost_inc}")
+    endif()
+endif()
+
 set(TARGET_SOURCES
     source/low_level/file.cpp
     source/low_level/ringbuffer.cpp

@@ -73,6 +73,8 @@ crc8_continue(uint8_t crc, const uint8_t *const input_str, size_t input_str_size
 		for (size_t input_str_index = 0; input_str_index < input_str_size; input_str_index++) {
 			const uint8_t current_char = input_str[input_str_index];
 			const uint8_t table_index = current_char ^ crc;
+			// NOLINTNEXTLINE(clang-analyzer-core.uninitialized.Assign): table has 256
+			// entries, table_index is uint8_t (0-255) - always in bounds
 			crc = sht75_crc_table[table_index];
 		}
 	}

@@ -397,8 +397,9 @@ TEST_F(DefinitionTest, binary_layout_verification)
 	// Verify exact binary layout
 	uint8_t *ptr = buffer.data();
 
-	// [0-7]: body_size (uint64_t)
-	uint64_t body_size = *reinterpret_cast<uint64_t *>(ptr);
+	// [0-7]: body_size (uint64_t) - buffer is byte-aligned, read unaligned-safe
+	uint64_t body_size;
+	std::memcpy(&body_size, ptr, sizeof(body_size));
 	EXPECT_EQ(body_size, name_len + 1 + sizeof(definition_extended_t));
 	ptr += 8;
 

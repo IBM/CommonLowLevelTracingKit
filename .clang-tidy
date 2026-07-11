@@ -16,7 +16,6 @@ Checks: >
   readability-duplicate-include,
   readability-else-after-return,
   readability-implicit-bool-conversion,
-  readability-inconsistent-declaration-parameter-name,
   readability-misleading-indentation,
   readability-misplaced-array-index,
   readability-non-const-parameter,
@@ -44,6 +43,9 @@ Checks: >
   -modernize-use-trailing-return-type,
   -readability-function-cognitive-complexity,
   -readability-magic-numbers,
+  # low signal for a C library: header and implementation legitimately use
+  # different, more descriptive parameter names
+  -readability-inconsistent-declaration-parameter-name,
   -bugprone-reserved-identifier,
   -bugprone-branch-clone,
   -bugprone-macro-parentheses,
