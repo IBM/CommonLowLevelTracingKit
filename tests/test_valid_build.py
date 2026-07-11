@@ -128,6 +128,24 @@ class valid_build_tests(unittest.TestCase):
                     return 0;
                 }
                 """,
+            # A member function *defined inside* a class body is implicitly
+            # inline, hence COMDAT. This used to fail to link (see the README
+            # "Constrains" section); the COMDAT-safe discovery keeps it working.
+            "in-class member function": """
+                struct A
+                {
+                    void foo(void)
+                    {
+                        CLLTK_TRACEPOINT(BUFFER, "comdat %d", 1);
+                    }
+                };
+                int main(void)
+                {
+                    A{}.foo();
+                    plain_function();
+                    return 0;
+                }
+                """,
         }
         for case_name, comdat_part in comdat_cases.items():
             with self.subTest(case=case_name):

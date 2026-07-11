@@ -1,6 +1,16 @@
-1.7.2
+1.7.3
 
 # Change log
+## 1.7.3
+- docs: README fixes and additions - remove the (now lifted) in-class-member-function
+  tracing limitation, correct the minimal-build feature flags and the decoder output
+  description, and document the sanitizer, kernel-module and non-LTO CI steps, the
+  clang-tidy diff mode, and offline cross-endian decoding.
+- ci: UndefinedBehaviorSanitizer runs as its own leg (split out of the AddressSanitizer
+  leg) so its findings are unambiguous.
+- test: regression test that a tracepoint inside an in-class member function builds and
+  links.
+
 ## 1.7.2
 - fix: data race on a tracepoint's shared static argument-type info. The one-time
   lazy initialization (`first_time_check`) is now serialized under the global lock and
