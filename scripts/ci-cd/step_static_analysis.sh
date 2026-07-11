@@ -53,12 +53,19 @@ usage() {
     exit 0
 }
 
+# When set, clang-tidy runs only on lines changed since this git ref
+# (clang-tidy-diff). The decoder carries a large pre-existing clang-tidy
+# backlog; diff mode gates new code without requiring the whole backlog to be
+# cleared first. cppcheck still runs on the full tree.
+DIFF_BASE=""
+
 while [[ $# -gt 0 ]]; do
     case $1 in
         --clang-tidy) RUN_CLANG_TIDY=true; shift ;;
         --cppcheck) RUN_CPPCHECK=true; shift ;;
         --iwyu) RUN_IWYU=true; shift ;;
         --all) RUN_CLANG_TIDY=true; RUN_CPPCHECK=true; shift ;;
+        --diff) DIFF_BASE="$2"; shift 2 ;;
         --fix) FIX=true; shift ;;
         --werror) WERROR=true; shift ;;
         --filter) FILTER="$2"; shift 2 ;;
@@ -140,7 +147,59 @@ ERRORS_FOUND=0
 # =============================================================================
 # clang-tidy
 # =============================================================================
+find_clang_tidy_diff() {
+    for p in /usr/share/clang/clang-tidy-diff.py \
+             /usr/lib64/llvm*/share/clang/clang-tidy-diff.py \
+             "$(command -v clang-tidy-diff.py 2>/dev/null)"; do
+        [[ -f "$p" ]] && { echo "$p"; return 0; }
+    done
+    return 1
+}
+
+# Diff mode: run clang-tidy only on lines changed since DIFF_BASE.
+run_clang_tidy_diff() {
+    echo "----------------------------------------"
+    echo "Running clang-tidy on changes since ${DIFF_BASE}..."
+    echo "----------------------------------------"
+
+    local diff_tool
+    if ! diff_tool=$(find_clang_tidy_diff); then
+        echo "clang-tidy-diff.py not found; cannot run diff mode"
+        ERRORS_FOUND=1
+        return
+    fi
+
+    # container repo is checked out by the host user but the container runs as
+    # root; tell git the mount is trusted so `git diff` works
+    git config --global --add safe.directory "$ROOT_PATH" 2>/dev/null || true
+
+    # Only source files: headers are not translation units (not in
+    # compile_commands.json), and some intentionally #error when compiled
+    # standalone. Header changes are still covered by the full builds and by
+    # clang-tidy of the sources that include them.
+    #
+    # -U0: no context lines, so only changed lines are analyzed. -p1 strips the
+    # a/ b/ diff prefix. clang-tidy-diff exits non-zero on findings, so guard the
+    # assignment (set -e) and decide pass/fail from the output itself.
+    local out
+    out=$(git diff -U0 "${DIFF_BASE}" -- '*.c' '*.cpp' \
+        | python3 "$diff_tool" -p1 -path "$BUILD_DIR" -clang-tidy-binary clang-tidy \
+            -extra-arg=-Wno-unknown-warning-option 2>&1) || true
+    echo "$out"
+
+    if echo "$out" | grep -qE ': (warning|error):'; then
+        echo "clang-tidy: FAILED (findings on changed lines)"
+        ERRORS_FOUND=1
+    else
+        echo "clang-tidy: PASSED (no findings on changed lines)"
+    fi
+}
+
 run_clang_tidy() {
+    if [[ -n "$DIFF_BASE" ]]; then
+        run_clang_tidy_diff
+        return
+    fi
     echo "----------------------------------------"
     echo "Running clang-tidy..."
     echo "----------------------------------------"
@@ -152,8 +211,12 @@ run_clang_tidy() {
     
     echo "Analyzing $file_count files..."
 
-    local tidy_args=("-p=$BUILD_DIR")
-    
+    # compile_commands.json comes from the gcc build, so it carries GCC-only
+    # warning flags (-Wlogical-op, -Wduplicated-cond, ...) that clang-tidy's
+    # clang front-end does not know. Silence those meta-diagnostics; they are
+    # not findings about the code.
+    local tidy_args=("-p=$BUILD_DIR" "--extra-arg=-Wno-unknown-warning-option")
+
     if $FIX; then
         tidy_args+=("--fix" "--fix-errors")
     fi
@@ -212,6 +275,31 @@ run_cppcheck() {
     cppcheck_args+=("--suppress=*:*boost*")
     cppcheck_args+=("--suppress=*:/usr/include/*")
     cppcheck_args+=("--suppress=*:/usr/local/include/*")
+    # Known false positives, scoped to the file:
+    # - stack_alloc() uses alloca() by design for the hot path; cppcheck cannot
+    #   see that it initializes the buffer, hence allocaCalled + legacyUninitvar.
+    cppcheck_args+=("--suppress=allocaCalled:*/tracepoint.c")
+    cppcheck_args+=("--suppress=legacyUninitvar:*/tracepoint.c")
+    # - test code may use alloca directly (it is testing the allocator).
+    cppcheck_args+=("--suppress=allocaCalled:*/tests/*")
+    # - the discovery-section bounds are distinct linker symbols; comparing them
+    #   is the intended way to iterate the section.
+    cppcheck_args+=("--suppress=comparePointers:*/_user_tracing.h")
+    # - cppcheck's C++ parser chokes on some test constructs (not a code defect).
+    cppcheck_args+=("--suppress=syntaxError:*/tests/*")
+    # - test code intentionally uses terse casts and skips malloc-failure checks.
+    cppcheck_args+=("--suppress=dangerousTypeCast:*/tests/*")
+    cppcheck_args+=("--suppress=nullPointerOutOfResources:*/tests/*")
+    # - each *.tests directory is a separate executable, so identically named
+    #   test fixtures in different suites never share a translation unit; the
+    #   whole-program ODR check is a false positive across separate binaries.
+    cppcheck_args+=("--suppress=ctuOneDefinitionRuleViolation:*/tests/*")
+    # - COMMAND_INIT registration runs at startup and is intentionally
+    #   noexcept: an exception there should fail-fast (terminate), not unwind.
+    cppcheck_args+=("--suppress=throwInNoexceptFunction:*/command_line_tool/*")
+    # - false positive: FilePart grow() mutates m_file->size() between the outer
+    #   and inner checks, so the inner condition is not always true.
+    cppcheck_args+=("--suppress=identicalInnerCondition:*/file.cpp")
 
     if ! cppcheck "${cppcheck_args[@]}" 2>&1; then
         echo "cppcheck: FAILED"

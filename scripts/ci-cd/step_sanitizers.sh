@@ -23,8 +23,11 @@ echo "CI Step: Sanitizer ($KIND)"
 echo "========================================"
 
 # halt_on_error=1 makes the first finding fail the run instead of scrolling past.
-export ASAN_OPTIONS="detect_leaks=1:halt_on_error=1:abort_on_error=1:${ASAN_OPTIONS:-}"
-export UBSAN_OPTIONS="halt_on_error=1:abort_on_error=1:print_stacktrace=1:${UBSAN_OPTIONS:-}"
+# Do NOT set abort_on_error for ASan: the death tests expect ASan's default
+# exit(1) on a caught error (EXPECT_EXIT(ExitedWithCode(1))); abort() would
+# raise SIGABRT and fail those tests.
+export ASAN_OPTIONS="detect_leaks=1:halt_on_error=1:${ASAN_OPTIONS:-}"
+export UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1:${UBSAN_OPTIONS:-}"
 # TSan understands pthreads but not our shared-memory futex mutexes; a
 # suppression file (if present) keeps known-safe patterns from failing CI.
 export TSAN_OPTIONS="halt_on_error=1:${TSAN_OPTIONS:-}"

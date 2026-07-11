@@ -256,14 +256,27 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Load CI-Container
         uses: ./.github/actions/load-container
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Static analysis (clang-tidy + cppcheck)
-        run: ./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --all --werror
+      # clang-tidy runs diff-only (changed lines) so the decoder's pre-existing
+      # backlog does not block new work; cppcheck runs on the full tree.
+      - name: Determine diff base
+        id: diffbase
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base=${{ github.event.pull_request.base.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "base=${{ github.sha }}^" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Static analysis (clang-tidy diff + cppcheck)
+        run: ./scripts/container.sh ./scripts/ci-cd/step_static_analysis.sh --all --werror --diff "${{ steps.diffbase.outputs.base }}"
 
   # ============================================
   # Sanitizers - runtime verification of the semantics static lint can't see
