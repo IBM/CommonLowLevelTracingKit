@@ -5,6 +5,7 @@
 #include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 #include "file.hpp"
 #include "ringbuffer.hpp"
+#include <cstring>
 #include <new>
 #include <ranges>
 #include <type_traits>
@@ -16,8 +17,10 @@ template <PODType T, std::ranges::contiguous_range R>
 INLINE static constexpr T get(R r, size_t offset = 0, bool foreign_endian = false) {
 	const uintptr_t base = std::bit_cast<uintptr_t>(r.data());
 	const uintptr_t position = base + offset;
-	const T *const ptr = reinterpret_cast<T *>(position);
-	T value = *ptr;
+	// trace data is byte-packed, so the source may be unaligned for T;
+	// copy the bytes out instead of a misaligned load
+	T value;
+	std::memcpy(&value, reinterpret_cast<const void *>(position), sizeof(T));
 	if constexpr (CommonLowLevelTracingKit::decoder::source::internal::ByteSwappable<T>) {
 		if (foreign_endian) {
 			value = CommonLowLevelTracingKit::decoder::source::internal::byteswapValue(value);

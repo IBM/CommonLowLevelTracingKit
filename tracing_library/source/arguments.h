@@ -25,7 +25,7 @@ extern "C" {
 
 uint32_t get_argument_sizes(const char *const format, uint32_t sizes_out[],
 							_clltk_argument_types_t *types, va_list args);
-void get_arguments(void *buffer, uint32_t sizes[], const _clltk_argument_types_t *types,
+void get_arguments(void *buffer, const uint32_t sizes[], const _clltk_argument_types_t *types,
 				   va_list args);
 
 void first_time_check(const char *const format, _clltk_argument_types_t *types);

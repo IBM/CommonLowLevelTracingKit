@@ -9,6 +9,7 @@
 #include "CommonLowLevelTracingKit/decoder/ToString.hpp"
 #include "CommonLowLevelTracingKit/decoder/Tracepoint.hpp"
 #include "TracepointInternal.hpp"
+#include <cstring>
 #include "file.hpp"
 #include "formatter.hpp"
 #include "ringbuffer.hpp"
@@ -78,7 +79,7 @@ TracepointDynamic::TracepointDynamic(std::string tb_name, source::Ringbuffer::En
 		return;
 	}
 	const char *const line_start = current;
-	m_line = *std::bit_cast<const size_t *>(line_start);
+	std::memcpy(&m_line, line_start, sizeof(m_line));
 	if (e->foreignEndian()) { m_line = source::internal::byteswapValue(m_line); }
 	current += line_len;
 	remaining -= line_len;

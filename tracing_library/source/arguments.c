@@ -143,7 +143,7 @@ uint32_t get_argument_sizes(const char *const format, uint32_t sizes_out[],
 	return size;
 }
 
-void get_arguments(void *_buffer, uint32_t sizes[], const _clltk_argument_types_t *types,
+void get_arguments(void *_buffer, const uint32_t sizes[], const _clltk_argument_types_t *types,
 				   va_list args)
 {
 	uint64_t buffer = (uint64_t)_buffer;
@@ -156,43 +156,43 @@ void get_arguments(void *_buffer, uint32_t sizes[], const _clltk_argument_types_
 		case _clltk_argument_uint8:
 		case _clltk_argument_sint8: {
 			uint8_t value = (uint8_t)va_arg(args_copy, __typeof__(uint32_t));
-			*(uint8_t *)buffer = value;
+			memcpy((void *)buffer, &value, sizeof(value));
 			buffer += fix_arg_size;
 		} break;
 		case _clltk_argument_uint16:
 		case _clltk_argument_sint16: {
 			const uint16_t value = (uint16_t)va_arg(args_copy, __typeof__(uint32_t));
-			*(uint16_t *)buffer = value;
+			memcpy((void *)buffer, &value, sizeof(value));
 			buffer += fix_arg_size;
 		} break;
 		case _clltk_argument_uint32:
 		case _clltk_argument_sint32: {
 			const uint32_t value = va_arg(args_copy, __typeof__(uint32_t));
-			*(uint32_t *)buffer = value;
+			memcpy((void *)buffer, &value, sizeof(value));
 			buffer += fix_arg_size;
 		} break;
 		case _clltk_argument_uint64:
 		case _clltk_argument_sint64:
 		case _clltk_argument_pointer: {
 			const uint64_t value = va_arg(args_copy, __typeof__(uint64_t));
-			*(uint64_t *)buffer = value;
+			memcpy((void *)buffer, &value, sizeof(value));
 			buffer += fix_arg_size;
 		} break;
 		case _clltk_argument_uint128:
 		case _clltk_argument_sint128: {
 			const __uint128_t value = va_arg(args_copy, __typeof__(__uint128_t));
-			*(__uint128_t *)buffer = value;
+			memcpy((void *)buffer, &value, sizeof(value));
 			buffer += fix_arg_size;
 		} break;
 #if !defined(__KERNEL__) // TODO: create an error?
 		case _clltk_argument_float: {
 			const float value = (float)va_arg(args_copy, __typeof__(double));
-			*(float *)buffer = value;
+			memcpy((void *)buffer, &value, sizeof(value));
 			buffer += fix_arg_size;
 		} break;
 		case _clltk_argument_double: {
 			const double value = va_arg(args_copy, __typeof__(double));
-			*(double *)buffer = value;
+			memcpy((void *)buffer, &value, sizeof(value));
 			buffer += fix_arg_size;
 		} break;
 #endif
