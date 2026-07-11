@@ -4,8 +4,9 @@ run-name: CI by ${{ github.actor }}
 on:
   push:
     branches: ['main']
+  # no branch filter: stacked PRs target feature branches and would
+  # otherwise get no CI at all
   pull_request:
-    branches: ['main']
 
 env:
   CI: true
