@@ -29,7 +29,24 @@ case "$ARCH" in
     aarch64) QEMU_PKG=qemu-system-aarch64-core ;;
     *) echo "unsupported arch $ARCH"; exit 1 ;;
 esac
-dnf -y install kernel-core kernel-devel kernel-modules-core cpio zstd busybox "$QEMU_PKG" >/dev/null
+# The CI container caches dnf metadata at image build time (refreshed weekly).
+# By mid-week that metadata can still reference a kernel-core NEVRA that Fedora
+# has already superseded and pruned from its mirrors, so a plain install 404s on
+# every mirror. --refresh forces fresh metadata so we resolve to a kernel that
+# still exists; the retry rides out transient mirror interruptions.
+PKGS=(kernel-core kernel-devel kernel-modules-core cpio zstd busybox "$QEMU_PKG")
+for attempt in 1 2 3; do
+    if dnf -y --refresh install "${PKGS[@]}" >/dev/null; then
+        break
+    fi
+    if [ "$attempt" -eq 3 ]; then
+        echo "package install failed after $attempt attempts" >&2
+        exit 1
+    fi
+    echo "dnf install failed (attempt $attempt), clearing cache and retrying..." >&2
+    dnf -y clean expire-cache >/dev/null 2>&1 || true
+    sleep 15
+done
 
 # Pick a version that has both a bootable image and a matching build tree.
 KVER=""
