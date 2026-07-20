@@ -45,6 +45,10 @@ elseif(${CMAKE_C_COMPILER_ID} MATCHES "Clang")
         -Wno-format-nonliteral
     )
     list(APPEND clltk_public_compiler_flags
+        # Keep first: lets older clang silently ignore -Wno-* flags it does not
+        # know (e.g. -Wno-pre-c11-compat, added in a later clang) instead of
+        # erroring under -Werror. Supported by all clang versions we target.
+        -Wno-unknown-warning-option
         -Wno-gnu-empty-initializer
         -Wno-zero-length-array
         -Wno-declaration-after-statement
