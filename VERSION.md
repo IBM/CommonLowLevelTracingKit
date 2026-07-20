@@ -1,6 +1,14 @@
-1.7.5
+1.7.6
 
 # Change log
+## 1.7.6
+- fix: clang builds add -Wno-unknown-warning-option so older clang (which does not
+  know -Wno-pre-c11-compat) no longer fails under -Werror.
+- ci: compiler-compatibility matrix builds, links and runs a minimal tracing example
+  on every released GCC (>=14) and clang (>=18) on x86_64, plus a representative
+  gcc/clang on arm64 and s390x (big-endian) under QEMU; the minimum supported
+  compilers (set by the "Ws" inline-asm constraint) are now documented in the README.
+
 ## 1.7.5
 - ci: kernel-module runtime gate. Boots the modules in QEMU on the stock distro kernel
   (built without CONFIG_CONSTRUCTORS) and verifies tracing actually registers and produces
