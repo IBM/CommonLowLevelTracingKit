@@ -4,6 +4,8 @@
 ## 1.7.6
 - fix: clang builds add -Wno-unknown-warning-option so older clang (which does not
   know -Wno-pre-c11-compat) no longer fails under -Werror.
+- ci: kernel-module build step refreshes dnf metadata (like the kernel-runtime step)
+  so it no longer 404s on a pruned kernel-devel package mid-week.
 - ci: compiler-compatibility matrix builds, links and runs a minimal tracing example
   on every released GCC (>=14) and clang (>=18) on x86_64, plus a representative
   gcc/clang on arm64 and s390x (big-endian) under QEMU; the minimum supported

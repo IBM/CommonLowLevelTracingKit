@@ -23,7 +23,24 @@ echo "========================================"
 
 if ! ls /usr/src/kernels/*/Makefile >/dev/null 2>&1; then
     echo "Installing kernel-devel..."
-    dnf -y install kernel-devel flex bison elfutils-libelf-devel openssl-devel bc >/dev/null
+    # The CI container caches dnf metadata at image build time (refreshed weekly).
+    # By mid-week that metadata can still reference a kernel-devel NEVRA that
+    # Fedora has already superseded and pruned from its mirrors, so a plain
+    # install 404s on every mirror. --refresh forces fresh metadata; the retry
+    # rides out transient mirror interruptions.
+    PKGS=(kernel-devel flex bison elfutils-libelf-devel openssl-devel bc)
+    for attempt in 1 2 3; do
+        if dnf -y --refresh install "${PKGS[@]}" >/dev/null; then
+            break
+        fi
+        if [ "$attempt" -eq 3 ]; then
+            echo "package install failed after $attempt attempts" >&2
+            exit 1
+        fi
+        echo "dnf install failed (attempt $attempt), clearing cache and retrying..." >&2
+        dnf -y clean expire-cache >/dev/null 2>&1 || true
+        sleep 15
+    done
 fi
 KDIR=$(ls -d /usr/src/kernels/* | head -1)
 echo "Kernel tree: $KDIR"
