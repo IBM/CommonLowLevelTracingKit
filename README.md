@@ -152,6 +152,23 @@ You may use the repository with or without a container. To run any scripts, buil
 
 It is also possible to cross compile with the container env by using of example: `CONTAINER_ARCH=arm64 ./scripts/container.sh`.
 
+### Compiler requirements
+
+The tracing library requires a recent compiler:
+
+| Compiler | Minimum version |
+| -------- | --------------- |
+| GCC      | 14              |
+| Clang    | 18              |
+
+Older compilers reject the build with `impossible constraint in 'asm'` /
+`invalid input constraint 'Ws'`: the tracepoint macros emit their metadata
+sections via the `Ws` inline-asm constraint (a symbol reference with offset),
+which is only supported from these versions onward. The `compiler-compat` CI
+job builds and runs a minimal tracing example against every released GCC and
+Clang from these floors upward on x86_64, plus a representative gcc/clang on
+arm64 and s390x (big-endian) under QEMU.
+
 ### Build this repository
 
 To build this repository for test purposes or development run:
