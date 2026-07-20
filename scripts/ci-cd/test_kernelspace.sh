@@ -4,7 +4,9 @@
 
 PERSITENT_ARTIFACTS="${PERSITENT_ARTIFACTS:-"./build_kernel/persistent"}"
 
-./cmake/gen_version_header.sh
+# Note: version.gen.h is generated inside build_kernelspace.sh (build_modules ->
+# generate_version_header) and by the kernel Makefile, both with explicit -t/-o
+# arguments. No standalone pre-generation call is needed here.
 ./scripts/ci-cd/build_kernelspace.sh \
     -t "$PERSITENT_ARTIFACTS" \
     -k 5.10.52 \
