@@ -124,6 +124,9 @@ foreach(LIB_NAME clltk_tracing_static clltk_tracing_shared)
         target_link_options(${LIB_NAME}
             PRIVATE
                 -Wl,--gc-sections
+                # Fail the build on any linker warning (e.g. "creating
+                # DT_TEXTREL"); empty under sanitizers. See Sanitizers.cmake.
+                ${CLLTK_FATAL_LINKER_WARNINGS}
         )
     endif()
 endforeach()

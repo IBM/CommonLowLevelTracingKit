@@ -67,4 +67,48 @@ if [ -z "$(find "${OUT}" -name '*.clltk_trace' -print -quit)" ]; then
     exit 1
 fi
 
+# ---------------------------------------------------------------------------
+# Text-relocation guard for the "tracepoint inside a shared library" shape.
+#
+# A consumer shared object (a plugin/driver .so) expands the tracepoint macros
+# *inside the .so*, which emits the _metaptr metadata section. If that section
+# is ever read-only, its absolute pointers become text relocations
+# (DT_TEXTREL): -fPIC cannot avoid them, hardened targets (AArch64) reject them
+# at load time, and Yocto's do_package_qa fails the build. The main test suite
+# links such a shared library but only ever *warns* on TEXTREL, so the
+# regression stayed invisible. Here we build a minimal tracepoint-bearing
+# shared object with "-z text", which makes the linker refuse to emit any text
+# relocation - a hard error. Because this runs on every compiler and every arch
+# in the matrix (incl. arm64 and s390x under QEMU), it catches both generic and
+# arch-specific reintroductions. A shared object may keep undefined symbols, so
+# no CLLTK runtime needs to be linked - the relocations are a property of the
+# consumer object alone.
+echo "Checking tracepoint-in-shared-library is text-relocation free (-z text)..."
+GUARD_SRC="${OUT}/clltk_textrel_guard.c"
+GUARD_SO="${OUT}/libclltk_textrel_guard.so"
+cat > "${GUARD_SRC}" <<'GUARD_EOF'
+#include "CommonLowLevelTracingKit/tracing/tracing.h"
+CLLTK_TRACEBUFFER(compat_textrel_guard, 4096);
+void clltk_compat_textrel_guard(int x) {
+    CLLTK_TRACEPOINT(compat_textrel_guard, "textrel guard %d", x);
+}
+GUARD_EOF
+if ! "${CC}" -fPIC -shared -O2 -I"${ROOT_PATH}/tracing_library/include" \
+        -Wl,-z,text "${GUARD_SRC}" -o "${GUARD_SO}"; then
+    echo "FAILED: a tracepoint compiled into a shared library produced text"
+    echo "        relocations (DT_TEXTREL). This breaks PIE/hardened targets"
+    echo "        and Yocto do_package_qa. See _CLLTK_EMIT_META_PTR - the"
+    echo "        _metaptr section must be emitted writable (\"aw\")."
+    exit 1
+fi
+# Belt and suspenders: fail if a TEXTREL somehow survived the link (e.g. a
+# linker that only warns). Skipped if readelf is unavailable.
+if command -v readelf >/dev/null 2>&1; then
+    if readelf -dW "${GUARD_SO}" 2>/dev/null | grep -qiE '\bTEXTREL\b'; then
+        echo "FAILED: DT_TEXTREL present in ${GUARD_SO} despite -z text"
+        exit 1
+    fi
+fi
+
 echo "PASSED: library + minimal examples build, run, and trace with ${CC}/${CXX}"
+echo "PASSED: tracepoint-in-shared-library is free of text relocations"

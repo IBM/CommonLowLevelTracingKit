@@ -128,7 +128,15 @@ _CLLTK_EXTERN_C_END
  * translation unit ("causes a section type conflict"). Assembler-emitted data
  * never joins a COMDAT group. The constraint/operand pair to print a bare
  * symbol address differs per target (each validated with -fPIC/-pie -Werror
- * at -O0..-O2). */
+ * at -O0..-O2).
+ *
+ * The section is emitted writable ("aw"): its entries are absolute pointers
+ * that the dynamic linker must relocate at load time. A read-only section
+ * ("a") would force those relocations onto a read-only page, producing a text
+ * relocation (DT_TEXTREL) that -fPIC cannot avoid and that PIE/hardened
+ * targets (e.g. AArch64) reject. Writable places them in the data segment as
+ * ordinary RELATIVE relocations -- matching how the compiler already handles
+ * the sibling _clltk_tracebuffer_handler_ptr section. */
 #if defined(__aarch64__)
 #define _CLLTK_ASM_SYM_CONSTRAINT "S"
 #define _CLLTK_ASM_SYM_OPERAND(_N_) "%c" _N_
@@ -141,7 +149,7 @@ _CLLTK_EXTERN_C_END
 #endif
 
 #define _CLLTK_EMIT_META_PTR(_BUFFER_, _META_, _OFFSET_)                                         \
-	__asm__(".pushsection _clltk_" #_BUFFER_ "_metaptr,\"a\"\n\t"                                \
+	__asm__(".pushsection _clltk_" #_BUFFER_ "_metaptr,\"aw\"\n\t"                               \
 			".balign " _CLLTK_STR(                                                               \
 				__SIZEOF_POINTER__) "\n\t"                                                       \
 									".dc.a " _CLLTK_ASM_SYM_OPERAND(                             \

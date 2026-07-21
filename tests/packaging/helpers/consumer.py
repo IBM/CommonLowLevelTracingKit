@@ -58,6 +58,20 @@ def create_temp_consumer_project(
     return tmpdir
 
 
+def create_temp_project_copy(src_dir: pathlib.Path) -> pathlib.Path:
+    """Copy an entire consumer-project fixture directory to a temp location.
+
+    Unlike create_temp_consumer_project (which copies a single source plus the
+    CMakeLists), this copies the whole fixture tree, for projects with several
+    sources (e.g. a shared library plus a driver executable). The caller cleans
+    up with shutil.rmtree.
+    """
+    tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="clltk_consumer_"))
+    dest = tmpdir / src_dir.name
+    shutil.copytree(src_dir, dest)
+    return dest
+
+
 def configure_cmake_project(
     project_dir: pathlib.Path,
     install_prefix: pathlib.Path,

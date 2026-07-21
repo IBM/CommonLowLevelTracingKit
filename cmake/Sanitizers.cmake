@@ -42,3 +42,17 @@ if(_clltk_sanitizers)
         add_compile_options(-fno-sanitize-recover=undefined)
     endif()
 endif()
+
+# Linker-warning hygiene for our own binaries: promote linker warnings (e.g.
+# "creating DT_TEXTREL") to errors so they cannot hide in an otherwise green
+# build. Consumed via target_link_options by the tracing library and the
+# example shared libraries; kept PRIVATE at each use site so it never reaches
+# consumers. Empty (a no-op) unless linking with the GNU-style driver on Linux,
+# and disabled under sanitizers - the sanitizer runtimes can emit benign linker
+# diagnostics, and the non-sanitizer build/package/compat legs already give full
+# link-warning coverage.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT _clltk_sanitizers)
+    set(CLLTK_FATAL_LINKER_WARNINGS -Wl,--fatal-warnings)
+else()
+    set(CLLTK_FATAL_LINKER_WARNINGS "")
+endif()
