@@ -1,6 +1,18 @@
-1.7.6
+1.7.7
 
 # Change log
+## 1.7.7
+- fix: tracepoints compiled into a shared library no longer produce text relocations
+  (DT_TEXTREL). The `_clltk_<buffer>_metaptr` discovery section is now emitted writable, so
+  its absolute pointers become load-time RELATIVE relocations instead of forcing a text
+  relocation; a read-only section broke PIE/hardened targets (e.g. AArch64) at load time and
+  failed packaging QA (do_package_qa). No API or ABI change - recompile against the header.
+- test: a packaging consumer test builds a shared library against the installed headers and
+  asserts the produced .so is free of text relocations and an executable stack.
+- ci: the compiler-compat matrix links a tracepoint-bearing shared object with `-z text` on
+  every compiler and architecture (incl. arm64/s390x) so a text-relocation regression is a
+  hard error; the tracing library and example shared libraries link with `--fatal-warnings`.
+
 ## 1.7.6
 - fix: clang builds add -Wno-unknown-warning-option so older clang (which does not
   know -Wno-pre-c11-compat) no longer fails under -Werror.
