@@ -71,6 +71,12 @@ if(CLLTK_TESTS AND EXISTS ./tests/)
     add_subdirectory(./tests/)
 endif()
 
+option(CLLTK_GOLDEN "build the deterministic golden fixture generators" OFF)
+if(CLLTK_GOLDEN AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/golden/generator/")
+    message(STATUS "add golden generators")
+    add_subdirectory(./tests/golden/generator)
+endif()
+
 # Generate build info header (for command line tool)
 # Note: Must be after all CLLTK_* options are defined since build_info uses them
 include(cmake/CreateBuildInfo.cmake)

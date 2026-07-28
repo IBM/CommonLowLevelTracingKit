@@ -30,7 +30,7 @@ def setUpModule():
 GOLDEN_DIR = pathlib.Path(__file__).parent / "golden"
 PYTHON_DECODER = pathlib.Path(__file__).parent.parent / "decoder_tool" / "python" / "clltk_decoder.py"
 
-# formatted messages written by tests/golden/generator/writer.c
+# formatted messages written by tests/golden/generator/writer.cpp
 EXPECTED_MESSAGES = [
     "plain int 42",
     "u8 8 u16 1616 u32 323232",
@@ -41,21 +41,25 @@ EXPECTED_MESSAGES = [
     'golden dump =(dump)= "DE AD BE EF 01 02 03 04"',
 ]
 
+# fixtures are laid out one folder per library version: <version>/<arch>.<ext>
 LITTLE_ENDIAN_FIXTURES = [
-    "golden-1.2.39-le-aarch64.clltk_trace",  # oldest buildable, pre dump-format change (1.2.40)
-    "golden-1.2.49-le-aarch64.clltk_trace",  # pre definition-V2 format (1.2.50)
-    "golden-1.2.64-le-aarch64.clltk_trace",
-    "golden-1.3.0-le-aarch64.clltk_trace",
-    "golden-1.5.0-le-aarch64.clltk_trace",  # first version with span events
+    "1.2.39/le-aarch64.clltk_trace",  # oldest buildable, pre dump-format change (1.2.40)
+    "1.2.49/le-aarch64.clltk_trace",  # pre definition-V2 format (1.2.50)
+    "1.2.64/le-aarch64.clltk_trace",
+    "1.3.0/le-aarch64.clltk_trace",
+    "1.5.0/le-aarch64.clltk_trace",  # first version with span events
 ]
 BIG_ENDIAN_FIXTURES = [
-    "golden-1.3.0-be-s390x.clltk_trace",
-    "golden-1.5.0-be-s390x.clltk_trace",
+    "1.2.39/be-s390x.clltk_trace",
+    "1.2.49/be-s390x.clltk_trace",
+    "1.2.64/be-s390x.clltk_trace",
+    "1.3.0/be-s390x.clltk_trace",
+    "1.5.0/be-s390x.clltk_trace",
 ]
 # fmt-style tracepoint fixtures (deterministic messages)
 FMT_FIXTURES = [
-    "golden-1.6.0-fmt-le-aarch64.clltk_trace",
-    "golden-1.6.0-fmt-be-s390x.clltk_trace",
+    "1.6.0/fmt-le-aarch64.clltk_trace",
+    "1.6.0/fmt-be-s390x.clltk_trace",
 ]
 EXPECTED_FMT_MESSAGES = [
     "loaded module-a in 42ms",
@@ -66,9 +70,20 @@ EXPECTED_FMT_MESSAGES = [
 # fixtures containing span events (validated structurally: span ids are
 # random per generation, so exact strings differ between fixtures)
 SPAN_FIXTURES = [
-    "golden-1.5.0-le-aarch64.clltk_trace",
-    "golden-1.5.0-be-s390x.clltk_trace",
+    "1.5.0/le-aarch64.clltk_trace",
+    "1.5.0/be-s390x.clltk_trace",
 ]
+
+# Comprehensive baselines (1.7.7+): a single deterministic fixture per byte
+# order that exercises every tracepoint kind -- printf, dump, dynamic, fmt, and
+# spans -- produced by generator/writer.cpp. These are the byte-comparison
+# baseline for the format gate; here they are the cross-decoder correctness
+# oracle. writer.cpp emits the regular rows in this order, then the spans.
+COMPREHENSIVE_FIXTURES = [
+    "1.7.7/le-aarch64.clltk_trace",
+    "1.7.7/be-s390x.clltk_trace",
+]
+EXPECTED_COMPREHENSIVE = EXPECTED_MESSAGES + ["golden dyn 7"] + EXPECTED_FMT_MESSAGES
 
 
 def split_span_rows(messages: list) -> tuple:
@@ -164,21 +179,38 @@ class golden_python_decoder(unittest.TestCase):
 
 
 class golden_elf_meta(unittest.TestCase):
-    """clltk meta extracts tracepoint metadata from committed big-endian
-    s390x ELF objects: the .so through virtual addresses, the .o through
-    relocation records."""
+    """clltk meta must keep extracting tracepoint metadata from committed ELF
+    objects across format eras and both byte orders -- old objects must stay
+    parseable. The 1.3.0 big-endian pair is the historical backward-compat
+    anchor (built with old library headers); the 1.7.7 pairs are the current
+    objects for both byte orders. The .so exercises virtual addresses, the .o
+    relocation records; s390x is the cross-endian path, aarch64 the native one."""
 
-    def _assert_meta(self, name: str):
+    def _assert_meta(self, name: str, buffer: str, message: str):
         result = clltk("meta", str(GOLDEN_DIR / name))
         self.assertEqual(result.returncode, 0, msg=result.stderr)
-        self.assertIn("BE_ELF_TEST", result.stdout)
-        self.assertIn("big endian elf tracepoint %d", result.stdout)
+        self.assertIn(buffer, result.stdout)
+        self.assertIn(message, result.stdout)
+
+    # historical anchor: big-endian object built with library 1.3.0 headers
+    def test_old_big_endian_shared_object(self):
+        self._assert_meta("1.3.0/be-s390x.so", "BE_ELF_TEST", "big endian elf tracepoint %d")
+
+    def test_old_big_endian_relocatable_object(self):
+        self._assert_meta("1.3.0/be-s390x.o", "BE_ELF_TEST", "big endian elf tracepoint %d")
+
+    # current objects (writer.cpp), both byte orders
+    def test_little_endian_shared_object(self):
+        self._assert_meta("1.7.7/le-aarch64.so", "GOLDEN", "plain int %d")
+
+    def test_little_endian_relocatable_object(self):
+        self._assert_meta("1.7.7/le-aarch64.o", "GOLDEN", "plain int %d")
 
     def test_big_endian_shared_object(self):
-        self._assert_meta("golden-1.3.0-be-s390x.so")
+        self._assert_meta("1.7.7/be-s390x.so", "GOLDEN", "plain int %d")
 
     def test_big_endian_relocatable_object(self):
-        self._assert_meta("golden-1.3.0-be-s390x.o")
+        self._assert_meta("1.7.7/be-s390x.o", "GOLDEN", "plain int %d")
 
 
 class golden_fmt_fixtures(unittest.TestCase):
@@ -207,6 +239,28 @@ class golden_cli_decoder(unittest.TestCase):
             with self.subTest(fixture=name):
                 messages = decode_with_cli(GOLDEN_DIR / name)
                 assert_fixture(self, name, messages)
+
+
+class golden_comprehensive(unittest.TestCase):
+    """The 1.7.7+ baselines exercise every tracepoint kind in one fixture,
+    decoded by both decoders as the correctness oracle."""
+
+    def _check(self, decode_fn):
+        for name in COMPREHENSIVE_FIXTURES:
+            with self.subTest(fixture=name):
+                messages = decode_fn(GOLDEN_DIR / name)
+                regular, spans = split_span_rows(messages)
+                # all entries share one frozen timestamp, so relative order of
+                # the regular rows is not guaranteed by either decoder's sort;
+                # compare as a multiset. span causality is validated structurally.
+                self.assertCountEqual(EXPECTED_COMPREHENSIVE, regular)
+                validate_span_structure(self, spans)
+
+    def test_python_decoder(self):
+        self._check(decode_with_python)
+
+    def test_cli_decoder(self):
+        self._check(decode_with_cli)
 
 
 if __name__ == "__main__":

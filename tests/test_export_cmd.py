@@ -39,10 +39,10 @@ def export_fixture(name: str) -> dict:
 
 class export_golden_fixtures(unittest.TestCase):
     def test_span_fixture_little_endian(self):
-        self._check_span_fixture("golden-1.5.0-le-aarch64.clltk_trace")
+        self._check_span_fixture("1.5.0/le-aarch64.clltk_trace")
 
     def test_span_fixture_big_endian(self):
-        self._check_span_fixture("golden-1.5.0-be-s390x.clltk_trace")
+        self._check_span_fixture("1.5.0/be-s390x.clltk_trace")
 
     def _check_span_fixture(self, name: str):
         data = export_fixture(name)
@@ -79,7 +79,7 @@ class export_golden_fixtures(unittest.TestCase):
             self.assertIn("line", event["args"])
 
     def test_fixture_without_spans(self):
-        data = export_fixture("golden-1.3.0-le-aarch64.clltk_trace")
+        data = export_fixture("1.3.0/le-aarch64.clltk_trace")
         events = data["traceEvents"]
         self.assertEqual(7, len([e for e in events if e["ph"] == "i"]))
         self.assertEqual(0, len([e for e in events if e["ph"] in ("b", "e")]))

@@ -177,14 +177,17 @@ run_clang_tidy_diff() {
     # translation units (not in compile_commands.json), and some intentionally
     # #error when compiled standalone. Kernel-module sources are built by Kbuild,
     # not cmake, so they are absent from compile_commands.json too - clang-tidy
-    # would fall back to defaults and fail on the kernel headers. Exclude both;
-    # they are covered by the full builds and the kernel-module build job.
+    # would fall back to defaults and fail on the kernel headers. The golden
+    # fixture generators are built by the `golden` cmake preset, not the default
+    # build, so they are likewise absent from compile_commands.json. Exclude all
+    # three; they are covered by their own builds.
     #
     # -U0: no context lines, so only changed lines are analyzed. -p1 strips the
     # a/ b/ diff prefix. clang-tidy-diff exits non-zero on findings, so guard the
     # assignment (set -e) and decide pass/fail from the output itself.
     local out
-    out=$(git diff -U0 "${DIFF_BASE}" -- '*.c' '*.cpp' ':(exclude)kernel_tracing_library/*' \
+    out=$(git diff -U0 "${DIFF_BASE}" -- '*.c' '*.cpp' \
+            ':(exclude)kernel_tracing_library/*' ':(exclude)tests/golden/generator/*' \
         | python3 "$diff_tool" -p1 -path "$BUILD_DIR" -clang-tidy-binary clang-tidy \
             -extra-arg=-Wno-unknown-warning-option 2>&1) || true
     echo "$out"
