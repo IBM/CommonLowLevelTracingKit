@@ -19,6 +19,7 @@ cd "${ROOT_PATH}"
 SKIP_STATIC_ANALYSIS=${CLLTK_SKIP_STATIC_ANALYSIS:-false}
 SKIP_PACKAGE=${CLLTK_SKIP_PACKAGE:-false}
 SKIP_MEMCHECK=${CLLTK_SKIP_MEMCHECK:-false}
+SKIP_GOLDEN=${CLLTK_SKIP_GOLDEN:-false}
 CHECK_VERSION=${CLLTK_CHECK_VERSION:-false}
 STOP_ON_FAILURE=${CLLTK_STOP_ON_FAILURE:-false}
 
@@ -31,6 +32,7 @@ usage() {
     echo "  --skip-static-analysis    Skip static analysis step"
     echo "  --skip-package            Skip packaging step"
     echo "  --skip-memcheck           Skip memory check step"
+    echo "  --skip-golden             Skip golden format gate (needs a container engine + qemu)"
     echo "  --check-version           Run version validation (for PRs)"
     echo "  --stop-on-failure         Stop immediately on first failure"
     echo "  --help                    Show this help message"
@@ -39,6 +41,7 @@ usage() {
     echo "  CLLTK_SKIP_STATIC_ANALYSIS=true    Skip static analysis"
     echo "  CLLTK_SKIP_PACKAGE=true            Skip packaging"
     echo "  CLLTK_SKIP_MEMCHECK=true           Skip memory check"
+    echo "  CLLTK_SKIP_GOLDEN=true             Skip golden format gate"
     echo "  CLLTK_CHECK_VERSION=true           Run version validation"
     echo "  CLLTK_STOP_ON_FAILURE=true         Stop on first failure"
     echo ""
@@ -55,6 +58,7 @@ while [[ $# -gt 0 ]]; do
         --skip-static-analysis) SKIP_STATIC_ANALYSIS=true; shift ;;
         --skip-package) SKIP_PACKAGE=true; shift ;;
         --skip-memcheck) SKIP_MEMCHECK=true; shift ;;
+        --skip-golden) SKIP_GOLDEN=true; shift ;;
         --check-version) CHECK_VERSION=true; shift ;;
         --stop-on-failure) STOP_ON_FAILURE=true; shift ;;
         --help) usage ;;
@@ -71,6 +75,7 @@ echo "Options:"
 echo "  Skip static analysis: $SKIP_STATIC_ANALYSIS"
 echo "  Skip package:         $SKIP_PACKAGE"
 echo "  Skip memcheck:        $SKIP_MEMCHECK"
+echo "  Skip golden:          $SKIP_GOLDEN"
 echo "  Check version:        $CHECK_VERSION"
 echo "  Stop on failure:      $STOP_ON_FAILURE"
 echo ""
@@ -128,6 +133,16 @@ else
     
     # Step 4: Tests
     run_step "Tests" "step_test.sh" || true
+
+    # Step 4b: Golden format gate (spawns its own build containers; needs qemu)
+    if ! $SKIP_GOLDEN; then
+        if command -v podman >/dev/null 2>&1 || command -v docker >/dev/null 2>&1; then
+            run_step "Golden Gate" "step_golden.sh" || true
+        else
+            echo ""
+            echo ">>> Skipping Golden Gate: no container engine (podman/docker) found"
+        fi
+    fi
 
     # Step 5: Memory check
     if ! $SKIP_MEMCHECK; then

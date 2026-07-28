@@ -1,6 +1,15 @@
-1.7.7
+1.7.8
 
 # Change log
+## 1.7.8
+- test: deterministic golden trace fixtures and a CI format gate. A single C++
+  writer produces a byte-deterministic fixture (frozen timestamp/pid/tid via
+  frozen_info.c) exercising every tracepoint kind; scripts/ci-cd/step_golden.sh
+  regenerates at HEAD for both byte orders and byte-compares (library-version
+  field masked) against the newest committed golden, so a trace-format change
+  fails CI until a new fixture is committed. Fixtures are laid out one folder
+  per version, both byte orders, and the corpus enforces backward compatibility
+  of the decoders, `clltk meta`, and `export`. No library API/ABI change.
 ## 1.7.7
 - fix: tracepoints compiled into a shared library no longer produce text relocations
   (DT_TEXTREL). The `_clltk_<buffer>_metaptr` discovery section is now emitted writable, so

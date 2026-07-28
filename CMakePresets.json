@@ -80,6 +80,24 @@
                 "CMAKE_C_COMPILER": "clang",
                 "CMAKE_CXX_COMPILER": "clang++"
             }
+        },
+        {
+            "name": "golden",
+            "inherits": "default",
+            "binaryDir": "${sourceDir}/build/golden/",
+            "description": "Deterministic golden fixture generators (frozen identity, tracing lib only)",
+            "cacheVariables": {
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF",
+                "CLLTK_GOLDEN": "ON",
+                "CLLTK_TRACING": "ON",
+                "CLLTK_SNAPSHOT": "OFF",
+                "CLLTK_COMMAND_LINE_TOOL": "OFF",
+                "CLLTK_PYTHON_DECODER": "OFF",
+                "CLLTK_CPP_DECODER": "OFF",
+                "CLLTK_KERNEL_TRACING": "OFF",
+                "CLLTK_EXAMPLES": "OFF",
+                "CLLTK_TESTS": "OFF"
+            }
         }
     ],
     "buildPresets": [
@@ -128,6 +146,13 @@
             "configurePreset": "static-analysis",
             "targets": [
                 "all"
+            ]
+        },
+        {
+            "name": "golden",
+            "configurePreset": "golden",
+            "targets": [
+                "golden-generate"
             ]
         }
     ],
@@ -258,6 +283,19 @@
                 {
                     "type": "test",
                     "name": "unittests"
+                }
+            ]
+        },
+        {
+            "name": "golden",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "golden"
+                },
+                {
+                    "type": "build",
+                    "name": "golden"
                 }
             ]
         },

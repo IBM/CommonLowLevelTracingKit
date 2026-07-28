@@ -212,6 +212,37 @@ jobs:
         run: ./scripts/container.sh ./scripts/ci-cd/step_build.sh --preset unittests-nolto
 
   # ============================================
+  # Golden format gate
+  # Regenerates the deterministic golden fixtures at HEAD for both byte orders
+  # (le-aarch64 and be-s390x, emulated via qemu) and byte-compares them against
+  # the newest committed golden. A difference means the trace-file format
+  # changed and a new fixture must be committed. Correctness of the fixtures
+  # (both decoders agree) is checked by test_golden.py in build-and-test.
+  # Runs the generation containers directly (not via container.sh) since the
+  # step spawns its own per-arch build containers.
+  # ============================================
+  golden:
+    runs-on: ubuntu-latest
+    needs: [changes, checks]
+    if: |
+      !failure() && !cancelled() &&
+      (github.event_name == 'push' ||
+       needs.changes.outputs.code == 'true' ||
+       needs.changes.outputs.tests == 'true' ||
+       needs.changes.outputs.ci == 'true')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (multi-arch emulation)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Golden format gate
+        env:
+          CLLTK_CONTAINER_CMD: docker
+        run: ./scripts/ci-cd/step_golden.sh
+
+  # ============================================
   # Kernel modules (compile + modpost link check)
   # The kernel module shares sources with the userspace library but is
   # built by Kbuild against real kernel headers - userspace builds cannot

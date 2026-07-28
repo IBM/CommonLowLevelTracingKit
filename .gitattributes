@@ -1,2 +1,6 @@
-# Golden test fixtures are committed binaries; never apply text/EOL normalization
-tests/golden/** binary
+# Golden test fixtures are committed binaries; never apply text/EOL
+# normalization or line diffs. Scope this to the fixture blobs only, so the
+# generator sources and README under tests/golden/ stay diffable.
+tests/golden/**/*.clltk_trace binary
+tests/golden/**/*.o binary
+tests/golden/**/*.so binary
