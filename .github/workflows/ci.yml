@@ -30,6 +30,7 @@ jobs:
       tests: ${{ steps.filter.outputs.tests }}
       docs: ${{ steps.filter.outputs.docs }}
       ci: ${{ steps.filter.outputs.ci }}
+      golden: ${{ steps.filter.outputs.golden }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -63,35 +64,46 @@ jobs:
           TESTS=false
           DOCS=false
           CI_FILES=false
-          
+          GOLDEN=false
+
           # Check each pattern (only if CHANGED is non-empty)
           if [ -n "$CHANGED" ]; then
             if echo "$CHANGED" | grep -qE '^(tracing_library/|decoder_tool/|command_line_tool/|snapshot_library/|kernel_tracing_library/|cmake/|CMakeLists\.txt|CMakePresets\.json)'; then
               CODE=true
             fi
-            
+
             if echo "$CHANGED" | grep -qE '^(tests/|examples/)'; then
               TESTS=true
             fi
-            
+
             if echo "$CHANGED" | grep -qE '^docs/|\.md$'; then
               DOCS=true
             fi
-            
+
             if echo "$CHANGED" | grep -qE '^(\.github/|scripts/)'; then
               CI_FILES=true
             fi
+
+            # The golden format gate only needs to run when the trace-file format
+            # could change: the tracing library, the golden generator, the cmake
+            # preset that builds it, the gate script itself, or the workflow that
+            # defines the gate jobs. This keeps the slow qemu-emulated job off
+            # the vast majority of PRs.
+            if echo "$CHANGED" | grep -qE '^(tracing_library/|tests/golden/generator/|cmake/|CMakeLists\.txt|CMakePresets\.json|scripts/ci-cd/step_golden\.sh|\.github/workflows/ci\.yml)'; then
+              GOLDEN=true
+            fi
           fi
-          
+
           echo "code=$CODE" >> $GITHUB_OUTPUT
           echo "tests=$TESTS" >> $GITHUB_OUTPUT
           echo "docs=$DOCS" >> $GITHUB_OUTPUT
           echo "ci=$CI_FILES" >> $GITHUB_OUTPUT
-          
+          echo "golden=$GOLDEN" >> $GITHUB_OUTPUT
+
           echo "Changed files:"
           echo "$CHANGED"
           echo ""
-          echo "Detected: code=$CODE tests=$TESTS docs=$DOCS ci=$CI_FILES"
+          echo "Detected: code=$CODE tests=$TESTS docs=$DOCS ci=$CI_FILES golden=$GOLDEN"
 
   # ============================================
   # Quick checks (format, version) - fail fast
@@ -213,33 +225,50 @@ jobs:
 
   # ============================================
   # Golden format gate
-  # Regenerates the deterministic golden fixtures at HEAD for both byte orders
-  # (le-aarch64 and be-s390x, emulated via qemu) and byte-compares them against
-  # the newest committed golden. A difference means the trace-file format
+  # Regenerates the deterministic golden fixtures at HEAD and byte-compares them
+  # against the newest committed golden. A difference means the trace-file format
   # changed and a new fixture must be committed. Correctness of the fixtures
   # (both decoders agree) is checked by test_golden.py in build-and-test.
-  # Runs the generation containers directly (not via container.sh) since the
-  # step spawns its own per-arch build containers.
+  #
+  # Split by byte order so the two ~6-min legs run in parallel, and gated on the
+  # `golden` path filter so it only runs when the trace format could change. The
+  # LE leg runs on a native ARM64 runner (no qemu); only the BE (s390x) leg needs
+  # emulation. Each leg spawns its own build containers, so it runs the step
+  # directly rather than via container.sh.
   # ============================================
-  golden:
-    runs-on: ubuntu-latest
+  golden-le:
+    runs-on: ubuntu-24.04-arm
     needs: [changes, checks]
     if: |
       !failure() && !cancelled() &&
-      (github.event_name == 'push' ||
-       needs.changes.outputs.code == 'true' ||
-       needs.changes.outputs.tests == 'true' ||
-       needs.changes.outputs.ci == 'true')
+      (github.event_name == 'push' || needs.changes.outputs.golden == 'true')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up QEMU (multi-arch emulation)
-        uses: docker/setup-qemu-action@v3
-
-      - name: Golden format gate
+      - name: Golden format gate (le-aarch64, native)
         env:
           CLLTK_CONTAINER_CMD: docker
+          CLLTK_GOLDEN_ARCHES: aarch64
+        run: ./scripts/ci-cd/step_golden.sh
+
+  golden-be:
+    runs-on: ubuntu-latest
+    needs: [changes, checks]
+    if: |
+      !failure() && !cancelled() &&
+      (github.event_name == 'push' || needs.changes.outputs.golden == 'true')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (s390x emulation)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Golden format gate (be-s390x, emulated)
+        env:
+          CLLTK_CONTAINER_CMD: docker
+          CLLTK_GOLDEN_ARCHES: s390x
         run: ./scripts/ci-cd/step_golden.sh
 
   # ============================================
@@ -451,9 +480,13 @@ jobs:
   # ============================================
   # Packaging (only for code/ci changes, or push to main)
   # ============================================
+  # package builds its own rpms (cmake --workflow --preset rpms), so it does not
+  # need build-and-test's output -- only its own gate. Depending on `checks`
+  # instead of `build-and-test` takes it off the critical path (it ran serially
+  # after build-and-test before). A failing test still fails the PR overall.
   package:
     runs-on: ubuntu-latest
-    needs: [changes, build-and-test]
+    needs: [changes, checks]
     if: |
       !failure() && !cancelled() &&
       (github.event_name == 'push' ||
